@@ -1,0 +1,7 @@
+# 复制为 config/local/labels.yaml 后按需覆盖默认派系/节点名（gitignore）
+factions:
+  FC_GRINEER:
+    zh: '格林尼尔'
+    en: 'Grineer'
+nodes: {}
+paths: {}

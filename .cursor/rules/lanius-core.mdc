@@ -1,0 +1,20 @@
+---
+description: Lanius-Warframe-Bot core product and architecture constraints
+alwaysApply: true
+---
+
+# Lanius core
+
+- Product name: **Lanius-Warframe-Bot** (spelling **Lanius**, never "Lanuis").
+- Architecture: Warframe official (and documented community) data → **Lanius custom API** → independent clients: official QQ bot, public web, admin web.
+- Clients must **not** call upstream Warframe/community APIs directly.
+- QQ ↔ Web: **no runtime coupling**. Optional public-site URLs in QQ replies are display-only.
+- QQ channel: **Tencent official bot only**. Never add NapCat, go-cqhttp, Lagrange, AstrBot, or other unofficial protocols.
+- Secrets live in **config files and/or DB** (`config.local.yaml`), **not** env vars as the primary store. Keep secrets gitignored.
+- MVP realm: `international` only; keep `china` as a reserved type/route, do not ship China data in MVP.
+- i18n: `zh` / `en` for user-facing copy; code identifiers in English.
+- Do **not** invent scope: no player accounts, trade matching, full wiki mirror, multi-IM hub, or multi-tenant SaaS.
+- Prefer reading `AGENTS.md` and `docs/ARCHITECTURE.md` before large changes.
+- Git: no casual branches; ask user or use duty-based names; integrate into `develop`; `main` is release archive only; never commit directly to `main` or `develop` (merges/PRs only); SemVer tags `vX.Y.Z` on `main`.
+- Comments: ≥80% comment-required coverage; full TSDoc `@param`/`@returns` on every function; never paste agent chat into comments.
+- Later Tauri 2 (desktop/mobile): plan Web for pluggable UI/API client; **do not scaffold Tauri now** (`docs/TODO-TAURI.md`).

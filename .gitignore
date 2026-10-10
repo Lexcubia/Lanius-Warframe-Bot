@@ -1,0 +1,63 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build / cache
+dist/
+build/
+.next/
+.nuxt/
+.output/
+out/
+.turbo/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# Logs & local runtime
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secrets & local config (primary secret store — never commit)
+config.local.yaml
+config.local.yml
+config.local.json
+*.local.yaml
+*.local.yml
+# 运行时覆盖（备案号、定制映射等）；保留 example / gitkeep
+config/local/**
+!config/local/.gitkeep
+!config/local/**/*.example
+!config/local/**/*.yaml.example
+*.pem
+*.key
+secrets/
+.secrets/
+
+# Env files are not the primary secret store; still never commit real secrets
+.env
+.env.*
+!.env.example
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+*.sublime-*
+
+# Test / tool caches
+.eslintcache
+.prettiercache
+.vitest/
+.cache/
+
+# DB dumps that may contain secrets
+*.sqlite
+*.sqlite3
+*.db
+dumps/

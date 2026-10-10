@@ -1,0 +1,41 @@
+# Git / IDE
+.git
+.github
+.cursor
+.idea
+*.md
+!README.md
+
+# Dependencies & builds (rebuilt in image)
+node_modules
+**/node_modules
+**/dist
+**/.nuxt
+**/.output
+**/.turbo
+coverage
+tmp
+
+# Secrets — never bake into images
+config.local.yaml
+config.local.yml
+*.local.yaml
+*.local.yml
+.env
+.env.*
+secrets
+.secrets
+*.pem
+*.key
+
+# Tests / caches
+**/*.test.ts
+**/vitest.config.ts
+.eslintcache
+.prettiercache
+.vitest
+.cache
+
+# Deploy host state (compose runs on server, not inside build context noise)
+deploy/.env
+deploy/data

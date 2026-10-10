@@ -1,0 +1,48 @@
+# 显示名覆盖表（可提交的默认回退）。生产/本机覆盖：config/local/labels.yaml
+# 键为官方内部 id；值为可选 zh/en。未写的语言回退到 WFCD 字典或原键。
+# 重启 API 容器/进程后生效，无需重新发布镜像。
+
+factions:
+  FC_GRINEER:
+    zh: '格林尼尔'
+    en: 'Grineer'
+  FC_CORPUS:
+    zh: 'Corpus'
+    en: 'Corpus'
+  FC_INFESTATION:
+    zh: '感染体'
+    en: 'Infested'
+  FC_OROKIN:
+    zh: 'Orokin'
+    en: 'Orokin'
+  FC_SENTIENT:
+    zh: 'Sentient'
+    en: 'Sentient'
+  FC_CORRUPTED:
+    zh: '堕落者'
+    en: 'Corrupted'
+  FC_NARMER:
+    zh: '纳摩'
+    en: 'Narmer'
+  FC_MITW:
+    zh: '墙中人'
+    en: 'Man in the Wall'
+  FC_SCALDRA:
+    zh: 'Scaldra'
+    en: 'Scaldra'
+  FC_TECHROT:
+    zh: 'Techrot'
+    en: 'Techrot'
+
+# 后续同类覆盖可继续加段，例如：
+# nodes:
+#   SolNode189:
+#     zh: 'Naga（赛德娜）'
+#     en: 'Naga (Sedna)'
+# paths:
+#   /Lotus/Types/...:
+#     zh: '自定义标题'
+#     en: 'Custom title'
+
+nodes: {}
+paths: {}

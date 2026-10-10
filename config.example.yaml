@@ -1,0 +1,50 @@
+# Lanius-Warframe-Bot — example config (safe to commit)
+# Copy to config.local.yaml and fill real values. Never commit config.local.yaml.
+
+qq:
+  appId: 'YOUR_QQ_APP_ID'
+  appSecret: 'YOUR_QQ_APP_SECRET'
+  callbackPath: '/qq/callback'
+
+admin:
+  username: 'admin'
+  # Store a password hash only (argon2/bcrypt). Never store plaintext passwords.
+  passwordHash: '$argon2id$REPLACE_ME'
+  # Session signing secret for future /v1/admin auth.
+  sessionSecret: 'REPLACE_ME_WITH_LONG_RANDOM'
+
+api:
+  # 本地默认环回；Docker 生产由环境变量 HOST=0.0.0.0 覆盖（见 docs/DEPLOY.md）。
+  host: '127.0.0.1'
+  # Avoid 3000/8080 conflicts with common local tools.
+  port: 8787
+  # Optional token for admin / internal callers.
+  adminToken: 'REPLACE_ME_WITH_LONG_RANDOM'
+  upstream:
+    # Override official international worldState URL when needed.
+    worldstateUrl: 'https://api.warframe.com/cdn/worldState.php'
+    # Upstream HTTP timeout in milliseconds.
+    timeoutMs: 8000
+
+bot:
+  # 本地默认环回；Docker 生产由 HOST=0.0.0.0 与 LANIUS_API_BASE=http://api:8787 覆盖。
+  host: '127.0.0.1'
+  port: 8788
+  apiBaseUrl: 'http://127.0.0.1:8787'
+  defaultReplyMode: text # text | image
+  # Local/dev: acknowledge sends without calling Tencent APIs.
+  dryRun: true
+  # Optional deep link appended to QQ text replies.
+  publicSiteBaseUrl: 'http://127.0.0.1:8790'
+  image:
+    maxPerUserPerMinute: 5
+    renderTimeoutMs: 4000
+
+web:
+  apiBaseUrl: 'http://127.0.0.1:8787'
+
+# Non-secret defaults (may later move to DB)
+defaults:
+  realm: international
+  locale: zh
+  qqReplyMode: text # text | image

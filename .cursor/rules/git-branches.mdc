@@ -1,0 +1,27 @@
+---
+description: develop integration, main release archive, SemVer tags — Lanius git model
+alwaysApply: true
+---
+
+# Git branches and releases (hard)
+
+## Roles
+
+- **`develop`**: day-to-day **integration** branch. Feature work merges here.
+- **`main`**: **archive / release** snapshots only — not the daily integration target.
+- **Duty branches**: `feature/<duty>`, `fix/<duty>`, `docs/<duty>`, `release/x.y.z` (or platform-prefixed equivalents that still encode duty, e.g. `Lexcubia/repo-standards-4f3f`).
+
+## Rules
+
+- **Do not create branches casually.** Ask the user first, or use a responsibility/workstream name the user/task already assigned.
+- Never use vague names alone: `temp`, `wip`, `fix`, `agent-*`.
+- Finished feature/fix/docs work → PR into **`develop`** (not `main`).
+- **No direct commits** to `main`. **No direct commits** to `develop` either — only merges/PRs (hotfix process may use short-lived branches merged via PR).
+- Agents work on duty branches; never commit/push straight to `main` or `develop`.
+
+## Versioning
+
+- SemVer `MAJOR.MINOR.PATCH`; release tags **`vX.Y.Z` on `main`**.
+- Update root `package.json` version + `CHANGELOG.md` when cutting a release.
+- Optional `release/x.y.z` to freeze; then merge to `main`, tag, and ensure `develop` receives any release fixes.
+- Full policy: `docs/VERSIONING.md`, `docs/CONTRIBUTING.md` §分支, `AGENTS.md` §分支.

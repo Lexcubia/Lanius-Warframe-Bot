@@ -1,0 +1,31 @@
+{
+  "name": "lanius-warframe-bot",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Lanius-Warframe-Bot — Warframe query API with QQ/web clients (monorepo).",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @lanius/server dev",
+    "dev:api": "pnpm --filter @lanius/server dev",
+    "dev:bot": "pnpm --filter @lanius/bot dev",
+    "dev:web": "pnpm --filter @lanius/web dev",
+    "build": "pnpm -r --filter @lanius/core --filter @lanius/api --filter @lanius/server --filter @lanius/bot run build",
+    "test": "pnpm -r --filter @lanius/core --filter @lanius/api --filter @lanius/server --filter @lanius/ui --filter @lanius/qq-official --filter @lanius/render --filter @lanius/bot run test",
+    "typecheck": "pnpm -r --filter @lanius/core --filter @lanius/api --filter @lanius/server --filter @lanius/ui --filter @lanius/qq-official --filter @lanius/render --filter @lanius/bot run typecheck",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.17.0",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.18.0"
+  }
+}

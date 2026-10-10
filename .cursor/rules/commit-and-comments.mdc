@@ -1,0 +1,45 @@
+---
+description: Commits, comment rate, TSDoc params, naming, no agent chat in comments
+alwaysApply: true
+---
+
+# Commits, naming, and comments (hard)
+
+## Commits
+
+- Conventional Commits: `type(scope): subject`.
+- Scopes: `api` | `bot` | `web` | `core` | `qq` | `render` | `docs` | `repo` | `rules`.
+- Subject: Chinese or English; no `update` / `WIP` / vague subjects.
+- Full rules: `docs/COMMIT_CONVENTION.md`.
+
+## Naming
+
+- Names must be **clear, concise, duty-describing**.
+- No rambling names that embed essays; no meaningless `data` / `temp` / `foo` / `handleStuff`.
+
+## Comment rate ≥ 80%
+
+- Target **≥ 80%** coverage of **comment-required units** in new/changed TS (definition in `docs/CODING_STANDARDS.md` §注释率).
+- Prefer **100%** on newly added functions.
+- **Anti-gaming:** empty `@param x - the x`, restating the identifier only, or padding with noise **does not count**.
+
+## Required TSDoc on functions
+
+- **Every function/method** (exported or not) needs a **multi-line** TSDoc covering:
+  - one-line summary of duty
+  - `@param name - …` for **each** parameter (meaning, units, constraints)
+  - `@returns …` for the return value (or `void` / explicit “no return value” when void)
+  - `@throws …` when callers must handle known errors
+- TSDoc / docs comments: **Chinese body**; English OK for identifiers, types, API field names.
+- Inline “why” comments: Chinese body (English keywords OK); one language style per file.
+
+## Forbidden in comments
+
+- **No agent chat, prompts, conversation logs, or session paste** in comments or source.
+- Comments describe **project/code content only** (behavior, invariants, protocol, domain).
+- No commented-out dead code dumps; no bare `TODO` without action text.
+
+## Docs
+
+- `docs/CODING_STANDARDS.md` §命名 / §注释
+- `AGENTS.md` §注释与文档

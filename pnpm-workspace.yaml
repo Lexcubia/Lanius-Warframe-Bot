@@ -1,0 +1,4 @@
+# pnpm workspace: Lanius API vertical slice (+ future bot/web packages).
+packages:
+  - 'apps/*'
+  - 'packages/*'
