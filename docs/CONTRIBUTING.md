@@ -9,7 +9,7 @@
 3. `cp config.example.yaml config.local.yaml`，填入本地密钥（勿提交）
 4. 按 README 启动 `api` / `bot` / `web`
 
-当前阶段仓库以**规范与工具链**为主；完整 monorepo 脚手架随后续 PR。
+当前已落地 API 垂直切片（`apps/api` + `packages/core` + `packages/api-client`）；QQ / Web 应用随后续 PR。
 
 ## 分支
 
