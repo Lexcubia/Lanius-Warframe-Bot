@@ -7,31 +7,42 @@
 
 ## 当前状态
 
-本仓库已落地 **工程规范 / Cursor 规则与 Skills / IDE 配置**。  
-应用代码（API、QQ 适配、**Nuxt / Vue** Web）按里程碑后续实现，**尚未脚手架完整 monorepo**。
+已脚手架 **API 垂直切片**：`packages/core`、`packages/api-client`、`apps/api`。  
+公开端点：`GET /v1/health`、`/v1/meta`、`/v1/worldstate`（国际服官方 worldState）。  
+QQ 适配与 Nuxt Web **尚未**脚手架（下一阶段）。
 
-| 表面              | 计划路径                                  | MVP / 状态                              |
-| ----------------- | ----------------------------------------- | --------------------------------------- |
-| Lanius API        | `apps/api`（Hono）                        | 国际服查询                              |
-| QQ 官方适配       | `apps/bot`                                | 文本 + 图片回复                         |
-| 公开站 + 管理后台 | `apps/web`（**Nuxt 4** 宿主）             | 国际服 + zh/en；Nuxt UI；`fetch` 客户端 |
-| 共享契约 / UI     | `packages/core`；规划 Vue `ui` / `api-client` | DTO；供 Nuxt 与后期 Tauri 复用       |
-| 桌面 / 移动       | Tauri 2（后期）                           | **现不脚手架**；见 `docs/TODO-TAURI.md` |
+| 表面              | 计划路径                                      | MVP / 状态                                      |
+| ----------------- | --------------------------------------------- | ----------------------------------------------- |
+| Lanius API        | `apps/api`（Hono）                            | ✅ health / meta / worldstate（国际服）         |
+| 共享契约          | `packages/core`                               | ✅ DTO / Zod / 错误码 / realm·locale            |
+| HTTP 客户端       | `packages/api-client`（`fetch`）              | ✅ getHealth / getMeta / getWorldstate          |
+| QQ 官方适配       | `apps/bot`                                    | 文本 + 图片回复（未脚手架）                     |
+| 公开站 + 管理后台 | `apps/web`（**Nuxt 4** 宿主）                 | 国际服 + zh/en（未脚手架）                      |
+| 桌面 / 移动       | Tauri 2（后期）                               | **现不脚手架**；见 `docs/TODO-TAURI.md`         |
 
-## 本地运行（后续）
-
-应用落地后预期流程：
+## 本地运行
 
 ```bash
 pnpm install
-cp config.example.yaml config.local.yaml   # 填入密钥；勿提交
-pnpm --filter @lanius/api dev              # API
-pnpm --filter @lanius/bot dev              # QQ 适配
-pnpm --filter @lanius/web dev              # Web
+cp config.example.yaml config.local.yaml   # 按需覆盖端口/上游 URL；勿提交
+pnpm --filter @lanius/api dev              # 默认 http://127.0.0.1:8787
+```
+
+试探：
+
+```bash
+curl "http://127.0.0.1:8787/v1/health"
+curl "http://127.0.0.1:8787/v1/meta"
+curl "http://127.0.0.1:8787/v1/worldstate?realm=international&locale=zh"
+```
+
+```bash
+pnpm test          # core / api-client / api
+pnpm typecheck
 ```
 
 密钥放在 **`config.local.yaml` 和/或数据库**，不以环境变量为主存储。  
-允许非密钥例外：`NODE_ENV`、`PORT`、配置文件路径覆盖（如 `LANIUS_CONFIG`）。
+允许非密钥例外：`NODE_ENV`、`PORT` / `HOST`、配置路径覆盖（`LANIUS_CONFIG`）。
 
 ## 规范与 Agent 入口
 

@@ -9,10 +9,20 @@ admin:
   username: 'admin'
   # Store a password hash only (argon2/bcrypt). Never store plaintext passwords.
   passwordHash: '$argon2id$REPLACE_ME'
+  # Session signing secret for future /v1/admin auth (not used in API scaffold slice).
+  sessionSecret: 'REPLACE_ME_WITH_LONG_RANDOM'
 
 api:
-  # Optional token for admin / internal callers
+  host: '127.0.0.1'
+  # Avoid 3000/8080 conflicts with common local tools.
+  port: 8787
+  # Optional token for admin / internal callers (reserved; admin routes not in this slice).
   adminToken: 'REPLACE_ME_WITH_LONG_RANDOM'
+  upstream:
+    # Override official international worldState URL when needed.
+    worldstateUrl: 'https://content.warframe.com/dynamic/worldState.php'
+    # Upstream HTTP timeout in milliseconds.
+    timeoutMs: 8000
 
 # Non-secret defaults (may later move to DB)
 defaults:

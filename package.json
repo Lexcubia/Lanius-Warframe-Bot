@@ -2,17 +2,21 @@
   "name": "lanius-warframe-bot",
   "private": true,
   "version": "0.0.0",
-  "description": "Lanius-Warframe-Bot — engineering standards and tooling baseline (apps land in later PRs).",
+  "description": "Lanius-Warframe-Bot — Warframe query API with QQ/web clients (monorepo).",
   "packageManager": "pnpm@9.15.0",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
+    "dev": "pnpm --filter @lanius/api dev",
+    "dev:api": "pnpm --filter @lanius/api dev",
+    "build": "pnpm -r --filter @lanius/core --filter @lanius/api-client --filter @lanius/api run build",
+    "test": "pnpm -r --filter @lanius/core --filter @lanius/api-client --filter @lanius/api run test",
+    "typecheck": "pnpm -r --filter @lanius/core --filter @lanius/api-client --filter @lanius/api run typecheck",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "typecheck": "echo \"No app packages yet; typecheck will run per-package once monorepo apps land.\""
+    "format:check": "prettier --check ."
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",

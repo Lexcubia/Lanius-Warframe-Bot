@@ -1,4 +1,4 @@
-# Placeholder workspace — add apps/* and packages/* when scaffolding the monorepo.
+# pnpm workspace: Lanius API vertical slice (+ future bot/web packages).
 packages:
   - 'apps/*'
   - 'packages/*'

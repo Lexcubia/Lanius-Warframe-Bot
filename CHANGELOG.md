@@ -6,13 +6,20 @@
 
 ## [Unreleased]
 
+### Added
+
+- Monorepo API 垂直切片：`packages/core`、`packages/api-client`、`apps/api`。
+- 公开端点 `GET /v1/health`、`GET /v1/meta`、`GET /v1/worldstate`（国际服官方 worldState 适配 + 进程内 TTL 缓存）。
+- YAML 配置加载（`config.local.yaml` / `config.example.yaml`，`LANIUS_CONFIG` 可覆盖路径）。
+- Vitest 单测覆盖 core 查询解析、worldstate 映射、API 路由与 api-client。
+
 ### Changed
 
 - Web 选型改为 **Nuxt 4 + Vue 3 + Nuxt UI + `@nuxtjs/i18n`**；HTTP 客户端锁定原生 **`fetch`**（`packages/api-client`），不默认 axios。
 - 废弃 Web 默认栈：Next.js / React / shadcn/ui / next-intl；`packages/ui` 改为 Vue-friendly（供后期 Tauri）。
 - 同步 `docs/ARCHITECTURE.md`、`TODO-TAURI.md`、`AGENTS.md`、README、`.cursor/rules` 中相关表述。
 
-### Added
+### Added (earlier)
 
 - 仓库工程规范、Cursor rules/skills、IDE 与 ESLint/Prettier 基线。
 - Git 模型：`develop` 日常集成，`main` 发布归档；SemVer 与 tag 约定。

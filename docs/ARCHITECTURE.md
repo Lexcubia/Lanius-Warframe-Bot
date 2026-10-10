@@ -49,7 +49,9 @@ lanius-warframe-bot/
 └── README.md
 ```
 
-当前仓库可能尚未创建 `apps/` / `packages/`；布局是约定，实现时按此落地。**禁止**在未立项时脚手架 Tauri。  
+**已落地（API 垂直切片）：** `packages/core`、`packages/api-client`、`apps/api`（`/v1/health` · `/v1/meta` · `/v1/worldstate`）。  
+**尚未脚手架：** `apps/bot`、`apps/web`、`packages/qq-official`、`packages/card-render`、`packages/ui`。  
+**禁止**在未立项时脚手架 Tauri。  
 **Web 栈已锁定 Nuxt/Vue**；勿再引入 Next.js / React / shadcn / next-intl 作为 Web 默认。
 
 ## 3. 依赖规则
