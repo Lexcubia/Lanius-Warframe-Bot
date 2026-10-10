@@ -30,25 +30,28 @@ feature/*  fix/*  docs/*  …
 ```
 
 - **日常功能**合入 `develop`，**不**因每个 PR 打 tag。
-- **发布**：从 `develop`（或 `release/x.y.z`）合并进 `main`，在 `main` 上打 **`vX.Y.Z`** annotated tag。
-- Hotfix（已发布线上紧急修复）：从对应 tag / `main` 拉 `fix/...` → 合回 `main`（打 `vX.Y.Z+1` patch）**并**合回 `develop`，避免回归丢失。
+- **发布**：从 `develop`（或 `release/x.y.z`）合并进 `main`；**由 Actions 自动**按 CHANGELOG 最新版本节打 **`vX.Y.Z`** annotated tag，并调用 `release.yml`（GHCR + 部署）。
+- Hotfix（已发布线上紧急修复）：从对应 tag / `main` 拉 `fix/...` → 合回 `main`（CHANGELOG / `package.json` 升 patch）**并**合回 `develop`，避免回归丢失。
 
 ## CHANGELOG
 
 - 维护根目录 [CHANGELOG.md](../CHANGELOG.md)（[Keep a Changelog](https://keepachangelog.com/) 风格）。
 - 每个**已发布**版本一节：`## [X.Y.Z] - YYYY-MM-DD`，下分 `Added` / `Changed` / `Fixed` / `Breaking`（按需）。
-- `## [Unreleased]`：合入 `develop` 的变更先记在这里；发布时挪到对应版本节。
+- `## [Unreleased]`：合入 `develop` 的变更先记在这里；**合入 `main` 前必须清空条目**，并新增对应版本节。
 - 语言：中文或中英短句均可，写清用户/运维可感知的变化。
+- 解析脚本：[scripts/changelog-release-version.mjs](../scripts/changelog-release-version.mjs)；工作流：[auto-tag-on-main.yml](../.github/workflows/auto-tag-on-main.yml)。
 
 ## 发布检查清单（简）
 
-1. `develop` 稳定；`CHANGELOG` 的 Unreleased 已整理为 `X.Y.Z`。
-2. 更新根 `package.json` `"version"` → `X.Y.Z`。
+1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
+2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
 3. PR：`develop` → `main`（或经 `release/x.y.z`）。
-4. 在 `main` 打 tag：`git tag -a vX.Y.Z -m "vX.Y.Z"` 并 push tag。
-5. 确认 `main` 无额外直推 commit。
+4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（构建 GHCR + SSH 部署）。
+5. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过，不重复发版。
+6. 确认 `main` 无额外直推 commit；勿再手工重复打同一 tag（除非刻意补发，可用 `Release` 的 `workflow_dispatch`）。
 
 ## 相关
 
 - 分支策略：[CONTRIBUTING.md](./CONTRIBUTING.md)
+- 部署与 Fork 安全 CI：[DEPLOY.md](./DEPLOY.md)
 - Agent 约束：[AGENTS.md](../AGENTS.md)

@@ -1,5 +1,11 @@
 import type { InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
 
+import {
+  resolveChallengeLabels,
+  resolveFactionLabel,
+  resolveNodeLabel,
+  resolvePathLabel,
+} from './resolve-labels.js';
 import type {
   UpstreamInvasion,
   UpstreamSeasonInfo,
@@ -13,7 +19,7 @@ export const WORLDSTATE_SOURCE = 'warframe-worldstate';
 
 /**
  * Maps official worldState JSON into a Lanius `WorldstateDto`.
- * Upstream field names never leave this function's return shape.
+ * 仅输出活跃入侵；节点/阵营/挑战/奖励在此解析为双语可读名。
  *
  * @param realm - Realm this snapshot belongs to (must be available).
  * @param raw - Parsed upstream JSON object.
@@ -26,6 +32,8 @@ export function mapWorldstate(
   fetchedAt: string,
 ): WorldstateDto {
   const invasions = [...(raw.Invasions ?? []), ...(raw.EventInvasions ?? [])]
+    // 已完成入侵对概览无意义，MVP 不返回。
+    .filter((row) => !row.Completed)
     .map(mapInvasion)
     .filter((row): row is InvasionDto => row !== null);
 
@@ -45,22 +53,24 @@ export function mapWorldstate(
  */
 function mapInvasion(raw: UpstreamInvasion): InvasionDto | null {
   const id = raw._id?.$oid;
-  const node = raw.Node;
-  if (!id || !node) {
+  const nodeKey = raw.Node;
+  if (!id || !nodeKey) {
     return null;
   }
 
-  const attackingFaction = raw.AttackerMissionInfo?.faction ?? 'Unknown';
-  const defendingFaction = raw.DefenderMissionInfo?.faction ?? 'Unknown';
+  const attackingKey = raw.AttackerMissionInfo?.faction ?? 'Unknown';
+  const defendingKey = raw.DefenderMissionInfo?.faction ?? 'Unknown';
   const completionPct = computeCompletionPct(raw.Count, raw.Goal);
+  const attackerRewardKey = firstRewardKey(raw.AttackerReward);
+  const defenderRewardKey = firstRewardKey(raw.DefenderReward);
 
   return {
     id,
-    node,
-    attackingFaction,
-    defendingFaction,
-    attackerReward: firstRewardLabel(raw.AttackerReward),
-    defenderReward: firstRewardLabel(raw.DefenderReward),
+    node: resolveNodeLabel(nodeKey),
+    attackingFaction: resolveFactionLabel(attackingKey),
+    defendingFaction: resolveFactionLabel(defendingKey),
+    attackerReward: attackerRewardKey ? resolvePathLabel(attackerRewardKey) : undefined,
+    defenderReward: defenderRewardKey ? resolvePathLabel(defenderRewardKey) : undefined,
     completionPct,
     expired: Boolean(raw.Completed),
   };
@@ -78,13 +88,14 @@ function mapNightwave(raw: UpstreamSeasonInfo | undefined): NightwaveDto | null 
   }
 
   const activeChallenges = (raw.ActiveChallenges ?? []).map((challenge, index) => {
-    const id = challenge._id?.$oid ?? challenge.Challenge ?? `challenge-${index}`;
+    const path = challenge.Challenge;
+    const id = challenge._id?.$oid ?? path ?? `challenge-${index}`;
     const expiryMs = Number(challenge.expiry?.$date?.$numberLong);
+    const labels = path ? resolveChallengeLabels(path) : undefined;
     return {
       id,
-      title: challenge.Challenge
-        ? { zh: challenge.Challenge, en: challenge.Challenge }
-        : undefined,
+      title: labels?.title,
+      description: labels?.description,
       expiry: Number.isFinite(expiryMs)
         ? new Date(expiryMs).toISOString()
         : undefined,
@@ -120,12 +131,12 @@ function computeCompletionPct(
 }
 
 /**
- * Extracts a short reward label from the first counted item, if any.
+ * Extracts the first reward ItemType path, if any.
  *
  * @param reward - Upstream attacker/defender reward object.
- * @returns Item type string, or `undefined` when empty.
+ * @returns ItemType uniqueName，或 `undefined`
  */
-function firstRewardLabel(
+function firstRewardKey(
   reward:
     | { countedItems?: Array<{ ItemType?: string; ItemCount?: number }> }
     | undefined,

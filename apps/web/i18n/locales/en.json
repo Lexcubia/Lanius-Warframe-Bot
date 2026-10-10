@@ -1,0 +1,38 @@
+{
+  "brand": "Lanius",
+  "nav": {
+    "home": "Home",
+    "worldstate": "World State",
+    "help": "Help",
+    "admin": "Admin"
+  },
+  "home": {
+    "tagline": "World state and commands, clean and handy",
+    "searchPlaceholder": "Search items, relics, aliases…",
+    "searchHint": "Search ships with market/relic endpoints next. Start with World State or Help.",
+    "ctaWorldstate": "Open World State",
+    "searchButton": "Search",
+    "realmNote": "MVP · International live"
+  },
+  "worldstate": {
+    "loading": "Syncing world state…",
+    "error": "Failed to load world state",
+    "retry": "Retry"
+  },
+  "help": {
+    "title": "Command help",
+    "eyebrow": "Commands",
+    "loading": "Loading help…",
+    "error": "Failed to load help",
+    "qqHint": "Each QQ command is its own root (e.g. /worldstate, /mode image). A leading / is optional.",
+    "aliases": "Aliases",
+    "params": "Parameters",
+    "required": "required",
+    "optional": "optional",
+    "examples": "Examples"
+  },
+  "admin": {
+    "title": "Admin",
+    "placeholder": "Auth and ops modules land in a later milestone. This is a shell only."
+  }
+}

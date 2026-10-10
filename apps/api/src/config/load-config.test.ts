@@ -1,6 +1,6 @@
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
@@ -9,9 +9,12 @@ import { loadAppConfig, resolveConfigPath } from './load-config.js';
 describe('resolveConfigPath', () => {
   it('prefers LANIUS_CONFIG override when set', () => {
     const previous = process.env.LANIUS_CONFIG;
-    process.env.LANIUS_CONFIG = 'E:\\custom\\config.yaml';
+    // 使用当前平台绝对路径，保证 Linux CI 与 Windows 本地一致
+    const overridePath = resolve('/custom', 'config.yaml');
+    const cwd = resolve('/repo');
+    process.env.LANIUS_CONFIG = overridePath;
     try {
-      expect(resolveConfigPath('E:\\repo', () => false)).toBe('E:\\custom\\config.yaml');
+      expect(resolveConfigPath(cwd, () => false)).toBe(overridePath);
     } finally {
       if (previous === undefined) {
         delete process.env.LANIUS_CONFIG;
@@ -22,11 +25,21 @@ describe('resolveConfigPath', () => {
   });
 
   it('falls back to config.example.yaml when local is missing', () => {
-    const path = resolveConfigPath('/repo', (candidate) =>
-      candidate.endsWith('config.example.yaml'),
-    );
-    // path.resolve('/repo', ...) is platform-specific (e.g. E:\repo on Windows).
-    expect(path.replace(/\\/g, '/').endsWith('/repo/config.example.yaml')).toBe(true);
+    const previous = process.env.LANIUS_CONFIG;
+    delete process.env.LANIUS_CONFIG;
+    try {
+      const path = resolveConfigPath('/repo', (candidate) =>
+        candidate.endsWith('config.example.yaml'),
+      );
+      // path.resolve('/repo', ...) is platform-specific (e.g. E:\repo on Windows).
+      expect(path.replace(/\\/g, '/').endsWith('/repo/config.example.yaml')).toBe(true);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.LANIUS_CONFIG;
+      } else {
+        process.env.LANIUS_CONFIG = previous;
+      }
+    }
   });
 });
 

@@ -1,0 +1,27 @@
+{
+  "name": "@lanius/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Nuxt 4 public query site + /admin host for Lanius.",
+  "scripts": {
+    "dev": "nuxt dev --port 8790",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck",
+    "prepare": "nuxt prepare"
+  },
+  "dependencies": {
+    "@lanius/api": "workspace:*",
+    "@lanius/core": "workspace:*",
+    "@lanius/ui": "workspace:*",
+    "@nuxt/ui": "^4.0.1",
+    "@nuxtjs/i18n": "^10.0.0",
+    "nuxt": "^4.1.0",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2"
+  }
+}

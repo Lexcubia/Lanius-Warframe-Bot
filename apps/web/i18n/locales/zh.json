@@ -1,0 +1,38 @@
+{
+  "brand": "Lanius",
+  "nav": {
+    "home": "首页",
+    "worldstate": "世界状态",
+    "help": "帮助",
+    "admin": "管理"
+  },
+  "home": {
+    "tagline": "查世界状态、查指令，干净好用",
+    "searchPlaceholder": "搜索物品、遗物、别名…",
+    "searchHint": "搜索接口将随市场/遗物端点一并上线；先从世界状态或帮助页开始。",
+    "ctaWorldstate": "查看世界状态",
+    "searchButton": "搜索",
+    "realmNote": "MVP · 国际服实时"
+  },
+  "worldstate": {
+    "loading": "正在同步世界状态…",
+    "error": "无法加载世界状态",
+    "retry": "重试"
+  },
+  "help": {
+    "title": "指令帮助",
+    "eyebrow": "Commands",
+    "loading": "加载帮助…",
+    "error": "无法加载帮助",
+    "qqHint": "QQ 中每条指令为独立根命令（如 /世界状态、/模式 图片），可带前导 /。",
+    "aliases": "别名",
+    "params": "参数",
+    "required": "必填",
+    "optional": "可选",
+    "examples": "示例"
+  },
+  "admin": {
+    "title": "管理后台",
+    "placeholder": "登录与运维模块将在后续里程碑接入。当前仅保留入口壳。"
+  }
+}

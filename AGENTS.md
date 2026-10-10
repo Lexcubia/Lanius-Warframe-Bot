@@ -23,7 +23,7 @@ Warframe 官方数据（及经文档标注的社区源）
 | -------------------------------------------- | ---------------------------------------- |
 | `apps/bot` / `apps/web` 只调 Lanius API      | 客户端直连 WF 上游或第三方原始接口       |
 | `packages/core` 放 DTO / Zod / 别名 / 错误码 | 在 bot/web 内复制业务查询逻辑            |
-| 规划 Vue `packages/ui` + `fetch` `api-client` | 共享层写死仅 Nuxt / 仅浏览器假设；默认 axios；Web 用 React/Next |
+| 规划 Vue `packages/ui` + `fetch` `packages/api` | 共享层写死仅 Nuxt / 仅浏览器假设；默认 axios；Web 用 React/Next |
 | `packages/qq-official` 仅被 `apps/bot` 使用  | api/web 引用 QQ SDK                      |
 | QQ 消息里放公开站 URL（可选导流）            | QQ 进程依赖 Web，或 Web 依赖 QQ 才能工作 |
 | 现期 Web 做响应式与可插拔（见 TODO-TAURI）   | **现在**脚手架 Tauri 或桌面专用后端      |
@@ -79,20 +79,20 @@ Warframe 官方数据（及经文档标注的社区源）
 2. **所有函数**（含非导出）的**入参与返回值**须有**标准多行 TSDoc**（`@param` / `@returns`；有抛错约定时加 `@throws`）。格式见 CODING_STANDARDS。
 3. 导出类型 / 类 / 重要常量：须有简述职责的文档注释。
 4. 非平凡逻辑块（分支降级、协议、缓存、鉴权）：在块前用简短注释说明**项目内原因**。
-5. TSDoc 主体用 **English**；行内业务说明可用中文或英文（单文件内统一）。
+5. TSDoc / 文档注释主体用 **中文**；标识符、类型名、API 字段名等关键词可保留英文；行内说明同一文件内统一。
 6. **禁止**把 Agent 对话、提示词、聊天记录、会话摘录写进注释或代码。注释**只描述项目与代码本身**。
 7. Commit：`type(scope): subject`。见 [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md)。暂不强制 commitlint。
 
 ## 语言约定
 
-| 场景                                   | 语言                   |
-| -------------------------------------- | ---------------------- |
-| 代码、标识符、API 字段（契约层）       | English                |
-| 用户可见产品文案                       | zh / en（i18n）        |
-| 仓库工程文档（`docs/`、README）        | 中文或中英短双语       |
-| Commit subject / body                  | 中文或英文均可         |
-| 函数 TSDoc（含 `@param` / `@returns`） | English                |
-| 行内注释                               | 中文或英文；单文件统一 |
+| 场景                                   | 语言                             |
+| -------------------------------------- | -------------------------------- |
+| 代码、标识符、API 字段（契约层）       | English                          |
+| 用户可见产品文案                       | zh / en（i18n）                  |
+| 仓库工程文档（`docs/`、README）        | 中文或中英短双语                 |
+| Commit subject / body                  | 中文或英文均可                   |
+| 函数 TSDoc（含 `@param` / `@returns`） | **中文主体**（关键词可用英文）   |
+| 行内注释                               | **中文主体**（关键词可用英文）   |
 
 ## 改代码前
 

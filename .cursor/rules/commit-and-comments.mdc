@@ -8,7 +8,7 @@ alwaysApply: true
 ## Commits
 
 - Conventional Commits: `type(scope): subject`.
-- Scopes: `api` | `bot` | `web` | `core` | `qq` | `card` | `docs` | `repo` | `rules`.
+- Scopes: `api` | `bot` | `web` | `core` | `qq` | `render` | `docs` | `repo` | `rules`.
 - Subject: Chinese or English; no `update` / `WIP` / vague subjects.
 - Full rules: `docs/COMMIT_CONVENTION.md`.
 
@@ -30,8 +30,8 @@ alwaysApply: true
   - `@param name - …` for **each** parameter (meaning, units, constraints)
   - `@returns …` for the return value (or `void` / explicit “no return value” when void)
   - `@throws …` when callers must handle known errors
-- Public/exported API TSDoc language: **English**.
-- Inline “why” comments: Chinese or English; one language per file.
+- TSDoc / docs comments: **Chinese body**; English OK for identifiers, types, API field names.
+- Inline “why” comments: Chinese body (English keywords OK); one language style per file.
 
 ## Forbidden in comments
 

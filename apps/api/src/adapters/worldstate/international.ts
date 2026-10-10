@@ -5,7 +5,7 @@ import type { UpstreamWorldstate } from './types.js';
  * Config may override via `api.upstream.worldstateUrl`.
  */
 export const DEFAULT_WORLDSTATE_URL =
-  'https://content.warframe.com/dynamic/worldState.php';
+  'https://api.warframe.com/cdn/worldState.php';
 
 /**
  * Options for fetching international worldstate from Digital Extremes.

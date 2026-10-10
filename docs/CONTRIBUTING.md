@@ -9,7 +9,12 @@
 3. `cp config.example.yaml config.local.yaml`，填入本地密钥（勿提交）
 4. 按 README 启动 `api` / `bot` / `web`
 
-当前已落地 API 垂直切片（`apps/api` + `packages/core` + `packages/api-client`）；QQ / Web 应用随后续 PR。
+当前已落地 API / Bot / Web 骨架。生产部署与 **Fork 安全 CI** 见 [DEPLOY.md](./DEPLOY.md)。
+
+## CI（开源）
+
+- PR（含 fork）与推送到 `develop`/`main`：只跑测试，**不使用任何部署 secrets**。
+- 推送本仓库 tag `vX.Y.Z`：构建镜像并部署（维护者流程；贡献者无需配置）。
 
 ## 分支
 

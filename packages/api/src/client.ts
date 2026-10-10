@@ -1,13 +1,17 @@
 import {
   FailureEnvelopeSchema,
   HealthDtoSchema,
+  HelpDtoSchema,
   MetaDtoSchema,
+  SiteDtoSchema,
   WorldstateDtoSchema,
   type ApiEnvelope,
   type HealthDto,
+  type HelpDto,
   type Locale,
   type MetaDto,
   type Realm,
+  type SiteDto,
   type WorldstateDto,
 } from '@lanius/core';
 import { z } from 'zod';
@@ -53,8 +57,7 @@ export class LaniusApiClientError extends Error {
 }
 
 /**
- * Thin fetch client for Lanius `/v1` public endpoints.
- * Does not call Warframe upstream; only the Lanius API base URL.
+ * 面向 Lanius `/v1` 公开端点的薄 fetch 客户端（仅请求配置的 `baseUrl`）。
  */
 export class LaniusApiClient {
   private readonly baseUrl: string;
@@ -91,6 +94,26 @@ export class LaniusApiClient {
   }
 
   /**
+   * 调用 `GET /v1/help`。
+   *
+   * @returns 帮助接口的成功或失败包络
+   * @throws LaniusApiClientError 当响应非 JSON 或 schema 校验失败时抛出
+   */
+  async getHelp(): Promise<ApiEnvelope<HelpDto>> {
+    return this.getJson('/v1/help', HelpDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/site`（页脚备案等公开站点配置）。
+   *
+   * @returns 站点配置包络
+   * @throws LaniusApiClientError 当响应非 JSON 或 schema 校验失败时抛出
+   */
+  async getSite(): Promise<ApiEnvelope<SiteDto>> {
+    return this.getJson('/v1/site', SiteDtoSchema);
+  }
+
+  /**
    * Calls `GET /v1/worldstate` with optional realm/locale.
    *
    * @param query - Optional public query parameters.
@@ -121,7 +144,8 @@ export class LaniusApiClient {
    */
   private async getJson<T>(
     path: string,
-    dataSchema: z.ZodType<T>,
+    // 第三泛参为 unknown：带 .default() 的 schema 以输出类型作为 T
+    dataSchema: z.ZodType<T, z.ZodTypeDef, unknown>,
   ): Promise<ApiEnvelope<T>> {
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method: 'GET',

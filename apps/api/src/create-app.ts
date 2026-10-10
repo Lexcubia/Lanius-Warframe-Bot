@@ -7,7 +7,9 @@ import type { AppContext, AppVariables } from './app-context.js';
 import { HttpError, internalError, validationError } from './lib/http-error.js';
 import { requestIdMiddleware } from './middleware/request-id.js';
 import { healthRoutes } from './routes/health.js';
+import { helpRoutes } from './routes/help.js';
 import { metaRoutes } from './routes/meta.js';
+import { siteRoutes } from './routes/site.js';
 import { worldstateRoutes } from './routes/worldstate.js';
 
 /**
@@ -28,6 +30,8 @@ export function createApp(appContext: AppContext) {
   const v1 = new Hono<{ Variables: AppVariables }>();
   v1.route('/', healthRoutes());
   v1.route('/', metaRoutes());
+  v1.route('/', helpRoutes());
+  v1.route('/', siteRoutes());
   v1.route('/', worldstateRoutes());
   app.route('/v1', v1);
 

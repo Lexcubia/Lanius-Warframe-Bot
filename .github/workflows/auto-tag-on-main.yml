@@ -1,0 +1,72 @@
+# main 合入后：按 CHANGELOG 最新版本节打 annotated tag，并经 workflow_call 调用 Release（GHCR + 部署）。
+
+name: Auto tag on main
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: auto-tag-main
+  cancel-in-progress: false
+
+jobs:
+  resolve-and-tag:
+    name: resolve-changelog-and-tag
+    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      tag: ${{ steps.ver.outputs.tag }}
+      should_release: ${{ steps.decide.outputs.should_release }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve version from CHANGELOG
+        id: ver
+        run: node scripts/changelog-release-version.mjs --github-output
+
+      - name: Decide whether to create tag
+        id: decide
+        run: |
+          TAG='${{ steps.ver.outputs.tag }}'
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "Tag ${TAG} already exists — skip release."
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Tag ${TAG} will be created."
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create annotated tag
+        if: steps.decide.outputs.should_release == 'true'
+        run: |
+          TAG='${{ steps.ver.outputs.tag }}'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "${TAG}" -m "${TAG}"
+          git push origin "refs/tags/${TAG}"
+
+  release:
+    name: release-via-call
+    needs: resolve-and-tag
+    if: >
+      github.repository == 'Lexcubia/Lanius-Warframe-Bot' &&
+      needs.resolve-and-tag.outputs.should_release == 'true'
+    uses: ./.github/workflows/release.yml
+    with:
+      image_tag: ${{ needs.resolve-and-tag.outputs.tag }}
+    secrets: inherit

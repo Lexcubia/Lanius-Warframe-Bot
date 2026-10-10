@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * Vitest config for `@lanius/api` route and mapper unit tests.
+ * Vitest config for `@lanius/server` route and mapper unit tests.
  *
  * @returns Vitest configuration object for this package.
  */

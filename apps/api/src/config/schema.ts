@@ -27,7 +27,7 @@ export const AppConfigSchema = z.object({
         worldstateUrl: z
           .string()
           .url()
-          .default('https://content.warframe.com/dynamic/worldState.php'),
+          .default('https://api.warframe.com/cdn/worldState.php'),
         timeoutMs: z.number().int().positive().default(8000),
       })
       .default({}),
@@ -37,7 +37,6 @@ export const AppConfigSchema = z.object({
       realm: z.enum(['international', 'china']).default('international'),
       locale: z.enum(['zh', 'en']).default('zh'),
       qqReplyMode: z.enum(['text', 'image']).default('text'),
-      commandPrefix: z.string().default('wf'),
     })
     .default({}),
 });

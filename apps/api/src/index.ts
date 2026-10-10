@@ -1,8 +1,14 @@
 import { serve } from '@hono/node-server';
 import { resolve } from 'node:path';
 
+import { setLabelOverrides } from './adapters/worldstate/label-overrides.js';
 import { createApp } from './create-app.js';
 import { loadAppConfig } from './config/load-config.js';
+import {
+  loadLabelsConfig,
+  loadSiteConfig,
+  resolveRuntimeConfigRoot,
+} from './config/runtime-config.js';
 import { createLogger } from './lib/logger.js';
 import { TtlCache } from './lib/ttl-cache.js';
 import { WorldstateService } from './services/worldstate-service.js';
@@ -10,7 +16,7 @@ import type { WorldstateDto } from '@lanius/core';
 
 /**
  * Resolves the monorepo root for config loading.
- * When started via `pnpm --filter @lanius/api`, cwd is often `apps/api`.
+ * When started via `pnpm --filter @lanius/server`, cwd is often `apps/api`.
  *
  * @param cwd - Process working directory.
  * @returns Absolute path to the repository root (parent of `apps/` when applicable).
@@ -30,7 +36,21 @@ function resolveRepoRoot(cwd: string = process.cwd()): string {
 function main(): void {
   const repoRoot = resolveRepoRoot();
   const config = loadAppConfig(repoRoot);
+  const runtimeRoot = resolveRuntimeConfigRoot(repoRoot);
+  const site = loadSiteConfig(runtimeRoot);
+  const labels = loadLabelsConfig(runtimeRoot);
+  setLabelOverrides(labels);
+
   const logger = createLogger();
+  logger.info(
+    {
+      runtimeRoot,
+      factionOverrides: Object.keys(labels.factions).length,
+      footerLines: site.footer.lines.length,
+    },
+    'loaded runtime config (default+local)',
+  );
+
   const worldstateCache = new TtlCache<WorldstateDto>();
   const worldstateService = new WorldstateService({
     cache: worldstateCache,
@@ -45,6 +65,7 @@ function main(): void {
     startedAtMs: Date.now(),
     worldstateCache,
     worldstateService,
+    site,
     version: '0.0.0',
   });
 

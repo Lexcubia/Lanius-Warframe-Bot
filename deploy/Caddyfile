@@ -1,0 +1,14 @@
+# Lanius 同域入口。DOMAIN 由 compose 环境变量注入（如 warframe.example.com）。
+{$DOMAIN:localhost} {
+	encode gzip
+
+	# QQ 官方回调 → bot（路径与 config 中 qq.callbackPath 对齐）
+	handle /qq/* {
+		reverse_proxy bot:8788
+	}
+
+	# 其余流量 → Nuxt（浏览器 API 经 Web 的 /api/lanius Nitro 代理到内网 api）
+	handle {
+		reverse_proxy web:8790
+	}
+}

@@ -13,16 +13,16 @@ Target layout:
 - `apps/bot` — Official QQ adapter (commands → API → text/image reply)
 - `apps/web` — Nuxt 4 public site + `/admin` (current UI host; API client only)
 - `packages/core` — DTOs, Zod, aliases, error codes, realm/locale
-- `packages/api-client` / `packages/ui` — planned shared `fetch` client + Vue presentational UI (Nuxt + future Tauri)
+- `packages/api` / `packages/ui` — planned shared `fetch` client + Vue presentational UI (Nuxt + future Tauri)
 - `packages/qq-official` — QQ verify/events/send; **bot only**
-- `packages/card-render` — image-mode cards; bot (MVP), optional API preview
+- `packages/render` — image-mode cards; bot (MVP), optional API preview
 - Later: Tauri hosts — **do not scaffold now** (`docs/TODO-TAURI.md`)
 
 Rules:
 
 - Put shared query contracts in `core`; do not duplicate business query logic in bot/web.
-- Prefer pluggable `api-client` / Vue `ui` over Nuxt-only coupling in shared layers.
-- Do **not** default to axios; use native `fetch` via `api-client`.
+- Prefer pluggable `packages/api` / Vue `ui` over Nuxt-only coupling in shared layers.
+- Do **not** default to axios; use native `fetch` via `packages/api`.
 - Do **not** reintroduce Next.js / React / shadcn / next-intl as the Web stack.
 - `qq-official` must not be imported by `api` or `web`.
 - Upstream fetch adapters belong under `apps/api` (or API-owned packages), never in web/bot.
