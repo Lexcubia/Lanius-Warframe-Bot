@@ -101,6 +101,13 @@ BREAKING CHANGE: `itemName` renamed to `name` in MarketItemDto.
 
 或在 type 后加 `!`：`feat(api)!: rename market DTO fields`。
 
+## 分支（与 commit 配合）
+
+Commit 只应出现在**职责/工作流分支**上，不得直接打在 `main`：
+
+- 勿随意建分支；需新建时先问用户，或使用职责清晰的命名（见 [CONTRIBUTING.md](./CONTRIBUTING.md) §分支、[AGENTS.md](../AGENTS.md) §分支）。
+- 功能完成后经 PR **合并进 `main`**；`main` **只接受 merge，不接受直推 commit**。
+
 ## Agent / 自动化
 
 - Cursor Agent 与本地手写 commit **均须**遵守本规范。
@@ -108,5 +115,5 @@ BREAKING CHANGE: `itemName` renamed to `name` in MarketItemDto.
 
 ## 相关
 
-- [CONTRIBUTING.md](./CONTRIBUTING.md)
-- [CODING_STANDARDS.md](./CODING_STANDARDS.md)（含注释规范）
+- [CONTRIBUTING.md](./CONTRIBUTING.md)（分支策略）
+- [CODING_STANDARDS.md](./CODING_STANDARDS.md)（注释率、TSDoc、命名）

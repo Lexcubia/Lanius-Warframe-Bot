@@ -38,9 +38,9 @@ pnpm --filter @lanius/web dev              # Web
 | -------------------------------------------------------- | ---------------------------- |
 | [AGENTS.md](./AGENTS.md)                                 | 给人类与 Agent 的总约束      |
 | [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)           | 架构边界与模块               |
-| [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码与注释规范               |
+| [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码、命名、注释率与 TSDoc   |
 | [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope |
-| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 贡献与 PR 流程               |
+| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程           |
 | `.cursor/rules/`                                         | Cursor 项目规则              |
 | `.cursor/skills/`                                        | 可复用工作流 Skills          |
 | `.vscode/`                                               | 推荐扩展与编辑器设置         |

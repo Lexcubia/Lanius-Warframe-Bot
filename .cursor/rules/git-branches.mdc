@@ -1,0 +1,12 @@
+---
+description: Branch and main-branch merge policy for Lanius agents
+alwaysApply: true
+---
+
+# Git branches (hard)
+
+- **Do not create branches casually.** Before `git checkout -b` / creating a branch: **ask the user**, unless the user (or assigned task) already named the workstream branch.
+- If creating an allowed branch: name it by **responsibility / workstream** (clear duty), e.g. `Lexcubia/repo-standards-4f3f`, `Lexcubia/api-worldstate-4f3f`. Never `temp`, `wip`, `fix`, `agent-*` alone.
+- Work only on the duty branch. When the feature/work is finished: open/update PR and **merge into the main development branch** (`main`).
+- **`main` accepts merges only — never commit or push directly to `main`.**
+- Full text: `AGENTS.md` §分支, `docs/CONTRIBUTING.md` §分支.

@@ -1,23 +1,45 @@
 ---
-description: Commit message and code comment conventions for Lanius
+description: Commits, comment rate, TSDoc params, naming, no agent chat in comments
 alwaysApply: true
 ---
 
-# Commits and comments
+# Commits, naming, and comments (hard)
 
 ## Commits
 
-- Use Conventional Commits: `type(scope): subject`.
+- Conventional Commits: `type(scope): subject`.
 - Scopes: `api` | `bot` | `web` | `core` | `qq` | `card` | `docs` | `repo` | `rules`.
-- Subject: imperative; Chinese or English OK; one language per commit; explain why in body when non-obvious.
-- No vague subjects (`update`, `WIP`, `fix stuff`).
+- Subject: Chinese or English; no `update` / `WIP` / vague subjects.
 - Full rules: `docs/COMMIT_CONVENTION.md`.
 
-## Comments
+## Naming
 
-- Prefer clarity via names/types; comment only **why**, invariants, workarounds, or non-obvious constraints.
-- **No noise**: no narrating `i++`, no commented-out dead code, no obvious restatements.
-- **Public exports** (`packages/core`, public API helpers): TSDoc/JSDoc in **English**.
-- **Inline comments**: Chinese or English; prefer one language per file.
-- TODOs: `TODO(scope): …` or `TODO: …` with actionable text; optional ticket/owner. No bare `TODO`.
-- Full rules: `docs/CODING_STANDARDS.md` §注释.
+- Names must be **clear, concise, duty-describing**.
+- No rambling names that embed essays; no meaningless `data` / `temp` / `foo` / `handleStuff`.
+
+## Comment rate ≥ 80%
+
+- Target **≥ 80%** coverage of **comment-required units** in new/changed TS (definition in `docs/CODING_STANDARDS.md` §注释率).
+- Prefer **100%** on newly added functions.
+- **Anti-gaming:** empty `@param x - the x`, restating the identifier only, or padding with noise **does not count**.
+
+## Required TSDoc on functions
+
+- **Every function/method** (exported or not) needs a **multi-line** TSDoc covering:
+  - one-line summary of duty
+  - `@param name - …` for **each** parameter (meaning, units, constraints)
+  - `@returns …` for the return value (or `void` / explicit “no return value” when void)
+  - `@throws …` when callers must handle known errors
+- Public/exported API TSDoc language: **English**.
+- Inline “why” comments: Chinese or English; one language per file.
+
+## Forbidden in comments
+
+- **No agent chat, prompts, conversation logs, or session paste** in comments or source.
+- Comments describe **project/code content only** (behavior, invariants, protocol, domain).
+- No commented-out dead code dumps; no bare `TODO` without action text.
+
+## Docs
+
+- `docs/CODING_STANDARDS.md` §命名 / §注释
+- `AGENTS.md` §注释与文档

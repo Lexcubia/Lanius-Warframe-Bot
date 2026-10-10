@@ -11,12 +11,20 @@
 
 当前阶段仓库以**规范与工具链**为主；完整 monorepo 脚手架随后续 PR。
 
-## 分支与 PR
+## 分支
 
-1. 从 `main` 拉功能分支（团队约定前缀时请遵守）。
-2. 保持 PR 聚焦：一次一件事（规范、API、Bot、Web 勿无必要混装）。
-3. 草稿 PR 可用于早期讨论；就绪后标 Ready。
-4. 描述中写清：动机、改动面、如何验证、是否触及密钥/QQ/区服。
+硬约束（Agent 与人类相同）：
+
+1. **不要随意新建分支。** 需要新分支时：先征得用户同意；或按已指定的**职责/工作流**命名并沿用（例：`Lexcubia/repo-standards-4f3f`、`Lexcubia/api-worldstate-4f3f`）。
+2. 分支名须能看出职责；禁止 `temp` / `wip` / `fix` / `agent-1` 等模糊名。
+3. 日常开发在职责分支上 commit；完成后开 PR，**合并进主开发分支 `main`**。
+4. **`main` 只接受合并，禁止直接在 `main` 上 commit 或 push。**
+
+PR 要求：
+
+- 保持聚焦：一次一件事（规范、API、Bot、Web 勿无必要混装）。
+- 草稿可用于早期讨论；就绪后标 Ready。
+- 描述写清：动机、改动面、如何验证、是否触及密钥/QQ/区服。
 
 ## Commit 信息
 
@@ -36,16 +44,23 @@
 - [ ] MVP 是否误上线了国服数据路径？
 - [ ] 拼写是否为 **Lanius**？
 - [ ] 用户文案是否考虑 zh/en？
+- [ ] 是否误在 `main` 上直接提交？
+- [ ] 新增/改动函数是否具备完整 `@param` / `@returns` TSDoc？注释率是否达标？
+- [ ] 注释中是否误含 Agent 对话？（必须为否）
 
 ## 代码风格
 
-- 遵循 [CODING_STANDARDS.md](./CODING_STANDARDS.md)（含**注释规范**：TSDoc 英文、行内中/英、无噪音注释）。
-- 格式化：Prettier；静态检查：ESLint（`pnpm lint` / `pnpm format` 在根 `package.json` 就绪后使用）。
+- 遵循 [CODING_STANDARDS.md](./CODING_STANDARDS.md)：
+  - 命名清晰简洁、描述职责；
+  - 注释率 ≥ 80%（定义见该文档）；
+  - 全部函数多行 TSDoc（入参/出参）；
+  - 禁止 Agent 对话进注释。
+- 格式化：Prettier；静态检查：ESLint（`pnpm lint` / `pnpm format`）。
 - VS Code：安装 `.vscode/extensions.json` 推荐扩展。
 
 ## Agent / Cursor
 
-- 规则：`.cursor/rules/`
+- 规则：`.cursor/rules/`（含 `git-branches.mdc`、`commit-and-comments.mdc`）
 - Skills：`.cursor/skills/`（新增 API 端点、QQ 命令、同步 WF 数据源等）
 - 不要扩大产品非目标（见 AGENTS.md）。
 
