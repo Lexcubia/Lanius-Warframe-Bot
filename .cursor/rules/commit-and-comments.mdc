@@ -1,0 +1,23 @@
+---
+description: Commit message and code comment conventions for Lanius
+alwaysApply: true
+---
+
+# Commits and comments
+
+## Commits
+
+- Use Conventional Commits: `type(scope): subject`.
+- Scopes: `api` | `bot` | `web` | `core` | `qq` | `card` | `docs` | `repo` | `rules`.
+- Subject: imperative; Chinese or English OK; one language per commit; explain why in body when non-obvious.
+- No vague subjects (`update`, `WIP`, `fix stuff`).
+- Full rules: `docs/COMMIT_CONVENTION.md`.
+
+## Comments
+
+- Prefer clarity via names/types; comment only **why**, invariants, workarounds, or non-obvious constraints.
+- **No noise**: no narrating `i++`, no commented-out dead code, no obvious restatements.
+- **Public exports** (`packages/core`, public API helpers): TSDoc/JSDoc in **English**.
+- **Inline comments**: Chinese or English; prefer one language per file.
+- TODOs: `TODO(scope): …` or `TODO: …` with actionable text; optional ticket/owner. No bare `TODO`.
+- Full rules: `docs/CODING_STANDARDS.md` §注释.

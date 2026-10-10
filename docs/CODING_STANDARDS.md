@@ -37,21 +37,68 @@ Lint/Format：**ESLint + Prettier**（见仓库根配置）。
 ## 5. i18n 与文案
 
 - 用户可见字符串走文案键（zh/en），代码里不硬编码单语长文案（测试夹具除外）。
-- 标识符、注释（面向开发者）用英文；产品说明文档可用中文。
+- 标识符、类型名、API 契约字段用 **English**；产品说明文档可用中文。
 
-## 6. 测试
+## 6. 注释规范
+
+原则：**能靠命名与类型说清的，不写注释**；注释只补充「为什么」、不变量、权衡、外部约束（QQ/官方 API/ToS）。
+
+### 6.1 语言
+
+| 场景                               | 语言                                            |
+| ---------------------------------- | ----------------------------------------------- |
+| 导出 API / 公共模块的 TSDoc、JSDoc | **English**（与标识符一致，便于工具与跨贡献者） |
+| 行内/块注释（说明业务原因、坑）    | **中文或英文均可**；同一文件内尽量统一          |
+| 用户可见文案                       | 走 i18n，不写进注释当文案源                     |
+
+### 6.2 何时写
+
+- 非显然的算法、缓存一致性、降级路径（如图片→文本）。
+- 与腾讯开放平台 / Warframe 上游行为相关的约束。
+- 临时 workaround：写清原因与移除条件。
+- `packages/core` 与对外稳定函数：用简短 TSDoc 说明参数、错误与副作用。
+
+### 6.3 何时不写
+
+- 「把 x 加一」「返回结果」等复述代码的噪音注释。
+- 大段注释掉的旧代码（应删；需要时用 git 历史）。
+- 为通过「看起来有文档」而堆砌的空 JSDoc（`@param x - the x`）。
+
+### 6.4 TSDoc 示例
+
+```ts
+/**
+ * Resolve a player-facing alias to a canonical item id.
+ * @param locale - `zh` or `en`; used only for alias tables
+ * @returns Canonical id, or `null` if unknown
+ */
+export function resolveAlias(raw: string, locale: Locale): string | null;
+```
+
+### 6.5 TODO / FIXME
+
+```ts
+// TODO(api): wire china realm upstream after MVP
+// FIXME(bot): retry official image upload once on 5xx
+```
+
+- 必须带可执行含义；禁止裸 `// TODO`。
+- 可选 `TODO(scope):`；有工单则附链接或编号。
+
+## 7. 测试
 
 - 纯函数 / DTO / 别名解析：Vitest 单测。
 - Formatter 与卡片渲染：快照或黄金文件（控制体积）。
 - 不为「测而测」加脆弱的 E2E；里程碑阶段再补关键路径。
 
-## 7. 安全
+## 8. 安全
 
 - 密钥只从配置文件/DB 加载；示例文件无真实值。
 - 管理接口鉴权；公开查询只读且限流。
 - 不在日志/错误响应中回显 Secret。
 
-## 8. Git
+## 9. Git
 
-- 小步提交；信息说明「为什么」。
+- 提交信息遵循 [COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md)（Conventional Commits + 本仓库 scope）。
+- 小步提交；body 写清「为什么」。
 - 禁止提交 `config.local.yaml`、`node_modules`、含密钥的 dump。

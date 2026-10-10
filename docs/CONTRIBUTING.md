@@ -18,6 +18,14 @@
 3. 草稿 PR 可用于早期讨论；就绪后标 Ready。
 4. 描述中写清：动机、改动面、如何验证、是否触及密钥/QQ/区服。
 
+## Commit 信息
+
+遵循 [COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md)：
+
+- 格式：`type(scope): subject`（如 `fix(bot): …`、`docs(repo): …`）。
+- subject 可用中文或英文；说明意图，避免 `update` / `WIP`。
+- 暂不强制 commitlint；评审与 Agent 规则会按该文档检查。
+
 ## 范围检查清单
 
 在打开 PR 前自问：
@@ -31,7 +39,7 @@
 
 ## 代码风格
 
-- 遵循 [CODING_STANDARDS.md](./CODING_STANDARDS.md)。
+- 遵循 [CODING_STANDARDS.md](./CODING_STANDARDS.md)（含**注释规范**：TSDoc 英文、行内中/英、无噪音注释）。
 - 格式化：Prettier；静态检查：ESLint（`pnpm lint` / `pnpm format` 在根 `package.json` 就绪后使用）。
 - VS Code：安装 `.vscode/extensions.json` 推荐扩展。
 

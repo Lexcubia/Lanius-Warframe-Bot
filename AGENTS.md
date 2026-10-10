@@ -51,7 +51,15 @@ Warframe 官方数据（及经文档标注的社区源）
 | 代码、标识符、API 字段（契约层）                        | English                  |
 | 用户可见产品文案（QQ 回复、Web UI、错误消息键对应文案） | zh / en（i18n）          |
 | 仓库工程文档（`docs/`、README）                         | 中文或中英短双语         |
-| Commit / PR 说明                                        | 中文或英文均可，保持清晰 |
+| Commit subject / body                                   | 中文或英文均可；见下节   |
+| 导出 API 的 TSDoc                                       | English                  |
+| 行内注释                                                | 中文或英文；单文件内统一 |
+
+## Commit 与注释
+
+- Commit：`type(scope): subject`（Conventional Commits）。scope 示例：`api` / `bot` / `web` / `core` / `docs` / `repo` / `rules`。详见 [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md)。
+- 注释：少写、写「为什么」；公共导出用英文 TSDoc；禁止噪音注释与裸 `TODO`。详见 [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md) §注释。
+- 当前不强制 commitlint/husky；Agent 与人工提交均须自觉遵守。
 
 ## 改代码前
 
