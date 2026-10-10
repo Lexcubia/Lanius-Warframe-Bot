@@ -42,7 +42,7 @@
 | `web`   | `apps/web`（公开站与 admin） |
 | `core`  | `packages/core`              |
 | `qq`    | `packages/qq-official`       |
-| `card`  | `packages/card-render`       |
+| `render`| `packages/render`            |
 | `docs`  | `docs/`、README、AGENTS 等   |
 | `repo`  | 根配置、gitignore、工具链    |
 | `rules` | `.cursor/rules` / skills     |

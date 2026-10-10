@@ -1,0 +1,20 @@
+/* Lanius visual tokens — keep values aligned with tokens.ts */
+:root {
+  --lanius-void: #f3f8fc;
+  --lanius-panel: #ffffff;
+  --lanius-panel-raised: #f7fbff;
+  --lanius-border: #d5e4f0;
+  --lanius-border-bright: #b7cfe0;
+  --lanius-text: #1c2f42;
+  --lanius-text-muted: #5d7388;
+  --lanius-accent: #14b8a6;
+  --lanius-accent-dim: #0d9488;
+  --lanius-warn: #f59e0b;
+  --lanius-danger: #ef4444;
+  --lanius-success: #22c55e;
+  --lanius-brand: #0f766e;
+  --lanius-highlight: #ff7a59;
+  --lanius-font-display: 'Sora', 'Noto Sans SC', sans-serif;
+  --lanius-font-body: 'Source Sans 3', 'Noto Sans SC', sans-serif;
+  --lanius-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}

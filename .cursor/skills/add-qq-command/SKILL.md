@@ -15,7 +15,7 @@ Parse a user command in `apps/bot`, call **Lanius API** only, format text and/or
 2. **Command parser** — Register pattern (prefix from config, e.g. `wf …`). Keep aliases in config/`core`, not hardcoded one-offs without docs.
 3. **HTTP client** — Call Lanius API with `realm` / `locale` from group/user defaults (MVP realm = international).
 4. **Text formatter** — Map DTO → short QQ-friendly text (i18n keys).
-5. **Image path** — If reply mode is image, render via `packages/card-render`; on failure, fall back to text + brief notice.
+5. **Image path** — If reply mode is image, render via `packages/render`; on failure, fall back to text + brief notice.
 6. **Send** — Use `packages/qq-official` only (no unofficial protocol).
 7. **Tests** — Parser unit tests; formatter snapshot if non-trivial.
 

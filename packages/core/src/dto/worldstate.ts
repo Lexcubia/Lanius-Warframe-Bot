@@ -17,14 +17,15 @@ export type LocalizedName = z.infer<typeof LocalizedNameSchema>;
 
 /**
  * Single invasion mission normalized for Lanius clients.
+ * 节点 / 阵营 / 奖励均为可读显示名，不再透传官方内部键。
  */
 export const InvasionDtoSchema = z.object({
   id: z.string().min(1),
-  node: z.string().min(1),
-  attackingFaction: z.string().min(1),
-  defendingFaction: z.string().min(1),
-  attackerReward: z.string().optional(),
-  defenderReward: z.string().optional(),
+  node: LocalizedNameSchema,
+  attackingFaction: LocalizedNameSchema,
+  defendingFaction: LocalizedNameSchema,
+  attackerReward: LocalizedNameSchema.optional(),
+  defenderReward: LocalizedNameSchema.optional(),
   completionPct: z.number().min(0).max(100).optional(),
   expired: z.boolean(),
 });

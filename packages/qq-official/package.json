@@ -1,9 +1,9 @@
 {
-  "name": "@lanius/api-client",
+  "name": "@lanius/qq-official",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Thin fetch-based Lanius API client with injectable baseUrl (no axios).",
+  "description": "Tencent official QQ bot helpers: verify callbacks, send text/image. Bot-only.",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -14,17 +14,11 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "@lanius/core": "workspace:*",
-    "zod": "^3.24.1"
+    "test": "vitest run"
   },
   "devDependencies": {
-    "tsup": "^8.3.5",
+    "@types/node": "^22.10.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }

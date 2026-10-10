@@ -22,11 +22,21 @@ describe('resolveConfigPath', () => {
   });
 
   it('falls back to config.example.yaml when local is missing', () => {
-    const path = resolveConfigPath('/repo', (candidate) =>
-      candidate.endsWith('config.example.yaml'),
-    );
-    // path.resolve('/repo', ...) is platform-specific (e.g. E:\repo on Windows).
-    expect(path.replace(/\\/g, '/').endsWith('/repo/config.example.yaml')).toBe(true);
+    const previous = process.env.LANIUS_CONFIG;
+    delete process.env.LANIUS_CONFIG;
+    try {
+      const path = resolveConfigPath('/repo', (candidate) =>
+        candidate.endsWith('config.example.yaml'),
+      );
+      // path.resolve('/repo', ...) is platform-specific (e.g. E:\repo on Windows).
+      expect(path.replace(/\\/g, '/').endsWith('/repo/config.example.yaml')).toBe(true);
+    } finally {
+      if (previous === undefined) {
+        delete process.env.LANIUS_CONFIG;
+      } else {
+        process.env.LANIUS_CONFIG = previous;
+      }
+    }
   });
 });
 

@@ -18,6 +18,8 @@ export {
   type Locale,
 } from './locale.js';
 
+export { pickLocalized } from './localized.js';
+
 export { ErrorCode, ErrorMessageKey } from './errors.js';
 export type { ErrorCode as ErrorCodeName } from './errors.js';
 
@@ -61,3 +63,36 @@ export {
   type NightwaveDto,
   type WorldstateDto,
 } from './dto/worldstate.js';
+
+export {
+  HelpDtoSchema,
+  HelpLineSchema,
+  HelpParamSchema,
+  type HelpDto,
+  type HelpLine,
+  type HelpParam,
+} from './dto/help.js';
+
+export {
+  LANIUS_COMMAND_CATALOG,
+  buildHelpDto,
+  findCommandByRoot,
+  type CommandDef,
+  type CommandParamDef,
+} from './commands/catalog.js';
+
+export {
+  SiteDtoSchema,
+  SiteFooterLineSchema,
+  SiteFooterSchema,
+  type SiteDto,
+  type SiteFooter,
+  type SiteFooterLine,
+} from './dto/site.js';
+
+export {
+  LabelOverrideSchema,
+  LabelsConfigSchema,
+  type LabelOverride,
+  type LabelsConfig,
+} from './dto/labels.js';

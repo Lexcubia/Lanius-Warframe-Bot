@@ -26,7 +26,6 @@ function testConfig(): AppConfig {
       realm: 'international',
       locale: 'zh',
       qqReplyMode: 'text',
-      commandPrefix: 'wf',
     },
   };
 }
@@ -61,6 +60,12 @@ function createTestApp(upstreamBody: unknown) {
     startedAtMs: Date.now() - 5_000,
     worldstateCache: cache,
     worldstateService,
+    site: {
+      footer: {
+        copyright: 'Test',
+        lines: [{ text: '粤ICP备测试号', href: 'https://beian.miit.gov.cn/' }],
+      },
+    },
     version: '0.0.0-test',
   });
 }
@@ -76,6 +81,15 @@ async function readJson(response: Response): Promise<Record<string, any>> {
 }
 
 describe('createApp routes', () => {
+  it('returns site footer from runtime config', async () => {
+    const app = createTestApp({});
+    const response = await app.request('/v1/site');
+    expect(response.status).toBe(200);
+    const body = await readJson(response);
+    expect(body.ok).toBe(true);
+    expect(body.data.footer.lines[0].text).toContain('ICP');
+  });
+
   it('returns health envelope', async () => {
     const app = createTestApp({});
     const response = await app.request('/v1/health');
@@ -121,7 +135,9 @@ describe('createApp routes', () => {
     expect(response.status).toBe(200);
     const body = await readJson(response);
     expect(body.ok).toBe(true);
-    expect(body.data.invasions[0].node).toBe('SolNode99');
+    expect(body.data.invasions[0].node.en).toBeTruthy();
+    expect(body.data.invasions[0].attackingFaction.en).toBe('Infested');
+    expect(body.data.invasions[0].defendingFaction.en).toBe('Grineer');
     expect(body.meta.source).toBe('warframe-worldstate');
     expect(body.meta.locale).toBe('en');
   });

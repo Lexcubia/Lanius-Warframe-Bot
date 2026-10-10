@@ -8,7 +8,7 @@ alwaysApply: true
 - **Decision:** Later consider Windows desktop + mobile via **Tauri 2**. **Do not** scaffold Tauri, add Rust desktop crates, or create `apps/desktop` / `apps/mobile` until explicitly tasked.
 - **Current UI host:** Nuxt 4 / Vue (`apps/web`). Business data still only via **Lanius API**.
 - When implementing Web UI or clients:
-  - Prefer future **`packages/ui`** (Vue SFCs) + **`packages/api-client`** (injectable `baseUrl` / native `fetch`; **no** default axios).
+  - Prefer future **`packages/ui`** (Vue SFCs) + **`packages/api`** (injectable `baseUrl` / native `fetch`; **no** default axios).
   - Keep shared layers free of hard web-only assumptions (`vue-router` / `NuxtLink` / `#app` in presentational packages, `window`-only APIs without adapters).
   - Leave Nuxt-only concerns (SSR SEO, route middleware, Nitro BFF rewrites, HttpOnly cookie session bridge) in `apps/web`.
   - Ship **responsive** layouts (narrow + wide); critical actions must not be hover-only.

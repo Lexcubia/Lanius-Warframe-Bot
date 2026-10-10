@@ -1,9 +1,9 @@
 import { defineConfig } from 'vitest/config';
 
 /**
- * Vitest config for `@lanius/api-client` unit tests.
+ * `@lanius/qq-official` 的 Vitest 配置。
  *
- * @returns Vitest configuration object for this package.
+ * @returns 本包 Vitest 配置对象
  */
 export default defineConfig({
   test: {

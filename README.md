@@ -7,42 +7,60 @@
 
 ## 当前状态
 
-已脚手架 **API 垂直切片**：`packages/core`、`packages/api-client`、`apps/api`。  
-公开端点：`GET /v1/health`、`/v1/meta`、`/v1/worldstate`（国际服官方 worldState）。  
-QQ 适配与 Nuxt Web **尚未**脚手架（下一阶段）。
+已落地 API + Bot + Web 骨架：共享视觉 token（`packages/ui`）同时驱动公开站与 QQ 卡片图。
 
-| 表面              | 计划路径                                      | MVP / 状态                                      |
-| ----------------- | --------------------------------------------- | ----------------------------------------------- |
-| Lanius API        | `apps/api`（Hono）                            | ✅ health / meta / worldstate（国际服）         |
-| 共享契约          | `packages/core`                               | ✅ DTO / Zod / 错误码 / realm·locale            |
-| HTTP 客户端       | `packages/api-client`（`fetch`）              | ✅ getHealth / getMeta / getWorldstate          |
-| QQ 官方适配       | `apps/bot`                                    | 文本 + 图片回复（未脚手架）                     |
-| 公开站 + 管理后台 | `apps/web`（**Nuxt 4** 宿主）                 | 国际服 + zh/en（未脚手架）                      |
-| 桌面 / 移动       | Tauri 2（后期）                               | **现不脚手架**；见 `docs/TODO-TAURI.md`         |
+| 表面              | 路径                                          | MVP / 状态                                         |
+| ----------------- | --------------------------------------------- | -------------------------------------------------- |
+| Lanius API        | `apps/api`（Hono）                            | health / meta / help / worldstate（国际服）        |
+| 共享契约          | `packages/core`                               | DTO / Zod / 错误码 / realm·locale                  |
+| HTTP 客户端       | `packages/api`（`fetch`）              | health / meta / help / worldstate                  |
+| 视觉 / UI         | `packages/ui`                                 | token + WorldstateBoard（Web）                     |
+| QQ 卡片           | `packages/render`                        | worldstate PNG（与 Web 同色板）                    |
+| QQ 官方封装       | `packages/qq-official`                        | 验签 + dry-run 发送                                |
+| QQ 官方适配       | `apps/bot`                                    | 独立根命令 `/世界状态` `/入侵` `/夜浪` `/模式` `/帮助`；文本+图片降级 |
+| 公开站 + 管理壳   | `apps/web`（Nuxt）                            | 首页 / 世界状态 / 帮助 /admin；zh/en               |
+| 桌面 / 移动       | Tauri 2（后期）                               | **现不脚手架**；见 `docs/TODO-TAURI.md`            |
 
 ## 本地运行
 
 ```bash
+# 根目录 .npmrc 默认 registry.npmmirror.com（国内镜像）
 pnpm install
-cp config.example.yaml config.local.yaml   # 按需覆盖端口/上游 URL；勿提交
-pnpm --filter @lanius/api dev              # 默认 http://127.0.0.1:8787
+cp config.example.yaml config.local.yaml   # 填入密钥；勿提交
+
+# 三个进程可并行
+pnpm dev:api    # http://127.0.0.1:8787
+pnpm dev:bot    # http://127.0.0.1:8788  （默认 dryRun=true）
+pnpm dev:web    # http://127.0.0.1:8790
 ```
 
-试探：
+API 试探：
 
 ```bash
 curl "http://127.0.0.1:8787/v1/health"
-curl "http://127.0.0.1:8787/v1/meta"
 curl "http://127.0.0.1:8787/v1/worldstate?realm=international&locale=zh"
+curl "http://127.0.0.1:8787/v1/help"
 ```
 
+Bot 本地回调（dry-run，无需真实签名时可先开 `bot.dryRun: true`）：
+
 ```bash
-pnpm test          # core / api-client / api
+curl -X POST "http://127.0.0.1:8788/qq/callback" ^
+  -H "content-type: application/json" ^
+  -d "{\"d\":{\"content\":\"/世界状态\",\"channel_id\":\"dev\"}}"
+```
+
+指令为独立根（可选 `/`），详见公开站帮助页或 `GET /v1/help`。
+
+```bash
+pnpm test
 pnpm typecheck
 ```
 
 密钥放在 **`config.local.yaml` 和/或数据库**，不以环境变量为主存储。  
-允许非密钥例外：`NODE_ENV`、`PORT` / `HOST`、配置路径覆盖（`LANIUS_CONFIG`）。
+允许非密钥例外：`NODE_ENV`、`PORT` / `HOST`、`LANIUS_CONFIG`、`LANIUS_API_BASE`、`LANIUS_RUNTIME_CONFIG_ROOT`。
+
+备案页脚、派系显示名等**可运行时覆盖**的内容：见 [`config/README.md`](./config/README.md)（`default/` 回退 + `local/` 覆盖，重启即生效）。
 
 ## 规范与 Agent 入口
 
@@ -54,11 +72,9 @@ pnpm typecheck
 | [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程           |
 | [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程        |
+| [docs/DEPLOY.md](./docs/DEPLOY.md)                       | Docker / GHCR / 同域部署与 Fork 安全 CI |
 | [docs/TODO-TAURI.md](./docs/TODO-TAURI.md)               | 后期 Tauri 2；现期 Web TODO  |
 | [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                 |
-| `.cursor/rules/`                                         | Cursor 项目规则              |
-| `.cursor/skills/`                                        | 可复用工作流 Skills          |
-| `.vscode/`                                               | 推荐扩展与编辑器设置         |
 
 ### Git 模型（摘要）
 

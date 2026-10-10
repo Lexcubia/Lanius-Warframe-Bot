@@ -6,6 +6,8 @@ node_modules/
 dist/
 build/
 .next/
+.nuxt/
+.output/
 out/
 .turbo/
 *.tsbuildinfo
@@ -25,6 +27,11 @@ config.local.yml
 config.local.json
 *.local.yaml
 *.local.yml
+# 运行时覆盖（备案号、定制映射等）；保留 example / gitkeep
+config/local/**
+!config/local/.gitkeep
+!config/local/**/*.example
+!config/local/**/*.yaml.example
 *.pem
 *.key
 secrets/

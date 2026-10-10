@@ -34,8 +34,8 @@ Lint/Format：**ESLint + Prettier**（见仓库根配置）。
 ## 3. 分层
 
 - **API**：路由薄；校验（Zod）→ 服务 → 上游 adapter → DTO。
-- **Bot**：解析命令 → 调 API → Formatter（文本）或 card-render（图片）→ 官方下行。
-- **Web（Nuxt / Vue）**：只消费 API；用 `packages/api-client`（原生 `fetch`），**不**默认 axios；SSR/`useAsyncData` 与客户端按 Nuxt 惯例；勿在浏览器打上游。
+- **Bot**：解析命令 → 调 API → Formatter（文本）或 `packages/render`（图片）→ 官方下行。
+- **Web（Nuxt / Vue）**：只消费 API；用 `packages/api`（原生 `fetch`），**不**默认 axios；SSR/`useAsyncData` 与客户端按 Nuxt 惯例；勿在浏览器打上游。
 
 ## 4. 异步与错误
 
@@ -79,9 +79,9 @@ PR / Agent 自检：对**本 diff 新增或实质修改**的需注释单元，�
 
 | 场景                                   | 语言 / 规则                                  |
 | -------------------------------------- | -------------------------------------------- |
-| 函数 TSDoc（含 `@param` / `@returns`） | **English**                                  |
-| 类型 / 导出常量的文档注释              | **English**                                  |
-| 行内/块「为什么」注释                  | 中文或英文；同一文件内统一                   |
+| 函数 TSDoc（含 `@param` / `@returns`） | **中文主体**（标识符 / 类型 / API 字段等关键词可用英文） |
+| 类型 / 导出常量的文档注释              | **中文主体**（关键词可用英文）               |
+| 行内/块「为什么」注释                  | **中文主体**；同一文件内统一                 |
 | Agent 对话 / prompt / 会话摘录         | **禁止**出现在任何注释或源码中               |
 | 注释内容范围                           | **仅**项目与代码（行为、不变量、协议、领域） |
 
@@ -99,36 +99,36 @@ PR / Agent 自检：对**本 diff 新增或实质修改**的需注释单元，�
 
 ```ts
 /**
- * Resolve a player-facing alias to a canonical item id.
+ * 将玩家输入的别名解析为规范物品 id。
  *
- * Looks up locale-specific alias tables; does not call upstream APIs.
+ * 查询 locale 对应的别名表；不直连上游 API。
  *
- * @param raw - User-entered name or alias (trimmed by caller)
- * @param locale - UI/query locale; `zh` or `en`
- * @returns Canonical item id, or `null` if the alias is unknown
+ * @param raw - 用户输入的名称或别名（由调用方 trim）
+ * @param locale - 界面/查询 locale：`zh` 或 `en`
+ * @returns 规范物品 id；未知别名时返回 `null`
  */
 export function resolveAlias(raw: string, locale: Locale): string | null {
   // ...
 }
 
 /**
- * Format a market quote for QQ text reply mode.
+ * 将市场报价格式化为 QQ 文本模式回复。
  *
- * @param quote - Normalized quote DTO from Lanius API
- * @param locale - Reply locale for number/date formatting
- * @returns Single-message plain text (no image payload)
+ * @param quote - 来自 Lanius API 的规范化报价 DTO
+ * @param locale - 回复 locale，用于数字/日期格式
+ * @returns 单条纯文本（不含图片载荷）
  */
 function formatPriceText(quote: MarketQuoteDto, locale: Locale): string {
   // ...
 }
 
 /**
- * Verify the official QQ callback signature and parse the event body.
+ * 校验官方 QQ 回调签名并解析事件体。
  *
- * @param headers - Incoming HTTP headers from the QQ open platform
- * @param body - Raw request body bytes
- * @returns Parsed official event envelope
- * @throws {QqSignatureError} When signature verification fails
+ * @param headers - QQ 开放平台传入的 HTTP headers
+ * @param body - 原始请求体字节
+ * @returns 解析后的官方事件包络
+ * @throws {QqSignatureError} 签名校验失败时抛出
  */
 async function verifyQqCallback(headers: Headers, body: Uint8Array): Promise<QqEventEnvelope> {
   // ...

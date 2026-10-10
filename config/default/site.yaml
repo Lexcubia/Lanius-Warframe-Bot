@@ -1,0 +1,14 @@
+# 站点公开展示（可提交）。生产覆盖写到 config/local/site.yaml（勿提交真实备案号到仓库外的误路径）。
+# 加载顺序：default → local 深合并；重启进程/容器后生效。
+
+footer:
+  # 页脚版权行（可选）
+  copyright: ''
+  # 备案 / 附加链接行：无内容则 Web 不渲染对应块
+  lines: []
+  # 示例（请只写在 config/local/site.yaml）：
+  # lines:
+  #   - text: '粤ICP备XXXXXXXX号'
+  #     href: 'https://beian.miit.gov.cn/'
+  #   - text: '粤公网安备XXXXXXXX号'
+  #     href: 'https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=XXXXXXXX'
