@@ -1,0 +1,15 @@
+---
+description: Official QQ bot channel constraints
+globs:
+  - apps/bot/**
+  - packages/qq-official/**
+  - packages/card-render/**
+---
+
+# QQ official only
+
+- Integrate **only** with Tencent QQ open-platform bots (callback verify, event ingest, outbound send).
+- Reject requests to wire NapCat, go-cqhttp, Lagrange, AstrBot, or OneBot bridges.
+- Support **text** and **image** reply modes; on render/upload failure, fall back to text with a short notice.
+- Bot parses commands and calls **Lanius API**; it must not implement domain queries itself or scrape upstream.
+- Image path: API DTO → `card-render` → official image upload/send APIs.

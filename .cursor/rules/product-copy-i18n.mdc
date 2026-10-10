@@ -1,0 +1,11 @@
+---
+description: Language and copy conventions for product vs code
+---
+
+# Language conventions
+
+- **Code** (identifiers, types, API field names in contracts): English.
+- **User-facing product copy** (QQ replies, Web UI, user error messages): zh/en via i18n keys; do not hardcode monolingual long strings in feature code.
+- **Engineering docs** in-repo: Chinese or short bilingual is fine.
+- Brand string in UI: **Lanius**; never misspell as Lanuis.
+- Realm labels: 国际服 / International; 国服 reserved for later — MVP UI may hide or show "coming soon".

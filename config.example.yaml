@@ -1,0 +1,22 @@
+# Lanius-Warframe-Bot — example config (safe to commit)
+# Copy to config.local.yaml and fill real values. Never commit config.local.yaml.
+
+qq:
+  appId: 'YOUR_QQ_APP_ID'
+  appSecret: 'YOUR_QQ_APP_SECRET'
+
+admin:
+  username: 'admin'
+  # Store a password hash only (argon2/bcrypt). Never store plaintext passwords.
+  passwordHash: '$argon2id$REPLACE_ME'
+
+api:
+  # Optional token for admin / internal callers
+  adminToken: 'REPLACE_ME_WITH_LONG_RANDOM'
+
+# Non-secret defaults (may later move to DB)
+defaults:
+  realm: international
+  locale: zh
+  qqReplyMode: text # text | image
+  commandPrefix: 'wf'

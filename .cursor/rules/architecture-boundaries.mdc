@@ -1,0 +1,24 @@
+---
+description: Monorepo package and app dependency boundaries
+globs:
+  - apps/**
+  - packages/**
+---
+
+# Architecture boundaries
+
+Target layout:
+
+- `apps/api` — Lanius HTTP API (sole business entry)
+- `apps/bot` — Official QQ adapter (commands → API → text/image reply)
+- `apps/web` — Next.js public site + `/admin` (API client only)
+- `packages/core` — DTOs, Zod, aliases, error codes, realm/locale
+- `packages/qq-official` — QQ verify/events/send; **bot only**
+- `packages/card-render` — image-mode cards; bot (MVP), optional API preview
+
+Rules:
+
+- Put shared query contracts in `core`; do not duplicate business query logic in bot/web.
+- `qq-official` must not be imported by `api` or `web`.
+- Upstream fetch adapters belong under `apps/api` (or API-owned packages), never in web/bot.
+- Keep route handlers thin; validate with Zod; map errors to stable codes + i18n keys.

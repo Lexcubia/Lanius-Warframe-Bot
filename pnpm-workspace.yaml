@@ -1,0 +1,4 @@
+# Placeholder workspace — add apps/* and packages/* when scaffolding the monorepo.
+packages:
+  - 'apps/*'
+  - 'packages/*'
