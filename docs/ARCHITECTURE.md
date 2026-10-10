@@ -17,7 +17,7 @@
        ▼       ▼              ▼                ▼（后期）
   apps/bot   apps/web      apps/web         Tauri 2
   QQ 官方适配  公开查询站     /admin          桌面/移动
-             （Next 宿主）
+             （Nuxt / Vue 宿主）
 ```
 
 三个**现期**部署进程：`lanius-api`、`lanius-bot`、`lanius-web`。  
@@ -30,13 +30,13 @@ lanius-warframe-bot/
 ├── apps/
 │   ├── api/                 # Lanius 自定义 API（Hono + Zod + pino）
 │   ├── bot/                 # QQ 官方适配
-│   ├── web/                 # Next.js：公开站 + /admin（当前 UI 宿主）
+│   ├── web/                 # Nuxt 4：公开站 + /admin（当前 UI 宿主）
 │   ├── desktop/             # 后期 Tauri 2 Windows（现不建）
 │   └── mobile/              # 后期 Tauri 2 移动（现不建）
 ├── packages/
 │   ├── core/                # DTO、Zod schema、别名、错误码、realm/locale
-│   ├── api-client/          # 规划：可注入 baseUrl 的 Lanius HTTP 客户端
-│   ├── ui/                  # 规划：与路由解耦的共享展示组件
+│   ├── api-client/          # 规划：可注入 baseUrl + fetch 的 Lanius HTTP 客户端（不默认 axios）
+│   ├── ui/                  # 规划：Vue SFC / 与路由解耦的共享展示组件
 │   ├── card-render/         # 图片模式：DTO → PNG/WebP
 │   └── qq-official/         # 验签、事件、发文本/发图
 ├── config.example.yaml
@@ -49,26 +49,27 @@ lanius-warframe-bot/
 └── README.md
 ```
 
-当前仓库可能尚未创建 `apps/` / `packages/`；布局是约定，实现时按此落地。**禁止**在未立项时脚手架 Tauri。
+当前仓库可能尚未创建 `apps/` / `packages/`；布局是约定，实现时按此落地。**禁止**在未立项时脚手架 Tauri。  
+**Web 栈已锁定 Nuxt/Vue**；勿再引入 Next.js / React / shadcn / next-intl 作为 Web 默认。
 
 ## 3. 依赖规则
 
 | 包 / 应用             | 可依赖                                                 | 禁止                                         |
 | --------------------- | ------------------------------------------------------ | -------------------------------------------- |
 | `packages/core`       | 无业务应用依赖                                         | 依赖 api/bot/web                             |
-| `packages/api-client` | `core`；可注入 `fetch` / `baseUrl`                     | 直连 WF 上游；仅能在 Next Server Action 工作 |
-| `packages/ui`         | 展示向依赖；**避免**硬绑 `next/navigation`             | 假设 `window` 必存在且无适配                 |
+| `packages/api-client` | `core`；可注入 `fetch` / `baseUrl`                     | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
+| `packages/ui`         | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app`       | React；假设 `window` 必存在且无适配           |
 | `apps/api`            | `core`；上游 HTTP 客户端                               | 依赖 bot/web；把 QQ SDK 塞进 API             |
-| `apps/bot`            | API 的 HTTP 客户端；`qq-official`；可选 `card-render`  | 直连 WF 上游；依赖 Next                      |
-| `apps/web`            | `api-client` / `ui`（规划）+ Next 壳（SEO/BFF/cookie） | 直连上游；依赖 bot 进程                      |
+| `apps/bot`            | API 的 HTTP 客户端；`qq-official`；可选 `card-render`  | 直连 WF 上游；依赖 Nuxt/Web                   |
+| `apps/web`            | `api-client` / `ui`（规划）+ Nuxt 壳（SEO/BFF/cookie） | 直连上游；依赖 bot 进程；默认 axios           |
 | `qq-official`         | 仅 bot                                                 | 被 api/web 引用                              |
 | `card-render`         | bot（MVP）；可选 api 管理预览                          | 公开站直接渲染 QQ 卡片                       |
 
 ## 4. Tauri 可插拔（现期）
 
-- **当前宿主**：Next.js。后期：**Tauri 2**（Windows 优先，移动另阶段）。
-- Web 须：**响应式**、触控可用；业务 UI/API 调用倾向进 `packages/ui` + `packages/api-client`。
-- Next 专有能力（RSC SEO、middleware、Route Handler BFF、HttpOnly cookie 桥）留在 `apps/web`。
+- **当前宿主**：Nuxt 4（Vue 3）。后期：**Tauri 2**（Windows 优先，移动另阶段）。
+- Web 须：**响应式**、触控可用；业务 UI/API 调用倾向进 `packages/ui`（Vue）+ `packages/api-client`（fetch）。
+- Nuxt 专有能力（SSR SEO、route middleware、Nitro BFF、HttpOnly cookie 桥）留在 `apps/web`。
 - 清单：[TODO-TAURI.md](./TODO-TAURI.md)。Context 详案：`tauri-roadmap.md`。
 
 ## 5. 横切约定
@@ -76,7 +77,9 @@ lanius-warframe-bot/
 | 项       | 约定                                       | MVP                      |
 | -------- | ------------------------------------------ | ------------------------ |
 | `realm`  | `international` \| `china`                 | 仅实现 international     |
-| `locale` | `zh` \| `en`                               | 中英骨架                 |
+| `locale` | `zh` \| `en`（`@nuxtjs/i18n`）             | 中英骨架                 |
+| Web UI   | Nuxt UI + Tailwind；Lanius 主题            | 避免默认紫系 AI 审美     |
+| HTTP     | `fetch` via `api-client`                   | 不默认 axios             |
 | 密钥     | `config.local.yaml` 和/或 DB               | 不以 env 为主存储        |
 | QQ 回复  | `text` \| `image`                          | 均需支持；图片可降级文本 |
 | Git      | 日常 → `develop`；发布 → `main` + `vX.Y.Z` | 二者禁直推 commit        |
@@ -89,6 +92,7 @@ lanius-warframe-bot/
 - MVP 上线国服数据
 - 多租户 / 多 IM 中台
 - **现在**脚手架 Tauri / 另起桌面业务后端
+- Web 侧 React / Next.js 默认栈
 
 ## 7. 相关文档
 

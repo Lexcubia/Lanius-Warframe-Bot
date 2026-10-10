@@ -16,14 +16,14 @@ Warframe 官方数据（及经文档标注的社区源）
         ↓
    ┌────┼────────┬────────────┐
    QQ官方  公开站   管理后台   （后期）Tauri 桌面/移动
-           Next 宿主
+           Nuxt / Vue 宿主
 ```
 
 | 允许                                         | 禁止                                     |
 | -------------------------------------------- | ---------------------------------------- |
 | `apps/bot` / `apps/web` 只调 Lanius API      | 客户端直连 WF 上游或第三方原始接口       |
 | `packages/core` 放 DTO / Zod / 别名 / 错误码 | 在 bot/web 内复制业务查询逻辑            |
-| 规划 `packages/ui` + `api-client` 供多宿主   | 共享层写死仅 Next / 仅浏览器假设         |
+| 规划 Vue `packages/ui` + `fetch` `api-client` | 共享层写死仅 Nuxt / 仅浏览器假设；默认 axios；Web 用 React/Next |
 | `packages/qq-official` 仅被 `apps/bot` 使用  | api/web 引用 QQ SDK                      |
 | QQ 消息里放公开站 URL（可选导流）            | QQ 进程依赖 Web，或 Web 依赖 QQ 才能工作 |
 | 现期 Web 做响应式与可插拔（见 TODO-TAURI）   | **现在**脚手架 Tauri 或桌面专用后端      |

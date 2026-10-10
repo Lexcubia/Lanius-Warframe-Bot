@@ -20,7 +20,7 @@ Lint/Format：**ESLint + Prettier**（见仓库根配置）。
 | 类型 / 接口     | PascalCase                             | `MarketItemDto`       |
 | 函数 / 变量     | camelCase                              | `resolveAlias`        |
 | 常量            | SCREAMING_SNAKE 或 camelCase（模块级） | `DEFAULT_REALM`       |
-| React 组件      | PascalCase 文件                        | `SearchBox.tsx`       |
+| Vue 组件        | PascalCase 文件（`.vue`）或清晰目录    | `SearchBox.vue`       |
 | 包名            | `@lanius/...`                          | `@lanius/core`        |
 | 产品名          | **Lanius**                             | 勿写成 Lanuis         |
 
@@ -35,7 +35,7 @@ Lint/Format：**ESLint + Prettier**（见仓库根配置）。
 
 - **API**：路由薄；校验（Zod）→ 服务 → 上游 adapter → DTO。
 - **Bot**：解析命令 → 调 API → Formatter（文本）或 card-render（图片）→ 官方下行。
-- **Web**：只消费 API；服务端/客户端组件按 Next 惯例；勿在浏览器打上游。
+- **Web（Nuxt / Vue）**：只消费 API；用 `packages/api-client`（原生 `fetch`），**不**默认 axios；SSR/`useAsyncData` 与客户端按 Nuxt 惯例；勿在浏览器打上游。
 
 ## 4. 异步与错误
 

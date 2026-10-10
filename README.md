@@ -8,14 +8,14 @@
 ## 当前状态
 
 本仓库已落地 **工程规范 / Cursor 规则与 Skills / IDE 配置**。  
-应用代码（API、QQ 适配、Next.js Web）按里程碑后续实现，**尚未脚手架完整 monorepo**。
+应用代码（API、QQ 适配、**Nuxt / Vue** Web）按里程碑后续实现，**尚未脚手架完整 monorepo**。
 
 | 表面              | 计划路径                                  | MVP / 状态                              |
 | ----------------- | ----------------------------------------- | --------------------------------------- |
-| Lanius API        | `apps/api`                                | 国际服查询                              |
+| Lanius API        | `apps/api`（Hono）                        | 国际服查询                              |
 | QQ 官方适配       | `apps/bot`                                | 文本 + 图片回复                         |
-| 公开站 + 管理后台 | `apps/web`（Next.js 宿主）                | 国际服 + zh/en 骨架；响应式可插拔       |
-| 共享契约 / UI     | `packages/core`；规划 `ui` / `api-client` | DTO；供 Web 与后期 Tauri 复用           |
+| 公开站 + 管理后台 | `apps/web`（**Nuxt 4** 宿主）             | 国际服 + zh/en；Nuxt UI；`fetch` 客户端 |
+| 共享契约 / UI     | `packages/core`；规划 Vue `ui` / `api-client` | DTO；供 Nuxt 与后期 Tauri 复用       |
 | 桌面 / 移动       | Tauri 2（后期）                           | **现不脚手架**；见 `docs/TODO-TAURI.md` |
 
 ## 本地运行（后续）

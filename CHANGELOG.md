@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+### Changed
+
+- Web 选型改为 **Nuxt 4 + Vue 3 + Nuxt UI + `@nuxtjs/i18n`**；HTTP 客户端锁定原生 **`fetch`**（`packages/api-client`），不默认 axios。
+- 废弃 Web 默认栈：Next.js / React / shadcn/ui / next-intl；`packages/ui` 改为 Vue-friendly（供后期 Tauri）。
+- 同步 `docs/ARCHITECTURE.md`、`TODO-TAURI.md`、`AGENTS.md`、README、`.cursor/rules` 中相关表述。
+
 ### Added
 
 - 仓库工程规范、Cursor rules/skills、IDE 与 ESLint/Prettier 基线。
