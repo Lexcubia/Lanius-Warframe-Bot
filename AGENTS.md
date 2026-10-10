@@ -44,14 +44,21 @@ Warframe 官方数据（及经文档标注的社区源）
 - i18n：`locale=zh|en`；产品面向用户的文案可中英；代码标识符用英文。
 - **不要发明范围**：不做玩家账号、交易撮合、全量百科镜像、多 IM 中台、多租户 SaaS。
 
-## 分支（硬约束）
+## 分支与版本（硬约束）
 
-1. **禁止随意新建分支。** 需要新分支时：先**询问用户**；或仅在用户已授权/任务已指定工作流时，按**职责/工作流**命名（如 `Lexcubia/repo-standards-4f3f`、`Lexcubia/api-worldstate-xxxx`），名称须一眼看出职责。
-2. **禁止**用模糊名：`temp`、`fix`、`wip`、`agent-1`、日期堆砌等。
-3. 功能/工作完成后，通过 PR **合并进主开发分支**（本仓库为 `main`）。
-4. **`main` 只接受合并（merge / PR）——禁止向 `main` 直接 commit / push。** Agent 一律在职责分支上工作。
+| 分支                                               | 角色                                                                   |
+| -------------------------------------------------- | ---------------------------------------------------------------------- |
+| **`develop`**                                      | **日常集成**目标：功能 / 修复 / 文档 PR 合入此处                       |
+| **`main`**                                         | **发布归档**：仅接受发布相关合并；对应已发布快照，**不是**日常集成分支 |
+| **`feature/*` · `fix/*` · `docs/*` · `release/*`** | 按职责的工作分支（平台若要求前缀如 `Lexcubia/…`，仍须能看出职责）      |
 
-详见 [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) §分支。
+1. **禁止随意新建分支。** 需新建时：先**询问用户**；或使用用户/任务已指定的职责名。
+2. **禁止**模糊名：`temp`、`wip`、`agent-1`、裸 `fix` 等。
+3. 功能/工作完成后：PR **合并进 `develop`**（不是 `main`）。
+4. **禁止向 `main` 直接 commit / push**；**禁止向 `develop` 直接 commit / push**——二者均只接受 **merge / PR**。Agent 只在职责分支上提交。
+5. **发布**：自 `develop`（或 `release/x.y.z`）合并进 `main`，按 SemVer 打 tag **`vX.Y.Z`**，并更新 `CHANGELOG.md` 与根 `package.json` 版本。详见 [docs/VERSIONING.md](./docs/VERSIONING.md)。
+
+分支细则：[docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) §分支。
 
 ## 命名（硬约束）
 
@@ -89,4 +96,4 @@ Warframe 官方数据（及经文档标注的社区源）
 2. 遵守 `.cursor/rules/`（分支、注释、架构、密钥、QQ）。
 3. 重复工作流优先跟 `.cursor/skills/`。
 4. 不确定是否在范围内 → **缩小范围或不做**，不要擅自扩 scope。
-5. 不在 `main` 上直接提交；不擅自开无关分支。
+5. 不在 `main` / `develop` 上直接提交；日常合入 `develop`；不擅自开无关分支。

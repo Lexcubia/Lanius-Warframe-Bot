@@ -191,8 +191,8 @@ export interface WorldstateDto {
 
 ## 9. Git
 
-- 分支与 `main` 合并策略：见 [CONTRIBUTING.md](./CONTRIBUTING.md) §分支 与 [AGENTS.md](../AGENTS.md) §分支。
+- 分支：日常合入 **`develop`**；**`main`** 仅发布归档。见 [CONTRIBUTING.md](./CONTRIBUTING.md) §分支、[VERSIONING.md](./VERSIONING.md)、[AGENTS.md](../AGENTS.md) §分支。
 - 提交信息遵循 [COMMIT_CONVENTION.md](./COMMIT_CONVENTION.md)。
 - 小步提交；body 写清「为什么」。
 - 禁止提交 `config.local.yaml`、`node_modules`、含密钥的 dump。
-- **禁止向 `main` 直接 commit。**
+- **禁止向 `main` 或 `develop` 直接 commit**（仅 merge / PR）。

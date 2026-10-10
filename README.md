@@ -41,9 +41,17 @@ pnpm --filter @lanius/web dev              # Web
 | [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码、命名、注释率与 TSDoc   |
 | [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程           |
+| [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程        |
+| [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                 |
 | `.cursor/rules/`                                         | Cursor 项目规则              |
 | `.cursor/skills/`                                        | 可复用工作流 Skills          |
 | `.vscode/`                                               | 推荐扩展与编辑器设置         |
+
+### Git 模型（摘要）
+
+- **`develop`**：日常集成；功能 PR 合入此处。
+- **`main`**：发布归档（非日常集成）；发布时合并并打 tag `vX.Y.Z`。
+- **`main` / `develop` 均禁止直接 commit**，只接受 merge / PR。
 
 ## 锁定原则（摘要）
 

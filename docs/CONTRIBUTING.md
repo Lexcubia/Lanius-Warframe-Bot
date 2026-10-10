@@ -13,18 +13,31 @@
 
 ## 分支
 
+```
+feature/* | fix/* | docs/* | …
+              ↓ PR
+           develop          ← 日常集成
+              ↓ 发布 PR（可选经 release/x.y.z）
+            main            ← 归档 / 已发布
+              ↓
+          tag vX.Y.Z
+```
+
 硬约束（Agent 与人类相同）：
 
-1. **不要随意新建分支。** 需要新分支时：先征得用户同意；或按已指定的**职责/工作流**命名并沿用（例：`Lexcubia/repo-standards-4f3f`、`Lexcubia/api-worldstate-4f3f`）。
-2. 分支名须能看出职责；禁止 `temp` / `wip` / `fix` / `agent-1` 等模糊名。
-3. 日常开发在职责分支上 commit；完成后开 PR，**合并进主开发分支 `main`**。
-4. **`main` 只接受合并，禁止直接在 `main` 上 commit 或 push。**
+1. **不要随意新建分支。** 需新建时先征得用户同意；或沿用已指定的职责/工作流名。
+2. 推荐命名：`feature/<duty>`、`fix/<duty>`、`docs/<duty>`、`release/x.y.z`。若平台要求前缀（如 `Lexcubia/repo-standards-4f3f`），仍须一眼看出职责。禁止 `temp` / `wip` / `agent-1`。
+3. 日常开发在职责分支上 commit；完成后开 PR，**合并进 `develop`**（日常集成目标）。
+4. **`main` 与 `develop` 均禁止直接 commit / push**——只接受 merge / PR。
+5. **`main` 不是集成分支**：仅在发布时从 `develop`（或 `release/*`）合入，并打 SemVer tag。见 [VERSIONING.md](./VERSIONING.md)。
 
 PR 要求：
 
-- 保持聚焦：一次一件事（规范、API、Bot、Web 勿无必要混装）。
+- 默认目标分支：**`develop`**（发布 PR 目标为 `main`）。
+- 保持聚焦：一次一件事。
 - 草稿可用于早期讨论；就绪后标 Ready。
 - 描述写清：动机、改动面、如何验证、是否触及密钥/QQ/区服。
+- 有用户可感知变更时，更新 `CHANGELOG.md` 的 `[Unreleased]`。
 
 ## Commit 信息
 
@@ -34,19 +47,25 @@ PR 要求：
 - subject 可用中文或英文；说明意图，避免 `update` / `WIP`。
 - 暂不强制 commitlint；评审与 Agent 规则会按该文档检查。
 
+## 版本与发布
+
+见 [VERSIONING.md](./VERSIONING.md) 与根目录 [CHANGELOG.md](../CHANGELOG.md)。摘要：SemVer；tag `vX.Y.Z` 打在 `main`；发布时同步根 `package.json` 版本。
+
 ## 范围检查清单
 
 在打开 PR 前自问：
 
+- [ ] 目标分支是否正确？（日常 → `develop`；发布 → `main`）
+- [ ] 是否误在 `main` / `develop` 上直接提交？
 - [ ] 是否仍只通过 Lanius API 暴露业务数据？
 - [ ] 是否引入了非官方 QQ 协议？（必须为否）
 - [ ] 密钥是否仍在配置文件/DB，而非 env 主存储？
 - [ ] MVP 是否误上线了国服数据路径？
 - [ ] 拼写是否为 **Lanius**？
 - [ ] 用户文案是否考虑 zh/en？
-- [ ] 是否误在 `main` 上直接提交？
 - [ ] 新增/改动函数是否具备完整 `@param` / `@returns` TSDoc？注释率是否达标？
 - [ ] 注释中是否误含 Agent 对话？（必须为否）
+- [ ] 用户可感知变更是否记入 `CHANGELOG.md` `[Unreleased]`？
 
 ## 代码风格
 

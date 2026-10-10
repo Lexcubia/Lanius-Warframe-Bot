@@ -103,10 +103,12 @@ BREAKING CHANGE: `itemName` renamed to `name` in MarketItemDto.
 
 ## 分支（与 commit 配合）
 
-Commit 只应出现在**职责/工作流分支**上，不得直接打在 `main`：
+Commit 只应出现在**职责分支**（`feature/*` / `fix/*` / `docs/*` 等）上：
 
 - 勿随意建分支；需新建时先问用户，或使用职责清晰的命名（见 [CONTRIBUTING.md](./CONTRIBUTING.md) §分支、[AGENTS.md](../AGENTS.md) §分支）。
-- 功能完成后经 PR **合并进 `main`**；`main` **只接受 merge，不接受直推 commit**。
+- 日常完成后经 PR **合并进 `develop`**（集成）；**不要**把日常功能 PR 直接打向 `main`。
+- **`main`** = 发布归档；**`develop`** = 日常集成。二者都 **只接受 merge / PR，禁止直推 commit**。
+- 发布与 tag：见 [VERSIONING.md](./VERSIONING.md)。
 
 ## Agent / 自动化
 
@@ -116,4 +118,5 @@ Commit 只应出现在**职责/工作流分支**上，不得直接打在 `main`�
 ## 相关
 
 - [CONTRIBUTING.md](./CONTRIBUTING.md)（分支策略）
+- [VERSIONING.md](./VERSIONING.md)（SemVer / tag / CHANGELOG）
 - [CODING_STANDARDS.md](./CODING_STANDARDS.md)（注释率、TSDoc、命名）
