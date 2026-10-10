@@ -17,3 +17,4 @@ alwaysApply: true
 - Prefer reading `AGENTS.md` and `docs/ARCHITECTURE.md` before large changes.
 - Git: no casual branches; ask user or use duty-based names; integrate into `develop`; `main` is release archive only; never commit directly to `main` or `develop` (merges/PRs only); SemVer tags `vX.Y.Z` on `main`.
 - Comments: ≥80% comment-required coverage; full TSDoc `@param`/`@returns` on every function; never paste agent chat into comments.
+- Later Tauri 2 (desktop/mobile): plan Web for pluggable UI/API client; **do not scaffold Tauri now** (`docs/TODO-TAURI.md`).

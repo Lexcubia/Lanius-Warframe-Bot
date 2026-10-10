@@ -1,0 +1,16 @@
+---
+description: Keep Web UI/API client pluggable for future Tauri 2; do not scaffold Tauri now
+alwaysApply: true
+---
+
+# Tauri-ready Web (no scaffold now)
+
+- **Decision:** Later consider Windows desktop + mobile via **Tauri 2**. **Do not** scaffold Tauri, add Rust desktop crates, or create `apps/desktop` / `apps/mobile` until explicitly tasked.
+- **Current UI host:** Next.js (`apps/web`). Business data still only via **Lanius API**.
+- When implementing Web UI or clients:
+  - Prefer future **`packages/ui`** + **`packages/api-client`** (injectable `baseUrl` / `fetch`).
+  - Keep shared layers free of hard web-only assumptions (`next/navigation` in presentational packages, `window`-only APIs without adapters).
+  - Leave Next-only concerns (RSC SEO, middleware, BFF rewrites, HttpOnly cookie session bridge) in `apps/web`.
+  - Ship **responsive** layouts (narrow + wide); critical actions must not be hover-only.
+- Tauri must **not** replace official QQ bot or call Warframe upstream directly.
+- TODOs: `docs/TODO-TAURI.md`. Context: `tauri-roadmap.md`.

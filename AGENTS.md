@@ -14,16 +14,19 @@ Warframe 官方数据（及经文档标注的社区源）
         ↓
   Lanius 自定义 API（唯一业务入口）
         ↓
-   ┌────┼────────┐
-   QQ官方  公开站   管理后台
+   ┌────┼────────┬────────────┐
+   QQ官方  公开站   管理后台   （后期）Tauri 桌面/移动
+           Next 宿主
 ```
 
 | 允许                                         | 禁止                                     |
 | -------------------------------------------- | ---------------------------------------- |
 | `apps/bot` / `apps/web` 只调 Lanius API      | 客户端直连 WF 上游或第三方原始接口       |
 | `packages/core` 放 DTO / Zod / 别名 / 错误码 | 在 bot/web 内复制业务查询逻辑            |
+| 规划 `packages/ui` + `api-client` 供多宿主   | 共享层写死仅 Next / 仅浏览器假设         |
 | `packages/qq-official` 仅被 `apps/bot` 使用  | api/web 引用 QQ SDK                      |
 | QQ 消息里放公开站 URL（可选导流）            | QQ 进程依赖 Web，或 Web 依赖 QQ 才能工作 |
+| 现期 Web 做响应式与可插拔（见 TODO-TAURI）   | **现在**脚手架 Tauri 或桌面专用后端      |
 
 ## QQ 通道
 
@@ -43,6 +46,7 @@ Warframe 官方数据（及经文档标注的社区源）
 - MVP：`realm=international`；国服仅预留类型/路由，不上线数据。
 - i18n：`locale=zh|en`；产品面向用户的文案可中英；代码标识符用英文。
 - **不要发明范围**：不做玩家账号、交易撮合、全量百科镜像、多 IM 中台、多租户 SaaS。
+- **后期**可考虑 Tauri 2（Windows + 移动）；**禁止擅自脚手架**。现期遵守 [docs/TODO-TAURI.md](./docs/TODO-TAURI.md) 与 `.cursor/rules/tauri-ui-pluggable.mdc`。
 
 ## 分支与版本（硬约束）
 

@@ -10,12 +10,13 @@
 本仓库已落地 **工程规范 / Cursor 规则与 Skills / IDE 配置**。  
 应用代码（API、QQ 适配、Next.js Web）按里程碑后续实现，**尚未脚手架完整 monorepo**。
 
-| 表面              | 计划路径           | MVP                 |
-| ----------------- | ------------------ | ------------------- |
-| Lanius API        | `apps/api`         | 国际服查询          |
-| QQ 官方适配       | `apps/bot`         | 文本 + 图片回复     |
-| 公开站 + 管理后台 | `apps/web`         | 国际服 + zh/en 骨架 |
-| 共享契约          | `packages/core` 等 | DTO / 别名 / 错误码 |
+| 表面              | 计划路径                                  | MVP / 状态                              |
+| ----------------- | ----------------------------------------- | --------------------------------------- |
+| Lanius API        | `apps/api`                                | 国际服查询                              |
+| QQ 官方适配       | `apps/bot`                                | 文本 + 图片回复                         |
+| 公开站 + 管理后台 | `apps/web`（Next.js 宿主）                | 国际服 + zh/en 骨架；响应式可插拔       |
+| 共享契约 / UI     | `packages/core`；规划 `ui` / `api-client` | DTO；供 Web 与后期 Tauri 复用           |
+| 桌面 / 移动       | Tauri 2（后期）                           | **现不脚手架**；见 `docs/TODO-TAURI.md` |
 
 ## 本地运行（后续）
 
@@ -42,6 +43,7 @@ pnpm --filter @lanius/web dev              # Web
 | [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope |
 | [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程           |
 | [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程        |
+| [docs/TODO-TAURI.md](./docs/TODO-TAURI.md)               | 后期 Tauri 2；现期 Web TODO  |
 | [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                 |
 | `.cursor/rules/`                                         | Cursor 项目规则              |
 | `.cursor/skills/`                                        | 可复用工作流 Skills          |

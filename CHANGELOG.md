@@ -10,6 +10,7 @@
 
 - 仓库工程规范、Cursor rules/skills、IDE 与 ESLint/Prettier 基线。
 - Git 模型：`develop` 日常集成，`main` 发布归档；SemVer 与 tag 约定。
+- 后期 Tauri 2 路线与现期 Web 可插拔 TODO（`docs/TODO-TAURI.md`；不脚手架）。
 
 ## [0.0.0] - 2026-10-10
 
