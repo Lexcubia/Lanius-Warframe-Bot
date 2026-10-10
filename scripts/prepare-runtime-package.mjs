@@ -1,5 +1,5 @@
 /**
- * 为 Docker runner 阶段生成不含 workspace 依赖的 package.json。
+ * 为 Docker runner 阶段生成可独立安装的 package.json（外部 npm 依赖）。
  * 用法：`node scripts/prepare-runtime-package.mjs api|bot <outDir>`
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';

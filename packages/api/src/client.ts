@@ -57,8 +57,7 @@ export class LaniusApiClientError extends Error {
 }
 
 /**
- * Thin fetch client for Lanius `/v1` public endpoints.
- * Does not call Warframe upstream; only the Lanius API base URL.
+ * 面向 Lanius `/v1` 公开端点的薄 fetch 客户端（仅请求配置的 `baseUrl`）。
  */
 export class LaniusApiClient {
   private readonly baseUrl: string;
@@ -145,7 +144,7 @@ export class LaniusApiClient {
    */
   private async getJson<T>(
     path: string,
-    // 第三泛参放宽为 unknown：带 .default() 的 schema 输入可选、输出必填，避免 T 被推成 input
+    // 第三泛参为 unknown：带 .default() 的 schema 以输出类型作为 T
     dataSchema: z.ZodType<T, z.ZodTypeDef, unknown>,
   ): Promise<ApiEnvelope<T>> {
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {

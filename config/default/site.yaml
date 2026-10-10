@@ -1,4 +1,4 @@
-# 站点公开展示（可提交）。生产覆盖写到 config/local/site.yaml（勿提交真实备案号到仓库外的误路径）。
+# 站点公开展示默认值（可提交）。生产覆盖写到 config/local/site.yaml。
 # 加载顺序：default → local 深合并；重启进程/容器后生效。
 
 footer:

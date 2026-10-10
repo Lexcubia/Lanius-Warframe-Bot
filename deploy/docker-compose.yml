@@ -30,7 +30,7 @@ services:
       HOST: 0.0.0.0
       PORT: '8787'
       LANIUS_CONFIG: /config/config.local.yaml
-      # default+local YAML：改文件后重启本服务即可，无需重发镜像
+      # default+local YAML：改文件后重启本服务即可生效
       LANIUS_RUNTIME_CONFIG_ROOT: /runtime-config
     volumes:
       - ${LANIUS_CONFIG_FILE:-./config.local.yaml}:/config/config.local.yaml:ro

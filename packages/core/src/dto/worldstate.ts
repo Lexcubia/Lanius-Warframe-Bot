@@ -17,7 +17,7 @@ export type LocalizedName = z.infer<typeof LocalizedNameSchema>;
 
 /**
  * Single invasion mission normalized for Lanius clients.
- * 节点 / 阵营 / 奖励均为可读显示名，不再透传官方内部键。
+ * 节点 / 阵营 / 奖励字段为中英可读显示名（`LocalizedName`）。
  */
 export const InvasionDtoSchema = z.object({
   id: z.string().min(1),

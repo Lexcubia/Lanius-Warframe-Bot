@@ -32,8 +32,7 @@ export type QqOfficialClientOptions = {
 };
 
 /**
- * 官方 QQ 文本/图片回复的薄封装客户端。
- * 不含命令业务逻辑，也不调用 Lanius 查询 API。
+ * 官方 QQ 文本/图片下行的薄封装客户端（验签与发信）。
  */
 export class QqOfficialClient {
   private readonly appId: string;

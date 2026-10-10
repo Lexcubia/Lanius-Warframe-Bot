@@ -23,7 +23,7 @@ export type CommandDef = {
   id: 'worldstate' | 'invasions' | 'nightwave' | 'mode' | 'help';
   /** 帮助页主展示命令（含前导 `/`） */
   command: string;
-  /** 可触发的根词（不含 `/`，大小写不敏感的英文别名小写书写） */
+  /** 可触发的根词（书写时省略前导 `/`；英文别名小写） */
   roots: readonly string[];
   /** 一句话摘要 */
   summary: LocalizedName;
@@ -155,8 +155,8 @@ export function buildHelpDto(): HelpDto {
       en: 'Lanius command help',
     },
     intro: {
-      zh: '每条指令为独立根命令（可带前导 `/`）。在 QQ 中直接发送根命令即可，无需总前缀。',
-      en: 'Each command is its own root (optional leading `/`). Send the root in QQ — no global prefix.',
+      zh: '每条指令为独立根命令（可带前导 `/`）。在 QQ 中直接发送根命令，例如 `/世界状态`。',
+      en: 'Each command is its own root (optional leading `/`). Send the root in QQ, e.g. `/worldstate`.',
     },
     lines,
   };

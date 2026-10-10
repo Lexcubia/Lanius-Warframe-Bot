@@ -1,5 +1,4 @@
-# main 合入后：按 CHANGELOG 最新版本节打 annotated tag，并调用 Release（GHCR + 部署）。
-# 使用 workflow_call 而非仅依赖 tag push：GITHUB_TOKEN 创建的 tag 不会再触发其它 workflow。
+# main 合入后：按 CHANGELOG 最新版本节打 annotated tag，并经 workflow_call 调用 Release（GHCR + 部署）。
 
 name: Auto tag on main
 

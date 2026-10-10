@@ -1,5 +1,4 @@
-# 开源友好 CI：无 secrets、不推镜像、不部署。
-# fork PR 与本仓库 PR / push 均可运行。
+# 开源友好 CI：安装依赖、跑测试与类型检查（fork PR 与本仓库 PR / push 均可运行）。
 
 name: CI
 

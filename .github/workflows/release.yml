@@ -1,6 +1,5 @@
 # 构建推送 GHCR 并 SSH 部署。
 # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
-# 故意不监听 pull_request / pull_request_target，避免 fork 触及 secrets。
 
 name: Release
 
