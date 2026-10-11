@@ -25,6 +25,6 @@ fi
 
 echo "pulling IMAGE_TAG=${TAG} with ${COMPOSE_FILE}"
 docker compose -f "${COMPOSE_FILE}" pull
-docker compose -f "${COMPOSE_FILE}" up -d
+docker compose -f "${COMPOSE_FILE}" up -d --no-deps --remove-orphans
 docker compose -f "${COMPOSE_FILE}" ps
 echo "done"

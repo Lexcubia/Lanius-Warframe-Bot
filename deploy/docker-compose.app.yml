@@ -63,7 +63,7 @@ services:
       - caddy_config:/config
     depends_on:
       lanius-app:
-        condition: service_healthy
+        condition: service_started
 
 volumes:
   caddy_data:
