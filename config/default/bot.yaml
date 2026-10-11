@@ -1,0 +1,13 @@
+# Bot 进程默认
+host: '127.0.0.1'
+port: 8788
+apiBaseUrl: 'http://127.0.0.1:8787'
+defaultReplyMode: image
+dryRun: true
+publicSiteBaseUrl: 'http://127.0.0.1:8790'
+pushIntervalMs: 60000
+commandPrefix: '/'
+commandPrefixPolicy: optional
+image:
+  maxPerUserPerMinute: 5
+  renderTimeoutMs: 4000

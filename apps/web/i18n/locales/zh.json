@@ -2,22 +2,131 @@
   "brand": "Lanius",
   "nav": {
     "home": "首页",
+    "tools": "工具",
+    "about": "关于",
     "worldstate": "世界状态",
+    "fissures": "裂隙",
+    "market": "市场",
+    "riven": "紫卡",
+    "traders": "商人",
+    "rotations": "轮换",
     "help": "帮助",
+    "subscribe": "订阅",
+    "more": "更多",
+    "menu": "菜单",
+    "collapse": "收起导航",
+    "expand": "展开导航",
     "admin": "管理"
   },
+  "common": {
+    "search": "搜索",
+    "retry": "刷新",
+    "stale": "数据可能略旧（stale）"
+  },
   "home": {
-    "tagline": "查世界状态、查指令，干净好用",
-    "searchPlaceholder": "搜索物品、遗物、别名…",
-    "searchHint": "搜索接口将随市场/遗物端点一并上线；先从世界状态或帮助页开始。",
-    "ctaWorldstate": "查看世界状态",
+    "tagline": "世界状态、裂隙、商人与轮换——顺手好用的 Warframe 看板",
+    "searchPlaceholder": "搜索市场物品…",
+    "searchHint": "市场 / 紫卡 / 帮助 / 订阅见独立页面；下方为实时看板模块。",
     "searchButton": "搜索",
-    "realmNote": "MVP · 国际服实时"
+    "realmNote": "MVP · 国际服实时",
+    "loading": "正在同步模块数据…",
+    "error": "无法加载首页数据",
+    "expandAll": "全部展开",
+    "collapseAll": "全部收起",
+    "emptyInvasions": "当前无活跃入侵。",
+    "emptyNightwave": "暂无午夜电波数据。",
+    "season": "赛季",
+    "phase": "阶段",
+    "modulesNav": "看板模块",
+    "mod": {
+      "invasions": "入侵",
+      "nightwave": "午夜电波"
+    }
+  },
+  "tools": {
+    "eyebrow": "Tools",
+    "title": "工具",
+    "lead": "更多独立小工具将陆续上线。",
+    "body": "当前版本「工具」页仍在规划中（掉落表、待办等）。世界状态与市场查询请回到首页模块区使用。",
+    "backHome": "← 回到首页"
+  },
+  "about": {
+    "eyebrow": "About",
+    "title": "关于 Lanius",
+    "lead": "Lanius-Warframe-Bot：官方/社区数据经自建 API，再服务 QQ 与公开站。",
+    "archTitle": "架构",
+    "archBody": "客户端只调 Lanius API，不直连 Warframe 上游。QQ 与 Web 运行时互不耦合。",
+    "scopeTitle": "范围",
+    "scopeBody": "MVP 仅国际服；不做玩家账号、交易撮合或全量百科镜像。",
+    "qqTitle": "QQ 机器人",
+    "qqBody": "仅腾讯官方 QQ 机器人通道；订阅推送在 QQ 内完成。",
+    "toSubscribe": "查看订阅说明 →"
   },
   "worldstate": {
     "loading": "正在同步世界状态…",
     "error": "无法加载世界状态",
-    "retry": "重试"
+    "retry": "重试",
+    "toFissures": "查看虚空裂隙 →"
+  },
+  "fissures": {
+    "eyebrow": "Fissures",
+    "title": "虚空裂隙",
+    "intro": "国际服当前裂隙列表（来自世界状态）。可按遗物类型、任务类型、普通/钢铁之路/九重天筛选。",
+    "loading": "加载裂隙…",
+    "error": "无法加载裂隙",
+    "toWorldstate": "← 返回世界状态"
+  },
+  "market": {
+    "eyebrow": "Market",
+    "title": "市场",
+    "intro": "经 Lanius API 查询 Warframe Market 物品与挂单概览。",
+    "placeholder": "物品名 / 别名…",
+    "emptyHint": "输入关键词开始搜索。",
+    "loading": "搜索中…",
+    "error": "无法加载市场结果"
+  },
+  "riven": {
+    "eyebrow": "Riven",
+    "title": "紫卡",
+    "intro": "按武器名查询紫卡相关信息。",
+    "placeholder": "武器名…",
+    "emptyHint": "输入武器名开始搜索。",
+    "loading": "搜索中…",
+    "error": "无法加载紫卡结果"
+  },
+  "traders": {
+    "eyebrow": "Traders",
+    "title": "商人",
+    "intro": "虚空商人与瓦奇娅货架（国际服）。",
+    "voidTrader": "虚空商人",
+    "varzia": "瓦奇娅",
+    "loading": "加载商人…",
+    "error": "无法加载商人数据",
+    "noInventory": "当前无货架条目。",
+    "active": "营业中",
+    "inactive": "未营业",
+    "activeUntil": "离开倒计时 {remain}",
+    "arrivesIn": "抵达倒计时 {remain}"
+  },
+  "rotations": {
+    "eyebrow": "Rotations",
+    "title": "武器轮换",
+    "intro": "信条（Ergo Glast）与终幕（Eleanor）当期货架：全部武器平级展示，含图标、译名、元素与 Valence 进度（相对 60% 上限）。百分比需随商店刷新人工维护。",
+    "tenet": "信条",
+    "coda": "终幕",
+    "loading": "加载轮换…",
+    "error": "无法加载轮换",
+    "remain": "约 {remain} 后刷新",
+    "upcoming": "后续"
+  },
+  "subscribe": {
+    "eyebrow": "Subscribe",
+    "title": "订阅说明",
+    "intro": "推送订阅在 QQ 内完成；本页仅说明用法，不在 Web 绑定 QQ openid。",
+    "qqTitle": "在 QQ 中使用",
+    "qqBody": "对机器人发送独立根命令（可带前导 /）：",
+    "webNote": "管理员可在 /admin 查看与启停订阅；公开站不做写入。",
+    "toHelp": "查看完整指令帮助 →"
   },
   "help": {
     "title": "指令帮助",
@@ -29,10 +138,13 @@
     "params": "参数",
     "required": "必填",
     "optional": "可选",
-    "examples": "示例"
+    "examples": "示例",
+    "viewDetail": "模块详解",
+    "backToList": "← 全部指令",
+    "moduleDetail": "模块：{module}"
   },
   "admin": {
     "title": "管理后台",
-    "placeholder": "登录与运维模块将在后续里程碑接入。当前仅保留入口壳。"
+    "placeholder": "登录后可管理配置、版本、模块、订阅、轮换、ACL 与帮助菜单。"
   }
 }

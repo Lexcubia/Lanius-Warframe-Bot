@@ -2,16 +2,32 @@ import {
   FailureEnvelopeSchema,
   HealthDtoSchema,
   HelpDtoSchema,
+  MarketSearchDtoSchema,
   MetaDtoSchema,
+  PushDispatchDtoSchema,
+  RivenSearchDtoSchema,
   SiteDtoSchema,
+  SubscriptionDtoSchema,
+  VarziaDtoSchema,
+  VoidTraderDtoSchema,
+  WeaponRotationDtoSchema,
   WorldstateDtoSchema,
   type ApiEnvelope,
   type HealthDto,
   type HelpDto,
   type Locale,
+  type MarketSearchDto,
   type MetaDto,
+  type PushDispatchDto,
+  type PushFrequency,
   type Realm,
+  type RivenSearchDto,
   type SiteDto,
+  type SubscribableModuleId,
+  type SubscriptionDto,
+  type VarziaDto,
+  type VoidTraderDto,
+  type WeaponRotationDto,
   type WorldstateDto,
 } from '@lanius/core';
 import { z } from 'zod';
@@ -24,6 +40,8 @@ export type LaniusApiClientOptions = {
   baseUrl: string;
   /** Injectable fetch implementation (defaults to global `fetch`). */
   fetchImpl?: typeof fetch;
+  /** 内部写操作 Bearer（订阅 / 推送 tick）；对应 api.adminToken */
+  adminToken?: string;
 };
 
 /**
@@ -62,6 +80,7 @@ export class LaniusApiClientError extends Error {
 export class LaniusApiClient {
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly adminToken?: string;
 
   /**
    * Creates a client bound to a Lanius API base URL.
@@ -70,7 +89,10 @@ export class LaniusApiClient {
    */
   constructor(options: LaniusApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
-    this.fetchImpl = options.fetchImpl ?? fetch;
+    // 浏览器原生 fetch 作为方法引用会丢 `this`，触发 Illegal invocation；须 bind。
+    this.fetchImpl =
+      options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+    this.adminToken = options.adminToken;
   }
 
   /**
@@ -94,13 +116,53 @@ export class LaniusApiClient {
   }
 
   /**
-   * 调用 `GET /v1/help`。
+   * 调用 `GET /v1/help`，可选模块详解。
    *
-   * @returns 帮助接口的成功或失败包络
+   * @param moduleToken - 模块 id 或根命令（如 `zk`）
+   * @returns 帮助包络
    * @throws LaniusApiClientError 当响应非 JSON 或 schema 校验失败时抛出
    */
-  async getHelp(): Promise<ApiEnvelope<HelpDto>> {
-    return this.getJson('/v1/help', HelpDtoSchema);
+  async getHelp(moduleToken?: string): Promise<ApiEnvelope<HelpDto>> {
+    const suffix = moduleToken
+      ? `?module=${encodeURIComponent(moduleToken)}`
+      : '';
+    return this.getJson(`/v1/help${suffix}`, HelpDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/market/items?q=`。
+   *
+   * @param query - 物品关键词
+   * @param context - 可选场景 ACL 上下文
+   * @returns 市场搜索包络
+   */
+  async getMarketItems(
+    query: string,
+    context: { scene?: string; targetId?: string; userId?: string } = {},
+  ): Promise<ApiEnvelope<MarketSearchDto>> {
+    const params = new URLSearchParams({ q: query });
+    if (context.scene) params.set('scene', context.scene);
+    if (context.targetId) params.set('targetId', context.targetId);
+    if (context.userId) params.set('userId', context.userId);
+    return this.getJson(`/v1/market/items?${params}`, MarketSearchDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/riven?q=`。
+   *
+   * @param query - 武器名
+   * @param context - 可选场景 ACL 上下文
+   * @returns 紫卡搜索包络
+   */
+  async getRiven(
+    query: string,
+    context: { scene?: string; targetId?: string; userId?: string } = {},
+  ): Promise<ApiEnvelope<RivenSearchDto>> {
+    const params = new URLSearchParams({ q: query });
+    if (context.scene) params.set('scene', context.scene);
+    if (context.targetId) params.set('targetId', context.targetId);
+    if (context.userId) params.set('userId', context.userId);
+    return this.getJson(`/v1/riven?${params}`, RivenSearchDtoSchema);
   }
 
   /**
@@ -135,10 +197,157 @@ export class LaniusApiClient {
   }
 
   /**
+   * 调用 `GET /v1/void-trader`。
+   *
+   * @param query - realm/locale
+   * @param context - 可选 ACL 上下文
+   * @returns 虚空商人包络
+   */
+  async getVoidTrader(
+    query: PublicQueryInput = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<VoidTraderDto>> {
+    return this.getJson(
+      `/v1/void-trader${buildQuery(query, context)}`,
+      VoidTraderDtoSchema,
+    );
+  }
+
+  /**
+   * 调用 `GET /v1/varzia`。
+   *
+   * @param query - realm/locale
+   * @param context - 可选 ACL 上下文
+   * @returns 瓦奇娅包络
+   */
+  async getVarzia(
+    query: PublicQueryInput = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<VarziaDto>> {
+    return this.getJson(`/v1/varzia${buildQuery(query, context)}`, VarziaDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/rotations/tenet` 或 `/coda`。
+   *
+   * @param kind - tenet | coda
+   * @param query - realm/locale
+   * @param context - 可选 ACL 上下文
+   * @returns 轮换包络
+   */
+  async getWeaponRotation(
+    kind: 'tenet' | 'coda',
+    query: PublicQueryInput = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<WeaponRotationDto>> {
+    return this.getJson(
+      `/v1/rotations/${kind}${buildQuery(query, context)}`,
+      WeaponRotationDtoSchema,
+    );
+  }
+
+  /**
+   * 列出某场景订阅（需 adminToken）。
+   *
+   * @param scene - group | c2c
+   * @param targetId - 目标 openid
+   * @returns 订阅列表包络
+   */
+  async listSubscriptions(
+    scene: 'group' | 'c2c',
+    targetId: string,
+  ): Promise<ApiEnvelope<{ subscriptions: SubscriptionDto[] }>> {
+    const params = new URLSearchParams({ scene, targetId });
+    return this.getJson(
+      `/v1/subscriptions?${params}`,
+      z.object({ subscriptions: z.array(SubscriptionDtoSchema) }),
+      { auth: true },
+    );
+  }
+
+  /**
+   * 创建/更新订阅（需 adminToken）。
+   *
+   * @param input - 订阅字段
+   * @returns 订阅包络
+   */
+  async upsertSubscription(input: {
+    scene: 'group' | 'c2c';
+    targetId: string;
+    moduleId: SubscribableModuleId;
+    frequency: PushFrequency;
+    userId?: string;
+  }): Promise<ApiEnvelope<{ subscription: SubscriptionDto }>> {
+    return this.postJson(
+      '/v1/subscriptions',
+      input,
+      z.object({ subscription: SubscriptionDtoSchema }),
+    );
+  }
+
+  /**
+   * 关闭订阅（需 adminToken）。
+   *
+   * @param input - 场景与模块
+   * @returns ok 包络
+   */
+  async disableSubscription(input: {
+    scene: 'group' | 'c2c';
+    targetId: string;
+    moduleId: SubscribableModuleId;
+  }): Promise<ApiEnvelope<{ ok: boolean }>> {
+    return this.postJson(
+      '/v1/subscriptions/disable',
+      input,
+      z.object({ ok: z.boolean() }),
+    );
+  }
+
+  /**
+   * 拉取到期推送（需 adminToken）。
+   *
+   * @returns dispatches + fingerprints
+   */
+  async pushTick(): Promise<
+    ApiEnvelope<{
+      dispatches: PushDispatchDto[];
+      fingerprints: Record<string, string>;
+    }>
+  > {
+    return this.postJson(
+      '/v1/push/tick',
+      {},
+      z.object({
+        dispatches: z.array(PushDispatchDtoSchema),
+        fingerprints: z.record(z.string()),
+      }),
+    );
+  }
+
+  /**
+   * 确认推送已发送（需 adminToken）。
+   *
+   * @param subscriptionId - 订阅 id
+   * @param fingerprint - 内容指纹
+   * @returns ok 包络
+   */
+  async pushAck(
+    subscriptionId: number,
+    fingerprint: string,
+  ): Promise<ApiEnvelope<{ ok: boolean }>> {
+    return this.postJson(
+      '/v1/push/ack',
+      { subscriptionId, fingerprint },
+      z.object({ ok: z.boolean() }),
+    );
+  }
+
+  /**
    * Performs a GET and parses a Lanius envelope for the given data schema.
    *
    * @param path - Absolute path beginning with `/v1`.
    * @param dataSchema - Zod schema for the success `data` field.
+   * @param options - 可选鉴权
    * @returns Typed API envelope.
    * @throws LaniusApiClientError on non-JSON or schema mismatch.
    */
@@ -146,12 +355,59 @@ export class LaniusApiClient {
     path: string,
     // 第三泛参为 unknown：带 .default() 的 schema 以输出类型作为 T
     dataSchema: z.ZodType<T, z.ZodTypeDef, unknown>,
+    options: { auth?: boolean } = {},
   ): Promise<ApiEnvelope<T>> {
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (options.auth && this.adminToken) {
+      headers.Authorization = `Bearer ${this.adminToken}`;
+    }
     const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers,
     });
+    return this.parseEnvelope(response, dataSchema);
+  }
 
+  /**
+   * POST JSON 并解析包络（默认带 adminToken）。
+   *
+   * @param path - 路径
+   * @param body - JSON 体
+   * @param dataSchema - data schema
+   * @returns 包络
+   */
+  private async postJson<T>(
+    path: string,
+    body: unknown,
+    dataSchema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  ): Promise<ApiEnvelope<T>> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    };
+    if (this.adminToken) {
+      headers.Authorization = `Bearer ${this.adminToken}`;
+    }
+    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    return this.parseEnvelope(response, dataSchema);
+  }
+
+  /**
+   * 解析成功/失败包络。
+   *
+   * @param response - fetch Response
+   * @param dataSchema - data schema
+   * @returns 包络
+   * @throws LaniusApiClientError 非法 JSON 或 schema 不匹配
+   */
+  private async parseEnvelope<T>(
+    response: Response,
+    dataSchema: z.ZodType<T, z.ZodTypeDef, unknown>,
+  ): Promise<ApiEnvelope<T>> {
     let body: unknown;
     try {
       body = await response.json();
@@ -199,9 +455,31 @@ export class LaniusApiClient {
       );
     }
 
-    // Narrow Zod's inferred object into the shared SuccessEnvelope<T> contract.
     return parsed.data as ApiEnvelope<T>;
   }
+}
+
+/**
+ * QQ/Web 门禁上下文查询参数。
+ */
+type GateContext = { scene?: string; targetId?: string; userId?: string };
+
+/**
+ * 拼装公开查询 + 门禁参数。
+ *
+ * @param query - realm/locale
+ * @param context - scene 等
+ * @returns 含前导 `?` 的查询串，或空串
+ */
+function buildQuery(query: PublicQueryInput, context: GateContext): string {
+  const params = new URLSearchParams();
+  if (query.realm) params.set('realm', query.realm);
+  if (query.locale) params.set('locale', query.locale);
+  if (context.scene) params.set('scene', context.scene);
+  if (context.targetId) params.set('targetId', context.targetId);
+  if (context.userId) params.set('userId', context.userId);
+  const suffix = params.size > 0 ? `?${params.toString()}` : '';
+  return suffix;
 }
 
 /**

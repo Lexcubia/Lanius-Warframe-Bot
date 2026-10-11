@@ -113,3 +113,38 @@ export function upstreamUnavailableError(message: string): HttpError {
 export function internalError(message: string = 'Internal server error'): HttpError {
   return new HttpError(500, ErrorCode.INTERNAL, message, ErrorMessageKey.INTERNAL);
 }
+
+/**
+ * 构建未授权错误（HTTP 401）。
+ *
+ * @param message - 说明
+ * @returns HttpError
+ */
+export function unauthorizedError(message = 'Unauthorized'): HttpError {
+  return new HttpError(
+    401,
+    ErrorCode.UNAUTHORIZED,
+    message,
+    ErrorMessageKey.UNAUTHORIZED,
+  );
+}
+
+/**
+ * 构建禁止访问错误（HTTP 403）。
+ *
+ * @param message - 说明
+ * @returns HttpError
+ */
+export function forbiddenError(message = 'Forbidden'): HttpError {
+  return new HttpError(403, ErrorCode.FORBIDDEN, message, ErrorMessageKey.FORBIDDEN);
+}
+
+/**
+ * 构建未找到错误（HTTP 404）。
+ *
+ * @param message - 说明
+ * @returns HttpError
+ */
+export function notFoundError(message = 'Not found'): HttpError {
+  return new HttpError(404, ErrorCode.NOT_FOUND, message, ErrorMessageKey.NOT_FOUND);
+}

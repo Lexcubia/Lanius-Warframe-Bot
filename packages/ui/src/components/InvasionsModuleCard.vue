@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import type { InvasionDto, WorldstateDto } from '@lanius/core';
+import type { CatalogItemDto, InvasionDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { computed } from 'vue';
 
+import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
 /**
@@ -26,30 +28,42 @@ function label(name: { zh: string; en: string }): string {
 }
 
 /**
- * 可选奖励文案。
+ * 可选奖励文案（数量大于 1 时附带 ×N）。
  *
- * @param reward - 奖励 LocalizedName
+ * @param reward - 奖励物品引用
  * @returns 显示串
  */
-function rewardText(reward: InvasionDto['attackerReward']): string {
+function rewardText(reward: CatalogItemDto | undefined): string {
   if (!reward) {
     return props.locale === 'en' ? '—' : '无奖励';
   }
-  return label(reward);
+  const name = label(reward.name);
+  if (reward.quantity != null && reward.quantity > 1) {
+    return `${name} ×${reward.quantity}`;
+  }
+  return name;
 }
 
 /**
- * 活跃入侵列表（未过期）。
+ * 活跃入侵列表（未过期，响应 props）。
  *
  * @returns 截断后的入侵行
  */
-function activeItems(): InvasionDto[] {
+const items = computed((): InvasionDto[] => {
   const limit = props.maxItems ?? 8;
-  return props.worldstate.invasions.filter((row) => !row.expired).slice(0, limit);
-}
+  return props.worldstate.invasions
+    .filter((row) => !row.expired)
+    .slice(0, limit);
+});
 
-const items = activeItems();
-const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, '');
+/**
+ * 抓取时间戳短文案。
+ *
+ * @returns 卡片副标题用时间
+ */
+const stamp = computed(() =>
+  props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
+);
 </script>
 
 <template>
@@ -72,13 +86,23 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
           />
         </div>
         <div class="invasions__sides">
-          <p>
+          <p class="invasions__side">
             <span class="invasions__faction">{{ label(item.attackingFaction) }}</span>
-            {{ rewardText(item.attackerReward) }}
+            <OfficialItemIcon
+              :icon-url="item.attackerReward?.iconUrl"
+              :alt="rewardText(item.attackerReward)"
+              :size="28"
+            />
+            <span>{{ rewardText(item.attackerReward) }}</span>
           </p>
-          <p>
+          <p class="invasions__side">
             <span class="invasions__faction">{{ label(item.defendingFaction) }}</span>
-            {{ rewardText(item.defenderReward) }}
+            <OfficialItemIcon
+              :icon-url="item.defenderReward?.iconUrl"
+              :alt="rewardText(item.defenderReward)"
+              :size="28"
+            />
+            <span>{{ rewardText(item.defenderReward) }}</span>
           </p>
         </div>
       </li>
@@ -104,6 +128,20 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   background: var(--lanius-panel-raised);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+@media (hover: hover) {
+  .invasions__row:hover {
+    border-color: rgba(255, 122, 110, 0.4);
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
+    transform: translateY(-1px);
+  }
 }
 
 .invasions__head {
@@ -130,14 +168,19 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   background: linear-gradient(90deg, var(--lanius-bar-attack), var(--lanius-bar-defend));
 }
 
-.invasions__sides p {
+.invasions__sides p,
+.invasions__side {
   margin: 0 0 4px;
   font-size: 11px;
   color: var(--lanius-text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .invasions__faction {
-  display: inline-block;
+  flex-shrink: 0;
   min-width: 4.5em;
   font-weight: 700;
   color: var(--lanius-text-muted);

@@ -12,16 +12,16 @@ import { successWithMeta } from '../lib/build-meta.js';
 export function healthRoutes() {
   const app = new Hono<{ Variables: AppVariables }>();
 
-  app.get('/health', (c) => {
+  app.get('/health', async (c) => {
     const ctx = c.get('app');
     const uptimeSec = Math.floor((Date.now() - ctx.startedAtMs) / 1000);
-    const hasWorldstateCache = ctx.worldstateCache.has('worldstate:international');
+    const cacheStatus = await ctx.cache.ping();
 
     const data: HealthDto = HealthDtoSchema.parse({
       status: 'ok',
       uptimeSec,
       checks: {
-        cache: hasWorldstateCache ? 'ok' : 'unknown',
+        cache: cacheStatus,
         upstreamWorldstate: 'unknown',
       },
     });

@@ -1,4 +1,5 @@
-# 构建推送 GHCR 并 SSH 部署。
+# 构建推送 GHCR（不 SSH 部署）。
+# 部署见 deploy-release.yml（长期分支 release → pull + up）。
 # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
 
 name: Release
@@ -16,7 +17,7 @@ on:
   workflow_call:
     inputs:
       image_tag:
-        description: '镜像与部署使用的 tag（如 v0.1.0）'
+        description: '镜像 tag（如 v0.1.0）'
         required: true
         type: string
 
@@ -59,6 +60,8 @@ jobs:
       fail-fast: true
       matrix:
         include:
+          - app: lanius-app
+            file: deploy/Dockerfile.app
           - app: api
             file: apps/api/Dockerfile
           - app: web
@@ -99,63 +102,3 @@ jobs:
             ${{ steps.meta.outputs.prefix }}/${{ matrix.app }}:sha-${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.app }}
           cache-to: type=gha,mode=max,scope=${{ matrix.app }}
-
-  deploy:
-    name: deploy-production
-    needs: build-push
-    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
-    runs-on: ubuntu-latest
-    # 服务器源码构建（国内机房拉 GHCR 层常极慢）；含 node 镜像与三服务 build
-    timeout-minutes: 60
-    environment: production
-    steps:
-      - name: Resolve image tag
-        id: meta
-        run: |
-          TAG='${{ inputs.image_tag }}'
-          if [ -z "$TAG" ]; then
-            TAG="${GITHUB_REF_NAME}"
-          fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 50m
-          script: |
-            set -euo pipefail
-            DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
-            REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
-            TAG='${{ steps.meta.outputs.tag }}'
-            # 密钥在仓库外；禁止写回 repo/deploy/config.local.yaml
-            SECRETS_FILE="${LANIUS_SECRETS_FILE:-/opt/lanius/secrets/config.local.yaml}"
-            test -f "${SECRETS_FILE}" || { echo "missing ${SECRETS_FILE}"; exit 1; }
-            cd "${REPO_ROOT}"
-            git fetch --tags --force origin
-            git checkout -f "tags/${TAG}"
-            cd "${DEPLOY_DIR}"
-            # 确保 .env 指向仓库外密钥（不被 checkout 清掉；.env 本身也在 deploy/.gitignore）
-            if [ -f .env ]; then
-              grep -q '^LANIUS_CONFIG_FILE=' .env || echo "LANIUS_CONFIG_FILE=${SECRETS_FILE}" >> .env
-              sed -i "s|^LANIUS_CONFIG_FILE=.*|LANIUS_CONFIG_FILE=${SECRETS_FILE}|" .env
-            fi
-            export IMAGE_TAG="${TAG}"
-            export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
-            PLAYWRIGHT_DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
-            # Chromium 须预先装在宿主机；build 不再下载浏览器（见 deploy/prepare-playwright.sh）
-            if ! compgen -G "${PLAYWRIGHT_DIR}/chromium-*" > /dev/null; then
-              echo "missing Playwright Chromium under ${PLAYWRIGHT_DIR}"
-              echo "on the server run: bash ${REPO_ROOT}/deploy/prepare-playwright.sh"
-              exit 1
-            fi
-            export LANIUS_PLAYWRIGHT_DIR="${PLAYWRIGHT_DIR}"
-            # 国内链路优先源码 build；GHCR 镜像仍由上游 job 推送作备份
-            docker compose build
-            docker compose up -d
-            docker compose ps
-            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
-              curl -fsS "http://127.0.0.1/api/lanius/v1/health"

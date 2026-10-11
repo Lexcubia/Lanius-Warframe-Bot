@@ -8,7 +8,8 @@
 set -euo pipefail
 
 DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
-PW_VERSION="${PLAYWRIGHT_VERSION:-1.51.0}"
+# 须与 packages/render 依赖的 playwright 版本一致（bot 镜像 npm 会装同版）
+PW_VERSION="${PLAYWRIGHT_VERSION:-1.64.0}"
 PW_DOWNLOAD_HOST="${PLAYWRIGHT_DOWNLOAD_HOST:-https://npmmirror.com/mirrors/playwright}"
 # DaoCloud 代理 Docker Hub 上的官方 node 镜像
 NODE_IMAGE="${LANIUS_PLAYWRIGHT_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"

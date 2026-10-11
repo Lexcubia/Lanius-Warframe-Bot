@@ -3,9 +3,9 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { applyBotEnvOverrides, type BotConfig } from './config.js';
 
 /**
- * 构造最小合法 Bot 配置供环境覆盖单测使用。
+ * 构造最小 Bot 配置。
  *
- * @returns 解析形状的 BotConfig 样例
+ * @returns BotConfig
  */
 function sampleConfig(): BotConfig {
   return {
@@ -15,12 +15,16 @@ function sampleConfig(): BotConfig {
       callbackPath: '/qq/callback',
       panelIds: {},
     },
+    api: { adminToken: 't' },
     bot: {
       host: '127.0.0.1',
       port: 8788,
       apiBaseUrl: 'http://127.0.0.1:8787',
       defaultReplyMode: 'text',
       dryRun: true,
+      pushIntervalMs: 60_000,
+      commandPrefix: '/',
+      commandPrefixPolicy: 'optional',
       image: {
         maxPerUserPerMinute: 5,
         renderTimeoutMs: 4000,

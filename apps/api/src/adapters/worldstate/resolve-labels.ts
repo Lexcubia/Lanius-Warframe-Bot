@@ -8,6 +8,7 @@ import {
   nodeMissionType,
 } from 'warframe-worldstate-data/utilities';
 
+import { toHuijiZh } from './huiji-zh.js';
 import { applyLabelOverride, lookupLabelOverride } from './label-overrides.js';
 
 /**
@@ -81,21 +82,24 @@ function localized(zh: string | undefined, en: string | undefined, fallback: str
  */
 export function resolveNodeLabel(nodeKey: string): LocalizedName {
   const en = safeCall(() => resolveNodeEn(nodeKey, 'en'));
-  const zh = safeCall(() => resolveNodeEn(nodeKey, 'zh'));
+  const zhRaw = safeCall(() => resolveNodeEn(nodeKey, 'zh'));
+  const zh = zhRaw ? toHuijiZh(zhRaw) : undefined;
   const base = localized(zh, en, nodeKey);
   return applyLabelOverride(base, lookupLabelOverride('nodes', nodeKey));
 }
 
 /**
  * 解析阵营代码（如 `FC_GRINEER`）为可读阵营名。
- * 优先 labels.yaml 中 factions 覆盖，再回退 WFCD。
+ * 先取 WFCD，再套 labels.yaml（默认对齐灰机 wiki）。
  *
  * @param factionKey - 上游 AttackerMissionInfo.faction 或 DefenderMissionInfo.faction
  * @returns 中英阵营显示名；未知时回退为原键
  */
 export function resolveFactionLabel(factionKey: string): LocalizedName {
   const en = safeCall(() => resolveFactionEn(factionKey, 'en')) ?? factionKey;
-  const base = localized(undefined, en, factionKey);
+  const zhRaw = safeCall(() => resolveFactionEn(factionKey, 'zh'));
+  const zh = zhRaw ? toHuijiZh(zhRaw) : undefined;
+  const base = localized(zh, en, factionKey);
   return applyLabelOverride(base, lookupLabelOverride('factions', factionKey));
 }
 
@@ -107,7 +111,8 @@ export function resolveFactionLabel(factionKey: string): LocalizedName {
  */
 export function resolvePathLabel(uniqueName: string): LocalizedName {
   const en = safeCall(() => languageString(uniqueName, 'en'));
-  const zh = safeCall(() => languageString(uniqueName, 'zh'));
+  const zhRaw = safeCall(() => languageString(uniqueName, 'zh'));
+  const zh = zhRaw ? toHuijiZh(zhRaw) : undefined;
   const fallback = uniqueName.includes('/')
     ? (uniqueName.split('/').pop() ?? uniqueName)
     : uniqueName;
@@ -127,7 +132,8 @@ export function resolveChallengeLabels(challengePath: string): {
 } {
   const title = resolvePathLabel(challengePath);
   const enDesc = safeCall(() => languageDesc(challengePath, 'en'));
-  const zhDesc = safeCall(() => languageDesc(challengePath, 'zh'));
+  const zhDescRaw = safeCall(() => languageDesc(challengePath, 'zh'));
+  const zhDesc = zhDescRaw ? toHuijiZh(zhDescRaw) : undefined;
   if (!enDesc && !zhDesc) {
     return { title };
   }
@@ -179,6 +185,31 @@ export function resolveMissionTypeLabel(
   const zh = zhOverride ?? zhFromMt ?? en;
 
   return localized(zh, en, typeKey);
+}
+
+/**
+ * 解析武器显示名（轮换表存英文名）。
+ * 有 uniqueName 时先取 languageString，再套 labels.weapons 覆盖（产品中文译名优先）。
+ *
+ * @param weaponName - 配置/库中的武器英文名，如 `Tenet Arca Plasmor`
+ * @param uniqueName - 可选 PublicExport 路径；缺省时仅用英文名 + labels
+ * @returns 双语显示名；无覆盖时中英均为原名
+ */
+export function resolveWeaponLabel(
+  weaponName: string,
+  uniqueName?: string,
+): LocalizedName {
+  const trimmed = weaponName.trim();
+  const fromPath = uniqueName ? resolvePathLabel(uniqueName) : undefined;
+  const pathTail = uniqueName?.includes('/')
+    ? (uniqueName.split('/').pop() ?? uniqueName)
+    : uniqueName;
+  const en =
+    fromPath && fromPath.en !== pathTail ? fromPath.en : trimmed;
+  const zh =
+    fromPath && fromPath.zh !== fromPath.en ? fromPath.zh : undefined;
+  const base = localized(zh, en, trimmed);
+  return applyLabelOverride(base, lookupLabelOverride('weapons', trimmed));
 }
 
 /**

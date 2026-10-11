@@ -5,6 +5,7 @@ import { ZodError } from 'zod';
 import type { AppVariables } from '../app-context.js';
 import { successWithMeta } from '../lib/build-meta.js';
 import { validationError } from '../lib/http-error.js';
+import { assertModuleAllowed } from '../services/module-gate.js';
 
 /**
  * Registers `GET /v1/worldstate` (invasions + nightwave for a realm).
@@ -31,6 +32,12 @@ export function worldstateRoutes() {
     }
 
     const ctx = c.get('app');
+    assertModuleAllowed(ctx.db, {
+      scene: (c.req.query('scene') as 'group' | 'c2c' | 'web') || 'web',
+      targetId: c.req.query('targetId') ?? 'public',
+      userId: c.req.query('userId') ?? '',
+      moduleId: 'worldstate',
+    });
     const result = await ctx.worldstateService.getWorldstate(realm, locale);
 
     return c.json(

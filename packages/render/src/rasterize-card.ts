@@ -133,8 +133,10 @@ function rowHasContent(
  * @returns 是否视为空白底
  */
 function isNearVoidBackground(r: number, g: number, b: number): boolean {
+  // 纯白内卡面板不是外底
   if (r >= 250 && g >= 250 && b >= 250) {
     return false;
   }
-  return r >= 228 && r <= 248 && g >= 242 && g <= 252 && b >= 246 && b <= 254;
+  // 暖奶油 void / panelRaised（#fff8f2 / #fff4eb）
+  return r >= 248 && r <= 255 && g >= 240 && g <= 252 && b >= 228 && b <= 248;
 }

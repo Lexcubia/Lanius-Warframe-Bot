@@ -1,0 +1,4 @@
+username: 'admin'
+# bcrypt 哈希；本地可用 plain:your-password（勿用于生产）
+passwordHash: '$2a$10$REPLACE_ME'
+sessionSecret: 'REPLACE_ME_WITH_LONG_RANDOM'

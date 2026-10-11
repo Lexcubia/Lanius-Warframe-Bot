@@ -1,31 +1,31 @@
 /**
  * Lanius 共享视觉 token，供 Web UI 与 QQ 卡片栅格化共用。
- * 浅色清新工具站气质；十六进制色值须与 `tokens.css` 保持同步。
+ * 暖底动漫风（对齐公开站 anime 主题）；十六进制色值须与 `tokens.css` 保持同步。
  */
 export const laniusTokens = {
   color: {
-    /** 浅青底，对齐 worldstate.wf.wiki 工具站气质 */
-    void: '#eef6fb',
+    /** 暖奶油底 */
+    void: '#fff8f2',
     panel: '#ffffff',
-    panelRaised: '#f5fafd',
-    border: '#cfe3f0',
-    borderBright: '#9ec9e0',
-    text: '#1a3348',
-    textMuted: '#5a7388',
-    accent: '#3aa7d6',
-    accentDim: '#2b8fc4',
-    warn: '#f0a030',
-    danger: '#e25555',
-    success: '#2fbf7a',
-    brand: '#2486bb',
-    highlight: '#f07a45',
+    panelRaised: '#fff4eb',
+    border: '#e4d5c8',
+    borderBright: '#c9b8a8',
+    text: '#2a3142',
+    textMuted: '#6b7385',
+    accent: '#4eb7e8',
+    accentDim: '#2f8fc4',
+    warn: '#f0b429',
+    danger: '#ff7a6e',
+    success: '#5fd0b0',
+    brand: '#2a3142',
+    highlight: '#ff7a6e',
     /** 入侵进度条：攻方 / 守方 */
-    barAttack: '#3aa7d6',
-    barDefend: '#f0a030',
+    barAttack: '#4eb7e8',
+    barDefend: '#ffb38a',
   },
   font: {
-    display: '"Sora", "Noto Sans SC", sans-serif',
-    body: '"Source Sans 3", "Noto Sans SC", sans-serif',
+    display: '"Zen Maru Gothic", "Noto Sans SC", sans-serif',
+    body: '"Noto Sans SC", "Source Sans 3", sans-serif',
     mono: '"IBM Plex Mono", ui-monospace, monospace',
   },
   card: {
@@ -35,8 +35,8 @@ export const laniusTokens = {
      */
     width: 640,
     /** 卡片外边距（内容区尽量铺满） */
-    padding: 10,
-    radius: 12,
+    padding: 12,
+    radius: 16,
     /** 宫格 / 列表间距 */
     gap: 8,
   },

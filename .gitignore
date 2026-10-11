@@ -57,8 +57,12 @@ Thumbs.db
 .cache/
 packages/render/tmp/
 
-# DB dumps that may contain secrets
+# DB dumps / local runtime DB（可能含密钥与运营数据）
 *.sqlite
+*.sqlite-shm
+*.sqlite-wal
 *.sqlite3
 *.db
+data/*
+!data/.gitkeep
 dumps/

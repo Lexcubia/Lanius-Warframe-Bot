@@ -15,6 +15,13 @@ export {
   type QqSendTarget,
 } from './client.js';
 export {
+  commandKeyboardButton,
+  toQqKeyboardPayload,
+  type QqKeyboardButton,
+  type QqKeyboardContent,
+  type QqKeyboardRow,
+} from './keyboard.js';
+export {
   syncQqCustomMenu,
   type QqMenuSendItem,
   type SyncQqCustomMenuOptions,
