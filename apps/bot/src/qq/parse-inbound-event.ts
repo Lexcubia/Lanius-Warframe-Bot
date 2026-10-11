@@ -120,3 +120,26 @@ export function parseInboundQqMessage(
 
   return null;
 }
+
+/**
+ * 从入站事件取出群 openid（消息或入群事件）。
+ *
+ * @param payload - Webhook JSON
+ * @returns group_openid；非群事件时为 `undefined`
+ */
+export function extractGroupOpenid(payload: QqInboundPayload): string | undefined {
+  const eventType = payload.t ?? '';
+  const groupOpenid = payload.d?.group_openid?.trim();
+  if (!groupOpenid) {
+    return undefined;
+  }
+  if (
+    eventType === 'GROUP_AT_MESSAGE_CREATE' ||
+    eventType === 'GROUP_MESSAGE_CREATE' ||
+    eventType === 'GROUP_ADD_ROBOT' ||
+    eventType === 'GROUP_MSG_RECEIVE'
+  ) {
+    return groupOpenid;
+  }
+  return undefined;
+}

@@ -1,5 +1,6 @@
 import {
   createQqOfficialClient,
+  ensureQqGroupCommandPanel,
   signQqWebhookValidation,
   verifyQqCallback,
   type QqOfficialClient,
@@ -10,7 +11,9 @@ import type { Logger } from 'pino';
 import type { BotConfig } from './config.js';
 import { parseCommand } from './commands/parse-command.js';
 import { handleCommand, type SessionPrefs } from './pipeline/handle-command.js';
+import { buildQqPanelItems } from './qq/build-panel-items.js';
 import {
+  extractGroupOpenid,
   parseInboundQqMessage,
   type QqInboundPayload,
 } from './qq/parse-inbound-event.js';
@@ -92,6 +95,34 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
       payload = JSON.parse(rawBody) as QqInboundPayload;
     } catch {
       return c.json({ ok: false, error: 'invalid_json' }, 400);
+    }
+
+    // Webhook 群指令面板需 API 按群 specific 绑定；在入群/@ 时异步 ensure，不阻断回包。
+    const groupOpenid = extractGroupOpenid(payload);
+    if (groupOpenid && !config.bot.dryRun) {
+      void ensureQqGroupCommandPanel({
+        appId: config.qq.appId,
+        appSecret: config.qq.appSecret,
+        cache: qq.getAccessTokenCache(),
+        items: buildQqPanelItems(),
+        groupOpenid,
+      })
+        .then((result) => {
+          if (result.action === 'failed') {
+            logger.warn({ result, groupOpenid }, 'qq group panel ensure failed');
+          } else if (result.action !== 'skipped') {
+            logger.info({ result, groupOpenid }, 'qq group panel ensured');
+          }
+        })
+        .catch((error: unknown) => {
+          logger.warn(
+            {
+              err: error instanceof Error ? error.message : String(error),
+              groupOpenid,
+            },
+            'qq group panel ensure error',
+          );
+        });
     }
 
     const inbound = parseInboundQqMessage(payload);

@@ -27,6 +27,7 @@ export {
   type QqOpenApiOptions,
 } from './open-api.js';
 export {
+  ensureQqGroupCommandPanel,
   syncQqCommandPanels,
   type QqPanelCommandItem,
   type QqPanelScope,

@@ -69,6 +69,7 @@ async function syncQqUi(
     logger.info({ version: menu.version }, 'qq custom menu synced');
   }
 
+  // c2c 可尝试 all；群面板在收到 GROUP_AT / GROUP_ADD 时按 specific 绑定
   const panels = await syncQqCommandPanels({
     ...creds,
     items: buildQqPanelItems(),

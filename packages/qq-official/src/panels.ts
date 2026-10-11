@@ -19,153 +19,183 @@ export type QqPanelCommandItem = {
 };
 
 /**
- * 同步指令面板的选项。
+ * 启动时全局同步（优先 c2c all；群面板改走按群 specific）。
  */
 export type SyncQqCommandPanelsOptions = QqOpenApiOptions & {
-  /** 需要确保存在的场景列表，默认 group + channel + c2c + dm。 */
-  scopes?: readonly QqPanelScope[];
-  /** 面板指令项；调用方从 Lanius 指令目录映射。 */
   items: readonly QqPanelCommandItem[];
-  /** 写入 panel.remark，用于识别本产品面板以便更新。 */
   remark?: string;
 };
 
 /**
- * 单场景同步结果。
+ * 单场景 / 单目标同步结果。
  */
 export type SyncQqCommandPanelResult = {
   scope: QqPanelScope;
   panelId: string;
-  action: 'created' | 'updated' | 'skipped' | 'failed';
+  action: 'created' | 'updated' | 'bound' | 'skipped' | 'failed';
   detail?: string;
 };
 
-/** 默认只同步群 + 单聊，降低 10QPM 触顶与无用频道配额占用。 */
-const DEFAULT_SCOPES: readonly QqPanelScope[] = ['group', 'c2c'];
 const DEFAULT_REMARK = 'lanius-mvp-commands';
 
 /**
- * 将 Lanius 指令同步为官方「指令面板」（创建或按 remark 更新）。
- * 单场景失败不阻断其它场景；场景间间隔以避免 100017 频控。
+ * 进程内：已绑定指令面板的群 openid → panel_id。
+ * 避免每次 @ 都打创建/关联接口（10 QPM）。
+ */
+const boundGroupPanels = new Map<string, string>();
+
+/** 共享的群聊 specific 面板 id（多群通过 /target 追加）。 */
+let sharedGroupPanelId: string | undefined;
+
+/**
+ * 启动时尝试创建单聊全局面板；群聊改为收到群事件后再按群绑定。
  *
- * @param options - 凭据、场景与指令项
- * @returns 各场景同步结果列表
+ * @param options - 凭据与指令项
+ * @returns 同步结果（通常仅含 c2c）
  */
 export async function syncQqCommandPanels(
   options: SyncQqCommandPanelsOptions,
 ): Promise<SyncQqCommandPanelResult[]> {
-  const scopes = options.scopes ?? DEFAULT_SCOPES;
   const remark = options.remark ?? DEFAULT_REMARK;
-  // 面板元素宜精简；超限错误码 30013 也可能指向 items 数量
-  const items = options.items.slice(0, 8).map((item) => ({
-    type: 'command' as const,
-    name: truncateChars(item.name, 14),
-    desc: truncateChars(item.desc, 30),
-  }));
-
+  const items = toPanelItems(options.items);
   const results: SyncQqCommandPanelResult[] = [];
-  for (let i = 0; i < scopes.length; i += 1) {
-    const scope = scopes[i]!;
-    if (i > 0) {
-      await sleepMs(7000);
-    }
-    try {
-      results.push(await syncOneScope(options, scope, items, remark));
-    } catch (error) {
-      results.push({
-        scope,
-        panelId: '',
-        action: 'failed',
-        detail: error instanceof Error ? error.message : String(error),
-      });
-    }
+
+  try {
+    results.push(await ensureScopeAllPanel(options, 'c2c', items, remark));
+  } catch (error) {
+    results.push({
+      scope: 'c2c',
+      panelId: '',
+      action: 'failed',
+      detail: error instanceof Error ? error.message : String(error),
+    });
   }
+
+  // 群聊不在启动时用 target_type=all（Webhook 机器人上常直接 30013）；
+  // 改为 ensureQqGroupCommandPanel 在入群/@ 时用 specific 绑定。
+  results.push({
+    scope: 'group',
+    panelId: sharedGroupPanelId ?? '',
+    action: 'skipped',
+    detail: 'group panels bind on GROUP_AT / GROUP_ADD via specific',
+  });
+
   return results;
 }
 
 /**
- * 异步等待指定毫秒。
+ * 确保指定群已绑定 Lanius 指令面板（specific）。
+ * 首次创建面板并带上该群；后续群通过关联对象接口追加。
  *
- * @param ms - 等待时长（毫秒）
- * @returns 无返回值
+ * @param options - 凭据与指令项
+ * @param groupOpenid - 群 openid（来自事件 d.group_openid）
+ * @returns 绑定结果
  */
-function sleepMs(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-/**
- * 同步单个场景的指令面板。
- *
- * @param options - 全局同步选项
- * @param scope - 场景
- * @param items - 已截断的面板元素
- * @param remark - 用于识别本产品面板的备注
- * @returns 该场景的同步结果
- */
-async function syncOneScope(
-  options: SyncQqCommandPanelsOptions,
-  scope: QqPanelScope,
-  items: Array<{
-    type: 'command';
-    name: string;
-    desc: string;
-  }>,
-  remark: string,
+export async function ensureQqGroupCommandPanel(
+  options: SyncQqCommandPanelsOptions & { groupOpenid: string },
 ): Promise<SyncQqCommandPanelResult> {
-  const existing = await listPanels(options, scope);
-  // 优先更新本产品 remark；否则复用该场景已有面板（避免 20 个上限占满无法创建）
-  const target = existing.find((row) => row.panel?.remark === remark) ?? existing[0];
-
-  if (target?.panel_id) {
-    await qqOpenApiJson(options, 'PUT', `/v2/panels/${target.panel_id}`, {
-      panel: { items, remark },
-    });
-    return { scope, panelId: target.panel_id, action: 'updated' };
+  const groupOpenid = options.groupOpenid.trim();
+  if (!groupOpenid) {
+    return { scope: 'group', panelId: '', action: 'skipped', detail: 'empty groupOpenid' };
+  }
+  if (boundGroupPanels.has(groupOpenid)) {
+    return {
+      scope: 'group',
+      panelId: boundGroupPanels.get(groupOpenid) ?? '',
+      action: 'skipped',
+      detail: 'already bound in-process',
+    };
   }
 
+  const remark = options.remark ?? DEFAULT_REMARK;
+  const items = toPanelItems(options.items);
+
   try {
-    return await createPanel(options, scope, items, remark);
+    if (sharedGroupPanelId) {
+      await qqOpenApiJson(options, 'PUT', `/v2/panels/${sharedGroupPanelId}/target`, {
+        op: 'add',
+        group_openids: [groupOpenid],
+      });
+      boundGroupPanels.set(groupOpenid, sharedGroupPanelId);
+      return { scope: 'group', panelId: sharedGroupPanelId, action: 'bound' };
+    }
+
+    // 先查是否已有本产品 remark 的 specific 面板可复用
+    const existing = await listPanels(options, 'group');
+    const ours = existing.find((row) => row.panel?.remark === remark);
+    if (ours?.panel_id) {
+      await qqOpenApiJson(options, 'PUT', `/v2/panels/${ours.panel_id}`, {
+        panel: { items, remark },
+      });
+      try {
+        await qqOpenApiJson(options, 'PUT', `/v2/panels/${ours.panel_id}/target`, {
+          op: 'add',
+          group_openids: [groupOpenid],
+        });
+      } catch {
+        // 可能已是 all 或已关联；忽略关联失败仍记录 panel
+      }
+      sharedGroupPanelId = ours.panel_id;
+      boundGroupPanels.set(groupOpenid, ours.panel_id);
+      return { scope: 'group', panelId: ours.panel_id, action: 'updated' };
+    }
+
+    const created = await qqOpenApiJson<{ panel_id?: string }>(
+      options,
+      'POST',
+      '/v2/panels',
+      {
+        scope: 'group',
+        target_type: 'specific',
+        group_openids: [groupOpenid],
+        panel: { items, remark },
+      },
+    );
+    if (!created.panel_id) {
+      return {
+        scope: 'group',
+        panelId: '',
+        action: 'failed',
+        detail: 'create specific group panel missing panel_id',
+      };
+    }
+    sharedGroupPanelId = created.panel_id;
+    boundGroupPanels.set(groupOpenid, created.panel_id);
+    return { scope: 'group', panelId: created.panel_id, action: 'created' };
   } catch (error) {
-    const detail = error instanceof Error ? error.message : String(error);
-    // 40030013：列表常为空却仍超限——多见于后台残留配额，需人工在开放平台删除旧面板
-    if (!detail.includes('30013') && !detail.includes('超出数量')) {
-      throw error;
-    }
-    const freed = await freeForeignPanelSlots(options, remark, 8);
-    if (freed > 0) {
-      await sleepMs(7000);
-      return await createPanel(options, scope, items, remark);
-    }
     return {
-      scope,
+      scope: 'group',
       panelId: '',
       action: 'failed',
-      detail: `${detail}; listEmpty=${existing.length === 0}; hint=在QQ开放平台删除旧指令面板后重启bot`,
+      detail: error instanceof Error ? error.message : String(error),
     };
   }
 }
 
 /**
- * 创建全局面板。
+ * 确保单聊全局面板存在（启动时调用）。
  *
  * @param options - OpenAPI 选项
- * @param scope - 场景
+ * @param scope - 场景（此处为 c2c）
  * @param items - 面板元素
  * @param remark - 产品备注
- * @returns 创建结果
+ * @returns 同步结果
  */
-async function createPanel(
-  options: SyncQqCommandPanelsOptions,
+async function ensureScopeAllPanel(
+  options: QqOpenApiOptions,
   scope: QqPanelScope,
-  items: Array<{
-    type: 'command';
-    name: string;
-    desc: string;
-  }>,
+  items: Array<{ type: 'command'; name: string; desc: string }>,
   remark: string,
 ): Promise<SyncQqCommandPanelResult> {
+  const existing = await listPanels(options, scope);
+  const ours = existing.find((row) => row.panel?.remark === remark) ?? existing[0];
+  if (ours?.panel_id) {
+    await qqOpenApiJson(options, 'PUT', `/v2/panels/${ours.panel_id}`, {
+      panel: { items, remark },
+    });
+    return { scope, panelId: ours.panel_id, action: 'updated' };
+  }
+
   const created = await qqOpenApiJson<{ panel_id?: string }>(
     options,
     'POST',
@@ -180,7 +210,7 @@ async function createPanel(
     return {
       scope,
       panelId: '',
-      action: 'skipped',
+      action: 'failed',
       detail: 'create response missing panel_id',
     };
   }
@@ -188,47 +218,30 @@ async function createPanel(
 }
 
 /**
- * 删除若干非本产品 remark 的面板，腾出全局配额。
+ * 将业务指令项转为官方 panel.items。
  *
- * @param options - OpenAPI 选项
- * @param remark - 本产品备注（保留）
- * @param maxDelete - 最多删除个数
- * @returns 实际删除数量
+ * @param items - 业务侧指令项
+ * @returns 截断后的官方元素列表
  */
-async function freeForeignPanelSlots(
-  options: SyncQqCommandPanelsOptions,
-  remark: string,
-  maxDelete: number,
-): Promise<number> {
-  let deleted = 0;
-  for (const scope of DEFAULT_SCOPES) {
-    if (deleted >= maxDelete) {
-      break;
-    }
-    const rows = await listPanels(options, scope);
-    for (const row of rows) {
-      if (deleted >= maxDelete) {
-        break;
-      }
-      if (!row.panel_id || row.panel?.remark === remark) {
-        continue;
-      }
-      await qqOpenApiJson(options, 'DELETE', `/v2/panels/${row.panel_id}`);
-      deleted += 1;
-    }
-  }
-  return deleted;
+function toPanelItems(
+  items: readonly QqPanelCommandItem[],
+): Array<{ type: 'command'; name: string; desc: string }> {
+  return items.slice(0, 12).map((item) => ({
+    type: 'command' as const,
+    name: truncateChars(item.name, 14),
+    desc: truncateChars(item.desc, 30),
+  }));
 }
 
 /**
- * 拉取某场景下已有面板列表（首页，足够定位本产品 remark）。
+ * 拉取某场景下已有面板列表。
  *
  * @param options - 凭据与 fetch
  * @param scope - 场景
  * @returns 面板摘要列表
  */
 async function listPanels(
-  options: SyncQqCommandPanelsOptions,
+  options: QqOpenApiOptions,
   scope: QqPanelScope,
 ): Promise<
   Array<{
@@ -270,5 +283,4 @@ async function listPanels(
   });
 }
 
-/** 再导出缓存类型，便于调用方标注。 */
 export type { AccessTokenCache };
