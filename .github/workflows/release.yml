@@ -103,7 +103,8 @@ jobs:
     needs: build-push
     if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # 服务器源码构建（国内机房拉 GHCR 层常极慢）；含 node 镜像与三服务 build
+    timeout-minutes: 60
     environment: production
     steps:
       - name: Resolve image tag
@@ -122,12 +123,21 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 50m
           script: |
             set -euo pipefail
-            cd "${{ secrets.DEPLOY_PATH }}"
-            export IMAGE_TAG='${{ steps.meta.outputs.tag }}'
+            DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
+            REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
+            TAG='${{ steps.meta.outputs.tag }}'
+            cd "${REPO_ROOT}"
+            git fetch --tags --force origin
+            git checkout -f "tags/${TAG}"
+            cd "${DEPLOY_DIR}"
+            export IMAGE_TAG="${TAG}"
             export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
-            # 拉取公开/私有 GHCR 镜像（若包为 private，服务器需事先 docker login ghcr.io）
-            docker compose pull
+            # 国内链路优先源码 build；GHCR 镜像仍由上游 job 推送作备份
+            docker compose build
             docker compose up -d
             docker compose ps
+            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
+              curl -fsS "http://127.0.0.1/api/lanius/v1/health"
