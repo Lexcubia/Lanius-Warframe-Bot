@@ -15,10 +15,12 @@ RUN apt-get update \
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/core/package.json packages/core/
+COPY packages/config/package.json packages/config/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter @lanius/server...
 COPY apps/api apps/api
 COPY packages/core packages/core
+COPY packages/config packages/config
 COPY config/default config/default
 COPY scripts/prepare-runtime-package.mjs scripts/prepare-runtime-package.mjs
 RUN pnpm --filter @lanius/server build \
