@@ -1,20 +1,26 @@
 /* Lanius visual tokens — keep values aligned with tokens.ts */
 :root {
-  --lanius-void: #f3f8fc;
+  --lanius-void: #eef6fb;
   --lanius-panel: #ffffff;
-  --lanius-panel-raised: #f7fbff;
-  --lanius-border: #d5e4f0;
-  --lanius-border-bright: #b7cfe0;
-  --lanius-text: #1c2f42;
-  --lanius-text-muted: #5d7388;
-  --lanius-accent: #14b8a6;
-  --lanius-accent-dim: #0d9488;
-  --lanius-warn: #f59e0b;
-  --lanius-danger: #ef4444;
-  --lanius-success: #22c55e;
-  --lanius-brand: #0f766e;
-  --lanius-highlight: #ff7a59;
+  --lanius-panel-raised: #f5fafd;
+  --lanius-border: #cfe3f0;
+  --lanius-border-bright: #9ec9e0;
+  --lanius-text: #1a3348;
+  --lanius-text-muted: #5a7388;
+  --lanius-accent: #3aa7d6;
+  --lanius-accent-dim: #2b8fc4;
+  --lanius-warn: #f0a030;
+  --lanius-danger: #e25555;
+  --lanius-success: #2fbf7a;
+  --lanius-brand: #2486bb;
+  --lanius-highlight: #f07a45;
+  --lanius-bar-attack: #3aa7d6;
+  --lanius-bar-defend: #f0a030;
   --lanius-font-display: 'Sora', 'Noto Sans SC', sans-serif;
   --lanius-font-body: 'Source Sans 3', 'Noto Sans SC', sans-serif;
   --lanius-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --lanius-card-width: 640px;
+  --lanius-card-padding: 10px;
+  --lanius-card-radius: 12px;
+  --lanius-card-gap: 8px;
 }

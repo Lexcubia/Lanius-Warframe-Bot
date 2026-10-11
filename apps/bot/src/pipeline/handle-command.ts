@@ -1,12 +1,22 @@
 import { createLaniusApiClient } from '@lanius/api';
-import { renderWorldstateCard } from '@lanius/render';
+import {
+  renderFissuresCard,
+  renderInvasionsCard,
+  renderNightwaveCard,
+  renderWorldstateCard,
+} from '@lanius/render';
 import { buildHelpDto, type Locale } from '@lanius/core';
 import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
 
 import type { BotConfig } from '../config.js';
 import type { BotIntent } from '../commands/parse-command.js';
 import { formatHelpText } from '../formatters/help-text.js';
-import { formatWorldstateText } from '../formatters/worldstate-text.js';
+import {
+  formatFissuresText,
+  formatInvasionsText,
+  formatNightwaveText,
+  formatWorldstateText,
+} from '../formatters/worldstate-text.js';
 
 /**
  * 会话级可变偏好（MVP 进程内内存）。
@@ -88,21 +98,47 @@ export async function handleCommand(
   }
 
   // QQ 群聊禁止消息内带 URL；公开站导流留给 Web，不拼进下行文本。
-  const text = formatWorldstateText(envelope.data, locale, {
-    stale: envelope.meta.stale,
-  });
-
-  // MVP：入侵/夜浪意图仍复用完整 worldstate 卡片与文本。
-  void intent;
+  // 世界状态 / 裂隙 / 入侵 / 午夜电波为独立模块，按意图分别格式化与出图。
+  const moduleKind =
+    intent.type === 'fissures'
+      ? 'fissures'
+      : intent.type === 'invasions'
+        ? 'invasions'
+        : intent.type === 'nightwave'
+          ? 'nightwave'
+          : 'worldstate';
+  const text =
+    moduleKind === 'fissures'
+      ? formatFissuresText(envelope.data, locale, { stale: envelope.meta.stale })
+      : moduleKind === 'invasions'
+        ? formatInvasionsText(envelope.data, locale, {
+            stale: envelope.meta.stale,
+          })
+        : moduleKind === 'nightwave'
+          ? formatNightwaveText(envelope.data, locale, {
+              stale: envelope.meta.stale,
+            })
+          : formatWorldstateText(envelope.data, locale, {
+              stale: envelope.meta.stale,
+            });
 
   if (deps.prefs.replyMode === 'image') {
     try {
+      const renderInput = {
+        worldstate: envelope.data,
+        locale,
+        stale: envelope.meta.stale,
+      };
+      const renderPromise =
+        moduleKind === 'fissures'
+          ? renderFissuresCard(renderInput)
+          : moduleKind === 'invasions'
+            ? renderInvasionsCard(renderInput)
+            : moduleKind === 'nightwave'
+              ? renderNightwaveCard(renderInput)
+              : renderWorldstateCard(renderInput);
       const png = await withTimeout(
-        renderWorldstateCard({
-          worldstate: envelope.data,
-          locale,
-          stale: envelope.meta.stale,
-        }),
+        renderPromise,
         deps.config.bot.image.renderTimeoutMs,
       );
       const sent = await deps.qq.sendImage(target, png);

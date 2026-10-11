@@ -127,8 +127,8 @@ export class QqOfficialClient {
   }
 
   /**
-   * 上传图片并作为富媒体消息发送。
-   * 官方上传接口要求公网 URL；当前无临时托管时返回失败，由调用方降级文本。
+   * 上传 PNG（`file_data` base64，≤5MB）并作为富媒体消息发送（`msg_type=7`）。
+   * 群/单聊走各自 `/files` 接口；频道场景暂未接线，返回降级提示。
    *
    * @param target - 频道/会话目标
    * @param imagePng - 来自 `@lanius/render` 的 PNG 字节
@@ -143,13 +143,65 @@ export class QqOfficialClient {
       };
     }
 
-    void imagePng;
-    return {
-      ok: false,
-      degraded: true,
-      detail:
-        'Official rich-media upload requires a public image URL; text fallback expected',
-    };
+    if (!target.targetId) {
+      return { ok: false, detail: 'missing targetId' };
+    }
+    if (target.scene !== 'group' && target.scene !== 'c2c') {
+      return {
+        ok: false,
+        degraded: true,
+        detail: `image upload unsupported for scene=${target.scene}`,
+      };
+    }
+    // 官方 file_data 直传软上限约 5MB；卡片 PNG 通常远小于此
+    if (imagePng.length > 5 * 1024 * 1024) {
+      return {
+        ok: false,
+        degraded: true,
+        detail: `png too large for file_data upload: ${imagePng.length} bytes`,
+      };
+    }
+
+    try {
+      const uploadPath = filesPath(target);
+      const uploaded = await this.openApiPost<{
+        file_info?: string;
+        file_uuid?: string;
+      }>(uploadPath, {
+        file_type: 1,
+        file_name: 'lanius-card.png',
+        file_data: imagePng.toString('base64'),
+        srv_send_msg: false,
+      });
+      if (!uploaded.file_info) {
+        return {
+          ok: false,
+          degraded: true,
+          detail: 'files upload missing file_info',
+        };
+      }
+
+      const body: Record<string, unknown> = {
+        msg_type: 7,
+        media: { file_info: uploaded.file_info },
+      };
+      this.applyPassiveReplyFields(body, target);
+      const result = await this.openApiPost<{ id?: string }>(
+        messagePath(target),
+        body,
+      );
+      return {
+        ok: true,
+        messageId: result.id,
+        detail: uploaded.file_uuid ? `file_uuid:${uploaded.file_uuid}` : undefined,
+      };
+    } catch (error) {
+      return {
+        ok: false,
+        degraded: true,
+        detail: error instanceof Error ? error.message : String(error),
+      };
+    }
   }
 
   /**
@@ -243,6 +295,20 @@ function messagePath(target: QqSendTarget): string {
       return _exhaustive;
     }
   }
+}
+
+/**
+ * 按场景拼出富媒体上传路径（仅 group / c2c）。
+ *
+ * @param target - 发送目标（须为 group 或 c2c）
+ * @returns OpenAPI `/files` 路径
+ */
+function filesPath(target: QqSendTarget): string {
+  const id = encodeURIComponent(target.targetId);
+  if (target.scene === 'group') {
+    return `/v2/groups/${id}/files`;
+  }
+  return `/v2/users/${id}/files`;
 }
 
 /**

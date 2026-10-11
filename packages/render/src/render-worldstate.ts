@@ -1,13 +1,9 @@
 import type { Locale, WorldstateDto } from '@lanius/core';
-import { laniusTokens } from '@lanius/ui/tokens';
-import { Resvg } from '@resvg/resvg-js';
-import satori from 'satori';
 
-import { loadCardFonts } from './fonts.js';
-import { buildWorldstateCardTree } from './worldstate-card.js';
+import { captureVueCard } from './chromium/capture-vue-card.js';
 
 /**
- * 渲染世界状态 PNG 卡片的入参。
+ * 渲染卡片的公共入参。
  */
 export type RenderWorldstateCardInput = {
   worldstate: WorldstateDto;
@@ -16,29 +12,49 @@ export type RenderWorldstateCardInput = {
 };
 
 /**
- * 使用共享 Lanius 视觉 token，将 worldstate DTO 渲染为 PNG。
+ * 渲染「世界状态」开放世界周期 PNG（Vue + Playwright 节点截图）。
  *
- * @param input - 世界状态载荷、locale，以及可选的 stale 提示。
- * @returns 可供 QQ 媒体上传的 PNG 字节。
- * @throws Error 当 Satori 或 Resvg 失败时抛出。
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
  */
 export async function renderWorldstateCard(
   input: RenderWorldstateCardInput,
 ): Promise<Buffer> {
-  const fonts = loadCardFonts();
-  const tree = buildWorldstateCardTree(input);
-  const svg = await satori(tree as never, {
-    width: laniusTokens.card.width,
-    height: 420,
-    fonts: [
-      { name: 'Rajdhani', data: fonts.display, weight: 600, style: 'normal' },
-      { name: 'IBM Plex Sans', data: fonts.body, weight: 400, style: 'normal' },
-      { name: 'Noto Sans SC', data: fonts.cjk, weight: 400, style: 'normal' },
-    ],
-  });
+  return captureVueCard({ kind: 'cycles', ...input });
+}
 
-  const resvg = new Resvg(svg, {
-    fitTo: { mode: 'width', value: laniusTokens.card.width },
-  });
-  return Buffer.from(resvg.render().asPng());
+/**
+ * 渲染「入侵」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderInvasionsCard(
+  input: RenderWorldstateCardInput,
+): Promise<Buffer> {
+  return captureVueCard({ kind: 'invasions', ...input });
+}
+
+/**
+ * 渲染「午夜电波」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderNightwaveCard(
+  input: RenderWorldstateCardInput,
+): Promise<Buffer> {
+  return captureVueCard({ kind: 'nightwave', ...input });
+}
+
+/**
+ * 渲染「虚空裂隙」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderFissuresCard(
+  input: RenderWorldstateCardInput,
+): Promise<Buffer> {
+  return captureVueCard({ kind: 'fissures', ...input });
 }

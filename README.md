@@ -17,7 +17,7 @@
 | 视觉 / UI         | `packages/ui`                                 | token + WorldstateBoard（Web）                     |
 | QQ 卡片           | `packages/render`                        | worldstate PNG（与 Web 同色板）                    |
 | QQ 官方封装       | `packages/qq-official`                        | 验签 + dry-run 发送                                |
-| QQ 官方适配       | `apps/bot`                                    | 独立根命令 `/世界状态` `/入侵` `/夜浪` `/模式` `/帮助`；文本+图片降级 |
+| QQ 官方适配       | `apps/bot`                                    | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/模式` `/帮助`；文本+图片降级 |
 | 公开站 + 管理壳   | `apps/web`（Nuxt）                            | 首页 / 世界状态 / 帮助 /admin；zh/en               |
 | 桌面 / 移动       | Tauri 2（后期）                               | **现不脚手架**；见 `docs/TODO-TAURI.md`            |
 

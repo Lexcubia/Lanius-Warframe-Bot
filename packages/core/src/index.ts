@@ -54,13 +54,23 @@ export {
 } from './dto/meta.js';
 
 export {
+  FissureDtoSchema,
+  FissureEraSchema,
+  FissurePathSchema,
   InvasionDtoSchema,
   LocalizedNameSchema,
   NightwaveDtoSchema,
+  OpenWorldCycleDtoSchema,
+  OpenWorldCycleIdSchema,
   WorldstateDtoSchema,
+  type FissureDto,
+  type FissureEra,
+  type FissurePath,
   type InvasionDto,
   type LocalizedName,
   type NightwaveDto,
+  type OpenWorldCycleDto,
+  type OpenWorldCycleId,
   type WorldstateDto,
 } from './dto/worldstate.js';
 

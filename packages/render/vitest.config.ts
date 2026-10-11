@@ -9,5 +9,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Chromium 截图测试文件串行，避免双开 Vite / Browser
+    fileParallelism: false,
   },
 });

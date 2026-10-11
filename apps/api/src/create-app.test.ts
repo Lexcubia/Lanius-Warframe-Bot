@@ -135,6 +135,7 @@ describe('createApp routes', () => {
     expect(response.status).toBe(200);
     const body = await readJson(response);
     expect(body.ok).toBe(true);
+    expect(Array.isArray(body.data.fissures)).toBe(true);
     expect(body.data.invasions[0].node.en).toBeTruthy();
     expect(body.data.invasions[0].attackingFaction.en).toBe('Infested');
     expect(body.data.invasions[0].defendingFaction.en).toBe('Grineer');

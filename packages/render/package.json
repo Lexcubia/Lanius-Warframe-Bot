@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "DTO → PNG/WebP card renderer for QQ image replies (shares Lanius visual tokens).",
+  "description": "DTO → PNG/WebP card renderer for QQ image replies (Vue + Playwright; shares Lanius visual tokens).",
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -15,7 +15,10 @@
   "types": "./src/index.ts",
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "preview": "node ./scripts/preview-card.mjs",
+    "build:card-host": "vite build --config vite.card-host.config.ts",
+    "browsers:install": "playwright install chromium"
   },
   "dependencies": {
     "@fontsource/ibm-plex-sans": "^5.2.5",
@@ -24,7 +27,11 @@
     "@lanius/core": "workspace:*",
     "@lanius/ui": "workspace:*",
     "@resvg/resvg-js": "^2.6.2",
-    "satori": "^0.12.1"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "playwright": "^1.51.0",
+    "satori": "^0.12.1",
+    "vite": "^5.4.21",
+    "vue": "^3.5.13"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",

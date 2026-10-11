@@ -58,12 +58,94 @@ export const NightwaveDtoSchema = z.object({
 export type NightwaveDto = z.infer<typeof NightwaveDtoSchema>;
 
 /**
- * Worldstate snapshot for one realm (MVP: invasions + nightwave).
- * Clients must not depend on upstream field names.
+ * 开放世界周期标识（世界状态模块主内容）。
+ */
+export const OpenWorldCycleIdSchema = z.enum([
+  'earth',
+  'cetus',
+  'cambion',
+  'vallis',
+  'duviri',
+  'zariman',
+]);
+
+/**
+ * 单条开放世界周期（地球昼夜、平原、魔胎、山谷、双衍、扎里曼）。
+ */
+export const OpenWorldCycleDtoSchema = z.object({
+  id: OpenWorldCycleIdSchema,
+  name: LocalizedNameSchema,
+  /** 机器可读状态键：day/night/fass/vome/warm/cold/... */
+  state: z.string().min(1),
+  stateLabel: LocalizedNameSchema,
+  expiry: z.string().datetime(),
+  remainingMs: z.number().int().nonnegative(),
+  /** 当前状态已流逝比例 `[0,1]`，供环形进度渲染。 */
+  progress: z.number().min(0).max(1),
+});
+
+/**
+ * Normalized open-world cycle row.
+ */
+export type OpenWorldCycleDto = z.infer<typeof OpenWorldCycleDtoSchema>;
+export type OpenWorldCycleId = z.infer<typeof OpenWorldCycleIdSchema>;
+
+/**
+ * 虚空裂隙遗物纪元（古纪→全能）。
+ */
+export const FissureEraSchema = z.enum([
+  'lith',
+  'meso',
+  'neo',
+  'axi',
+  'requiem',
+  'omnia',
+]);
+
+/**
+ * 裂隙路径档：普通 / 钢铁之路 / 九重天（虚空风暴）。
+ */
+export const FissurePathSchema = z.enum(['normal', 'steelPath', 'empyrean']);
+
+/**
+ * 单条虚空裂隙（含官方遗物图标路径）。
+ */
+export const FissureDtoSchema = z.object({
+  id: z.string().min(1),
+  era: FissureEraSchema,
+  eraLabel: LocalizedNameSchema,
+  missionTypeKey: z.string().min(1),
+  missionType: LocalizedNameSchema,
+  node: LocalizedNameSchema,
+  path: FissurePathSchema,
+  pathLabel: LocalizedNameSchema,
+  /** 官方 PublicExport 相对路径，如 `/Lotus/Interface/Icons/Relics/RelicLithA.png` */
+  iconPath: z.string().min(1),
+  /**
+   * 官方 CDN 图标 URL（`content.warframe.com/PublicExport…`）。
+   * 部分环境需带 contentHash 后缀；渲染侧优先用已打包的官方导出图。
+   */
+  iconUrl: z.string().url(),
+  expiry: z.string().datetime(),
+  remainingMs: z.number().int().nonnegative(),
+});
+
+/**
+ * Normalized void fissure row.
+ */
+export type FissureDto = z.infer<typeof FissureDtoSchema>;
+export type FissureEra = z.infer<typeof FissureEraSchema>;
+export type FissurePath = z.infer<typeof FissurePathSchema>;
+
+/**
+ * Worldstate snapshot：开放世界周期 + 裂隙 + 入侵 + 午夜电波。
+ * 客户端按指令模块分别消费，勿依赖上游字段名。
  */
 export const WorldstateDtoSchema = z.object({
   realm: RealmSchema,
   fetchedAt: z.string().datetime(),
+  cycles: z.array(OpenWorldCycleDtoSchema),
+  fissures: z.array(FissureDtoSchema),
   invasions: z.array(InvasionDtoSchema),
   nightwave: NightwaveDtoSchema.nullable(),
 });

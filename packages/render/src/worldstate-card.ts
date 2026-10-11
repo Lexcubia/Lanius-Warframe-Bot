@@ -1,9 +1,18 @@
-import type { Locale, WorldstateDto } from '@lanius/core';
+import type { Locale, OpenWorldCycleDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
 import { laniusTokens } from '@lanius/ui/tokens';
 
+import { buildCycleRingDataUrl } from './cycle-ring-svg.js';
+import { buildQqShell } from './qq-shell.js';
+import {
+  clipText,
+  el,
+  formatRemaining,
+  type SatoriNode,
+} from './satori-el.js';
+
 /**
- * 构建供 Satori 使用的世界状态卡片元素树的选项。
+ * 构建开放世界周期卡片（真正的「世界状态」模块）的选项。
  */
 export type WorldstateCardOptions = {
   worldstate: WorldstateDto;
@@ -11,264 +20,244 @@ export type WorldstateCardOptions = {
   stale?: boolean;
 };
 
-type SatoriNode = {
-  type: string;
-  props: Record<string, unknown>;
-};
+/** 周期环边长（移动端宫格内可读） */
+const RING_SIZE = 86;
 
 /**
- * 创建 Satori 元素节点（兼容 React element 的普通对象）。
+ * 估算周期卡片高度（2×3 宫格铺满）。
+ * 单格含：上下内边距 + 标题 + 环 + 徽章 + 倒计时。
  *
- * @param type - HTML 标签名。
- * @param props - 传给 Satori 的 style / children 等属性。
- * @returns Satori 可接受的普通元素对象。
+ * @param _options - 建树选项（高度由行数决定）
+ * @returns 像素高度
  */
-function el(type: string, props: Record<string, unknown>): SatoriNode {
-  return { type, props };
+export function estimateWorldstateCardHeight(_options: WorldstateCardOptions): number {
+  const pad = laniusTokens.card.padding;
+  const gap = laniusTokens.card.gap;
+  const header = 40;
+  // 10+10 内边距 + 标题区 + 环 + 间距 + 徽章 + 倒计时
+  const tileH = 10 + 10 + 22 + RING_SIZE + 8 + 26 + 22;
+  const rows = 2;
+  return pad * 2 + 6 + header + rows * tileH + gap;
 }
 
 /**
- * 构建世界状态卡片的 Satori 元素树。
- * 配色与面板节奏对齐 Web 端 `@lanius/ui` token。
+ * 构建世界状态（开放世界周期）Satori 树：移动端 2×3 宫格铺满。
  *
- * @param options - worldstate DTO、locale，以及可选 stale 标记。
- * @returns 供 Satori 消费的元素树。
+ * @param options - DTO 与 locale
+ * @returns Satori 元素树
  */
 export function buildWorldstateCardTree(options: WorldstateCardOptions): SatoriNode {
   const { worldstate, locale, stale } = options;
   const zh = locale !== 'en';
-  const invasions = worldstate.invasions.slice(0, 5);
-  const challenges = worldstate.nightwave?.activeChallenges.slice(0, 4) ?? [];
+  const cycles = worldstate.cycles.slice(0, 6);
+  const gap = laniusTokens.card.gap;
+  const rows = [cycles.slice(0, 3), cycles.slice(3, 6)];
 
-  const invasionChildren =
-    invasions.length === 0
-      ? [
+  const stamp = worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, '');
+
+  return buildQqShell({
+    title: zh ? '世界状态' : 'WORLD STATE',
+    subtitle: stamp || 'LANIUS',
+    stale,
+    zh,
+    panel: false,
+    body: [
+      el('div', {
+        style: {
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+        },
+        children: rows.map((row, rowIndex) =>
           el('div', {
-            style: { color: laniusTokens.color.textMuted, fontSize: 14 },
-            children: zh ? '当前无活跃入侵' : 'No active invasions',
-          }),
-        ]
-      : invasions.map((row) =>
-          el('div', {
-            key: row.id,
+            key: `row-${rowIndex}`,
             style: {
               display: 'flex',
-              flexDirection: 'column',
-              marginBottom: 10,
+              flexDirection: 'row',
+              width: '100%',
+              justifyContent: 'space-between',
+              marginBottom: rowIndex === rows.length - 1 ? 0 : gap,
             },
-            children: [
-              el('div', {
-                style: {
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  fontSize: 15,
-                  fontWeight: 600,
-                },
-                children: [
-                  el('span', { children: pickLocalized(row.node, locale) }),
-                  el('span', {
-                    children:
-                      row.completionPct !== undefined ? `${row.completionPct}%` : '',
-                  }),
-                ],
-              }),
-              el('div', {
-                style: {
-                  color: laniusTokens.color.textMuted,
-                  fontSize: 12,
-                  marginTop: 2,
-                },
-                children: `${pickLocalized(row.attackingFaction, locale)} → ${pickLocalized(row.defendingFaction, locale)}`,
-              }),
-              row.completionPct !== undefined
-                ? el('div', {
-                    style: {
-                      marginTop: 6,
-                      height: 4,
-                      background: laniusTokens.color.border,
-                      borderRadius: 999,
-                      display: 'flex',
-                    },
-                    children: [
-                      el('div', {
-                        style: {
-                          width: `${row.completionPct}%`,
-                          height: 4,
-                          background: laniusTokens.color.accent,
-                          borderRadius: 999,
-                        },
-                      }),
-                    ],
-                  })
-                : null,
-            ].filter(Boolean),
-          }),
-        );
-
-  const nightwaveChildren = worldstate.nightwave
-    ? [
-        el('div', {
-          style: {
-            color: laniusTokens.color.textMuted,
-            fontSize: 13,
-            marginBottom: 8,
-          },
-          children: `${zh ? '赛季' : 'Season'} ${worldstate.nightwave.season ?? '—'} · ${
-            zh ? '阶段' : 'Phase'
-          } ${worldstate.nightwave.phase ?? '—'}`,
-        }),
-        ...challenges.map((challenge) =>
-          el('div', {
-            key: challenge.id,
-            style: { fontSize: 14, marginBottom: 8, color: laniusTokens.color.text },
-            children: challenge.title
-              ? pickLocalized(challenge.title, locale)
-              : challenge.id,
+            children: row.map((cycle) => cycleTile(cycle, zh, locale)),
           }),
         ),
-      ]
-    : [
-        el('div', {
-          style: { color: laniusTokens.color.textMuted, fontSize: 14 },
-          children: zh ? '暂无夜浪数据' : 'No Nightwave data',
-        }),
-      ];
+      }),
+    ],
+  });
+}
+
+/**
+ * 单个周期小卡（名称 / SVG 环 / 状态徽章 / 倒计时），横向均分铺满。
+ *
+ * @param cycle - 周期 DTO
+ * @param zh - 是否中文
+ * @param locale - locale
+ * @returns Satori 节点
+ */
+function cycleTile(cycle: OpenWorldCycleDto, zh: boolean, locale: Locale): SatoriNode {
+  const colors = accentColors(cycle.state);
+  const ringSrc = buildCycleRingDataUrl({
+    progress: cycle.progress,
+    activeColor: colors.ring,
+    trackColor: colors.track,
+    glyph: cycleGlyph(cycle.id),
+    size: RING_SIZE,
+  });
 
   return el('div', {
+    key: cycle.id,
     style: {
-      width: laniusTokens.card.width,
-      height: '100%',
       display: 'flex',
       flexDirection: 'column',
-      background: `linear-gradient(165deg, ${laniusTokens.color.panelRaised} 0%, ${laniusTokens.color.void} 70%)`,
-      color: laniusTokens.color.text,
-      padding: laniusTokens.card.padding,
-      fontFamily: 'IBM Plex Sans, Noto Sans SC',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexGrow: 1,
+      flexBasis: 0,
+      marginLeft: 3,
+      marginRight: 3,
+      background: laniusTokens.color.panel,
       border: `1px solid ${laniusTokens.color.border}`,
       borderRadius: laniusTokens.card.radius,
+      paddingTop: 10,
+      paddingBottom: 10,
+      paddingLeft: 4,
+      paddingRight: 4,
     },
     children: [
       el('div', {
         style: {
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-end',
-          marginBottom: 18,
+          fontSize: 12,
+          fontWeight: 600,
+          color: laniusTokens.color.brand,
+          marginBottom: 6,
+          textAlign: 'center',
         },
-        children: [
-          el('div', {
-            style: { display: 'flex', flexDirection: 'column' },
-            children: [
-              el('div', {
-                style: {
-                  color: laniusTokens.color.accent,
-                  fontSize: 14,
-                  letterSpacing: 4,
-                  fontFamily: 'Rajdhani',
-                  textTransform: 'uppercase',
-                },
-                children: zh ? '世界状态' : 'WORLD STATE',
-              }),
-              el('div', {
-                style: {
-                  fontSize: 34,
-                  fontWeight: 700,
-                  fontFamily: 'Rajdhani',
-                  color: laniusTokens.color.brand,
-                  marginTop: 4,
-                },
-                children: 'LANIUS',
-              }),
-            ],
-          }),
-          el('div', {
-            style: {
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-end',
-              gap: 6,
-            },
-            children: [
-              el('div', {
-                style: {
-                  background: laniusTokens.color.highlight,
-                  color: '#ffffff',
-                  fontFamily: 'Rajdhani',
-                  fontWeight: 700,
-                  fontSize: 12,
-                  letterSpacing: 2,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                },
-                children: 'LIVE',
-              }),
-              el('div', {
-                style: { color: laniusTokens.color.textMuted, fontSize: 12 },
-                children: worldstate.fetchedAt,
-              }),
-            ],
-          }),
-        ],
+        children: clipText(pickLocalized(cycle.name, locale), 8),
       }),
-      stale
-        ? el('div', {
-            style: { color: laniusTokens.color.warn, fontSize: 13, marginBottom: 10 },
-            children: zh ? '数据可能延迟（缓存降级）' : 'Data may be delayed (stale cache)',
-          })
-        : null,
+      el('img', {
+        src: ringSrc,
+        width: RING_SIZE,
+        height: RING_SIZE,
+        style: {
+          width: RING_SIZE,
+          height: RING_SIZE,
+        },
+      }),
       el('div', {
-        style: { display: 'flex', gap: 14, flex: 1 },
-        children: [
-          el('div', {
-            style: {
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              background: laniusTokens.color.panel,
-              border: `1px solid ${laniusTokens.color.border}`,
-              borderRadius: laniusTokens.card.radius,
-              padding: 14,
-            },
-            children: [
-              el('div', {
-                style: {
-                  fontFamily: 'Rajdhani',
-                  fontSize: 18,
-                  letterSpacing: 2,
-                  color: laniusTokens.color.brand,
-                  marginBottom: 10,
-                },
-                children: zh ? '入侵' : 'INVASIONS',
-              }),
-              ...invasionChildren,
-            ],
-          }),
-          el('div', {
-            style: {
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              background: laniusTokens.color.panel,
-              border: `1px solid ${laniusTokens.color.border}`,
-              borderRadius: laniusTokens.card.radius,
-              padding: 14,
-            },
-            children: [
-              el('div', {
-                style: {
-                  fontFamily: 'Rajdhani',
-                  fontSize: 18,
-                  letterSpacing: 2,
-                  color: laniusTokens.color.brand,
-                  marginBottom: 10,
-                },
-                children: zh ? '夜浪' : 'NIGHTWAVE',
-              }),
-              ...nightwaveChildren,
-            ],
-          }),
-        ],
+        style: {
+          display: 'flex',
+          marginTop: 8,
+          background: colors.badgeBg,
+          color: colors.badgeFg,
+          fontSize: 12,
+          fontWeight: 700,
+          paddingTop: 3,
+          paddingBottom: 3,
+          paddingLeft: 10,
+          paddingRight: 10,
+          borderRadius: 8,
+        },
+        children: pickLocalized(cycle.stateLabel, locale),
       }),
-    ].filter(Boolean),
+      el('div', {
+        style: {
+          display: 'flex',
+          marginTop: 6,
+          fontSize: 14,
+          fontWeight: 700,
+          color: colors.badgeFg,
+          fontFamily: 'Rajdhani',
+        },
+        children: formatRemaining(cycle.remainingMs, zh),
+      }),
+    ],
   });
+}
+
+/**
+ * 周期中心简写（无图标资源时的占位）。
+ *
+ * @param id - 周期 id
+ * @returns 1–2 字符
+ */
+function cycleGlyph(id: OpenWorldCycleDto['id']): string {
+  const map: Record<OpenWorldCycleDto['id'], string> = {
+    earth: 'E',
+    cetus: 'C',
+    cambion: 'D',
+    vallis: 'V',
+    duviri: 'U',
+    zariman: 'Z',
+  };
+  return map[id];
+}
+
+/**
+ * 按状态取环/徽章配色。
+ * `track` 为对立相位色，形成参考站同款双色环。
+ *
+ * @param state - 状态键
+ * @returns 颜色组
+ */
+function accentColors(state: string): {
+  ring: string;
+  track: string;
+  badgeBg: string;
+  badgeFg: string;
+} {
+  if (state === 'day' || state === 'fass' || state === 'warm' || state === 'anger') {
+    return {
+      ring: '#f0a030',
+      track: '#2f5f8a',
+      badgeBg: '#fff4e8',
+      badgeFg: '#d97706',
+    };
+  }
+  if (state === 'night' || state === 'vome' || state === 'cold' || state === 'corpus') {
+    return {
+      ring: '#3aa7d6',
+      track: '#e8a060',
+      badgeBg: '#e8f5fc',
+      badgeFg: '#2486bb',
+    };
+  }
+  if (state === 'grineer') {
+    return {
+      ring: '#6b8f3a',
+      track: '#cfe3f0',
+      badgeBg: '#eef6e4',
+      badgeFg: '#4d6b28',
+    };
+  }
+  if (state === 'fear' || state === 'sorrow') {
+    return {
+      ring: '#7c8a99',
+      track: '#d4dbe3',
+      badgeBg: '#eef1f4',
+      badgeFg: '#5a7388',
+    };
+  }
+  if (state === 'joy') {
+    return {
+      ring: '#e6b422',
+      track: '#cfe3f0',
+      badgeBg: '#fff8e0',
+      badgeFg: '#b8860b',
+    };
+  }
+  if (state === 'envy') {
+    return {
+      ring: '#2fbf7a',
+      track: '#cfe3f0',
+      badgeBg: '#e8faf0',
+      badgeFg: '#1f8f5a',
+    };
+  }
+  return {
+    ring: laniusTokens.color.accent,
+    track: laniusTokens.color.border,
+    badgeBg: '#e8f5fc',
+    badgeFg: laniusTokens.color.brand,
+  };
 }

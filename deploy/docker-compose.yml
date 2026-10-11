@@ -90,6 +90,9 @@ services:
       # 覆盖 YAML 中的本机地址，指向 compose 内网 api
       LANIUS_API_BASE: http://api:8787
       PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://localhost}
+      # Vue 卡片宿主预构建目录（镜像内路径；Playwright 节点截图）
+      LANIUS_CARD_HOST_DIR: /app/card-host
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     volumes:
       - ${LANIUS_CONFIG_FILE:-./config.local.yaml}:/config/config.local.yaml:ro
     expose:

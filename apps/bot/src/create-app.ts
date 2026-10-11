@@ -11,12 +11,12 @@ import type { Logger } from 'pino';
 import type { BotConfig } from './config.js';
 import { parseCommand } from './commands/parse-command.js';
 import { handleCommand, type SessionPrefs } from './pipeline/handle-command.js';
-import { buildQqPanelItems } from './qq/build-panel-items.js';
 import {
   extractGroupOpenid,
   parseInboundQqMessage,
   type QqInboundPayload,
 } from './qq/parse-inbound-event.js';
+import { buildQqPanelSyncOptions } from './qq/panel-sync-options.js';
 
 /**
  * 构建 Bot HTTP 应用的结果。
@@ -101,10 +101,7 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
     const groupOpenid = extractGroupOpenid(payload);
     if (groupOpenid && !config.bot.dryRun) {
       void ensureQqGroupCommandPanel({
-        appId: config.qq.appId,
-        appSecret: config.qq.appSecret,
-        cache: qq.getAccessTokenCache(),
-        items: buildQqPanelItems(),
+        ...buildQqPanelSyncOptions(config, qq.getAccessTokenCache()),
         groupOpenid,
       })
         .then((result) => {

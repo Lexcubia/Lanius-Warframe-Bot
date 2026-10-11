@@ -8,7 +8,8 @@ import pino from 'pino';
 
 import { loadBotConfig, resolveRepoRoot, type BotConfig } from './config.js';
 import { createBotApp } from './create-app.js';
-import { buildQqMenuItems, buildQqPanelItems } from './qq/build-panel-items.js';
+import { buildQqMenuItems } from './qq/build-panel-items.js';
+import { buildQqPanelSyncOptions } from './qq/panel-sync-options.js';
 
 /**
  * 启动官方 QQ Bot HTTP 进程。
@@ -69,11 +70,9 @@ async function syncQqUi(
     logger.info({ version: menu.version }, 'qq custom menu synced');
   }
 
-  // c2c 可尝试 all；群面板在收到 GROUP_AT / GROUP_ADD 时按 specific 绑定
-  const panels = await syncQqCommandPanels({
-    ...creds,
-    items: buildQqPanelItems(),
-  });
+  // c2c 可尝试 all；群面板在收到 GROUP_AT / GROUP_ADD 时按 specific 绑定。
+  // 官方 GET 列表可能恒为空，依赖 knownPanelIds / panelIdStorePath 做 PUT。
+  const panels = await syncQqCommandPanels(buildQqPanelSyncOptions(config, cache));
   const failed = panels.filter((row) => row.action === 'failed');
   if (failed.length > 0) {
     logger.warn({ results: panels }, 'qq command panels sync partial failure');

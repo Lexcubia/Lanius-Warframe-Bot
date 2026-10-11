@@ -6,6 +6,28 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-11
+
+### Added
+
+- QQ 图片卡片改为 **Vue（`packages/ui`）+ Playwright 节点截图**，与 Web 同源组件；生产镜像预构建 `card-host` 并内置 Chromium。
+- 世界状态模块以开放世界周期环为主；独立模块：**虚空裂隙**（官方遗物图标）、入侵、午夜电波。
+- API / DTO：裂隙纪元与路径档、周期 `progress`、节点/任务中英标签映射增强。
+- QQ 官方下行：被动回复（群/C2C/频道）、指令面板同步、配额回收与 `specific` 绑定（at/join）。
+- 运维：`Deploy develop` 热修工作流；拉取 bot 日志 / dump QQ panels 探测工作流。
+- Bot 默认回复模式改为图片（配置示例与生产 secrets 对齐）。
+
+### Changed
+
+- `@lanius/render` 出图路径切换为 Chromium 截图；Satori 树构建仍保留作兼容/单测。
+- CI / Release 安装 Playwright Chromium（`--with-deps`）以跑卡片截图测试。
+- Bot Docker 镜像安装 Chromium 系统依赖，并通过 `LANIUS_CARD_HOST_DIR` 指向预构建宿主页。
+
+### Fixed
+
+- QQ 面板超限（30013）时回收/复用已有面板；列表探测与错误体可读性。
+- Deploy develop 在已检出 `develop` 时用 `FETCH_HEAD` 硬对齐，避免 fetch 失败。
+
 ## [0.1.0] - 2026-10-10
 
 ### Added

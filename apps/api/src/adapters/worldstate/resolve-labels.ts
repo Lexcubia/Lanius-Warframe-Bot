@@ -1,12 +1,63 @@
-import type { LocalizedName } from '@lanius/core';
+import type { FissureEra, LocalizedName } from '@lanius/core';
 import {
   faction as resolveFactionEn,
   languageDesc,
   languageString,
+  missionType as resolveMissionType,
   node as resolveNodeEn,
+  nodeMissionType,
 } from 'warframe-worldstate-data/utilities';
 
 import { applyLabelOverride, lookupLabelOverride } from './label-overrides.js';
+
+/**
+ * 产品侧简体中文任务类型覆盖（WFCD zh 表多为繁体或英文）。
+ * 键可为 `MT_*` 或星图英文 type（如 Skirmish）。
+ */
+const MISSION_TYPE_ZH: Record<string, string> = {
+  MT_SURVIVAL: '生存',
+  Survival: '生存',
+  MT_DEFENSE: '防御',
+  Defense: '防御',
+  MT_EXTERMINATION: '歼灭',
+  Extermination: '歼灭',
+  MT_INTEL: '间谍',
+  Spy: '间谍',
+  Skirmish: '前哨战',
+  Volatile: '爆发',
+  MT_RESCUE: '救援',
+  Rescue: '救援',
+  MT_TERRITORY: '拦截',
+  Interception: '拦截',
+  MT_SABOTAGE: '破坏',
+  Sabotage: '破坏',
+  MT_MOBILE_DEFENSE: '移动防御',
+  'Mobile Defense': '移动防御',
+  MT_DISRUPTION: '中断',
+  MT_ARTIFACT: '中断',
+  Disruption: '中断',
+  MT_ASSAULT: '强袭',
+  Assault: '强袭',
+  MT_EXCAVATE: '挖掘',
+  Excavation: '挖掘',
+  MT_CORRUPTION: '虚空洪流',
+  'Void Flood': '虚空洪流',
+  MT_VOID_CASCADE: '虚空覆涌',
+  'Void Cascade': '虚空覆涌',
+  'Conjunction Survival': '联结生存',
+};
+
+/**
+ * 纪元固定双语（与官方 VoidT1–T6 / 产品文案对齐）。
+ */
+const ERA_LABELS: Record<FissureEra, LocalizedName> = {
+  lith: { zh: '古纪', en: 'Lith' },
+  meso: { zh: '前纪', en: 'Meso' },
+  neo: { zh: '中纪', en: 'Neo' },
+  axi: { zh: '后纪', en: 'Axi' },
+  requiem: { zh: '安魂', en: 'Requiem' },
+  omnia: { zh: '全能', en: 'Omnia' },
+};
 
 /**
  * 将内部键解析为双语显示名；未知键时中英均回退为原键。
@@ -65,7 +116,7 @@ export function resolvePathLabel(uniqueName: string): LocalizedName {
 }
 
 /**
- * 解析夜浪挑战路径为标题 + 可选描述。
+ * 解析午夜电波（Nightwave）挑战路径为标题 + 可选描述。
  *
  * @param challengePath - `ActiveChallenges[].Challenge` 路径
  * @returns `title` 与可选 `description` 双语字段
@@ -84,6 +135,50 @@ export function resolveChallengeLabels(challengePath: string): {
     title,
     description: localized(zhDesc, enDesc, title.en),
   };
+}
+
+/**
+ * 解析裂隙纪元显示名。
+ *
+ * @param era - Lanius 纪元枚举
+ * @returns 中英纪元名
+ */
+export function resolveFissureEraLabel(era: FissureEra): LocalizedName {
+  return ERA_LABELS[era];
+}
+
+/**
+ * 解析任务类型键为双语显示名。
+ * `fromNode` 时先把节点键解析为星图英文 type（Skirmish 等），再套中英表。
+ *
+ * @param key - `MT_*` 或节点键 / 英文 type
+ * @param options - `fromNode`：key 为 SolNode / CrewBattleNode
+ * @returns 中英任务类型名
+ */
+export function resolveMissionTypeLabel(
+  key: string,
+  options: { fromNode?: boolean } = {},
+): LocalizedName {
+  let typeKey = key;
+  if (options.fromNode) {
+    const fromNode = safeCall(() => nodeMissionType(key, 'en'));
+    if (fromNode) {
+      typeKey = fromNode;
+    }
+  }
+
+  const enFromMt = typeKey.startsWith('MT_')
+    ? safeCall(() => resolveMissionType(typeKey, 'en'))
+    : undefined;
+  const zhFromMt = typeKey.startsWith('MT_')
+    ? safeCall(() => resolveMissionType(typeKey, 'zh'))
+    : undefined;
+
+  const en = enFromMt ?? (typeKey.startsWith('MT_') ? typeKey : typeKey);
+  const zhOverride = MISSION_TYPE_ZH[typeKey] ?? MISSION_TYPE_ZH[en];
+  const zh = zhOverride ?? zhFromMt ?? en;
+
+  return localized(zh, en, typeKey);
 }
 
 /**

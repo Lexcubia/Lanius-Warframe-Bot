@@ -12,6 +12,13 @@ export const BotConfigSchema = z.object({
     appId: z.string().default('YOUR_QQ_APP_ID'),
     appSecret: z.string().default('YOUR_QQ_APP_SECRET'),
     callbackPath: z.string().default('/qq/callback'),
+    /** 已知指令面板 ID（官方列表接口可能恒为空，需本地记住）。 */
+    panelIds: z
+      .object({
+        c2c: z.string().optional(),
+        group: z.string().optional(),
+      })
+      .default({}),
   }),
   bot: z
     .object({
@@ -21,6 +28,8 @@ export const BotConfigSchema = z.object({
       defaultReplyMode: z.enum(['text', 'image']).default('image'),
       dryRun: z.boolean().default(true),
       publicSiteBaseUrl: z.string().url().optional(),
+      /** 创建成功后持久化 panel_id 的 JSON 路径（容器内建议 /data/qq-panels.json）。 */
+      panelIdStorePath: z.string().optional(),
       image: z
         .object({
           maxPerUserPerMinute: z.number().int().positive().default(5),
@@ -52,7 +61,8 @@ export type BotConfig = z.infer<typeof BotConfigSchema>;
 export function applyBotEnvOverrides(config: BotConfig): BotConfig {
   const apiBase = process.env.LANIUS_API_BASE?.trim();
   const siteBase = process.env.PUBLIC_SITE_BASE_URL?.trim();
-  if (!apiBase && !siteBase) {
+  const panelStore = process.env.LANIUS_PANEL_ID_STORE?.trim();
+  if (!apiBase && !siteBase && !panelStore) {
     return config;
   }
   return {
@@ -61,6 +71,7 @@ export function applyBotEnvOverrides(config: BotConfig): BotConfig {
       ...config.bot,
       ...(apiBase ? { apiBaseUrl: apiBase } : {}),
       ...(siteBase ? { publicSiteBaseUrl: siteBase } : {}),
+      ...(panelStore ? { panelIdStorePath: panelStore } : {}),
     },
   };
 }
