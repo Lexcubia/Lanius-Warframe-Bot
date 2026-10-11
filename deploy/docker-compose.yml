@@ -92,9 +92,11 @@ services:
       PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://localhost}
       # Vue 卡片宿主预构建目录（镜像内路径；Playwright 节点截图）
       LANIUS_CARD_HOST_DIR: /app/card-host
+      # 浏览器二进制来自宿主机预装目录（deploy/prepare-playwright.sh），不在镜像内下载
       PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     volumes:
       - ${LANIUS_CONFIG_FILE:-./config.local.yaml}:/config/config.local.yaml:ro
+      - ${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}:/ms-playwright:ro
     expose:
       - '8788'
     depends_on:

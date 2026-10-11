@@ -117,7 +117,25 @@ GHCR 推送使用 `GITHUB_TOKEN`（workflow 内 `packages: write`），无需额
 
 6. GitHub Environment `production` 的 `DEPLOY_PATH` 设为 **`/opt/lanius/repo/deploy`**（或指向该目录的软链）。
 
-7. 启动：
+7. **预装 Playwright Chromium（必做一次；升 playwright 主版本时重跑）**：
+
+   Bot 镜像**不再**在 `docker compose build` 时下载浏览器（避免国内机房/Actions SSH 部署卡住）。
+   浏览器装在宿主机目录，容器只读挂载；目录已存在且版本标记一致时脚本会跳过下载。
+
+   ```bash
+   # 需能访问 mcr.microsoft.com（或已配置镜像加速）
+   bash /opt/lanius/repo/deploy/prepare-playwright.sh
+   # 默认目录：/opt/lanius/ms-playwright
+   # 可选：LANIUS_PLAYWRIGHT_DIR=... PLAYWRIGHT_VERSION=1.51.0
+   ```
+
+   在 `deploy/.env` 可写（默认即可省略）：
+
+   ```env
+   LANIUS_PLAYWRIGHT_DIR=/opt/lanius/ms-playwright
+   ```
+
+8. 启动：
 
    ```bash
    cd /opt/lanius/repo/deploy
@@ -128,7 +146,8 @@ GHCR 推送使用 `GITHUB_TOKEN`（workflow 内 `packages: write`），无需额
    curl -fsS "https://$DOMAIN/api/lanius/v1/health"
    ```
 
-后续发版（与 Actions 一致）：在仓库根 `git fetch --tags && git checkout -f tags/vX.Y.Z`，再于 `deploy/` 执行 `docker compose build && up -d`。
+后续发版（与 Actions 一致）：在仓库根 `git fetch --tags && git checkout -f tags/vX.Y.Z`，再于 `deploy/` 执行 `docker compose build && up -d`。  
+若 Actions 报 missing Playwright Chromium，先 SSH 上机跑一遍 `prepare-playwright.sh`。
 
 ## 使用 GHCR 拉取（可选）
 

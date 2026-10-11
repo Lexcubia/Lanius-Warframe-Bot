@@ -145,6 +145,14 @@ jobs:
             fi
             export IMAGE_TAG="${TAG}"
             export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
+            PLAYWRIGHT_DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
+            # Chromium 须预先装在宿主机；build 不再下载浏览器（见 deploy/prepare-playwright.sh）
+            if ! compgen -G "${PLAYWRIGHT_DIR}/chromium-*" > /dev/null; then
+              echo "missing Playwright Chromium under ${PLAYWRIGHT_DIR}"
+              echo "on the server run: bash ${REPO_ROOT}/deploy/prepare-playwright.sh"
+              exit 1
+            fi
+            export LANIUS_PLAYWRIGHT_DIR="${PLAYWRIGHT_DIR}"
             # 国内链路优先源码 build；GHCR 镜像仍由上游 job 推送作备份
             docker compose build
             docker compose up -d
