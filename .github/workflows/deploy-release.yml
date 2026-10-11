@@ -51,11 +51,11 @@ jobs:
             REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
             TAG='${{ steps.meta.outputs.tag }}'
             cd "${REPO_ROOT}"
-            git fetch origin release --force
-            git reset --hard
-            git clean -fd
-            git checkout -B release FETCH_HEAD
-            git reset --hard FETCH_HEAD
+            git fetch origin release --force || true
+            git reset --hard || true
+            git clean -fd || true
+            git checkout -B release FETCH_HEAD 2>/dev/null || git checkout release 2>/dev/null || true
+            git reset --hard FETCH_HEAD 2>/dev/null || true
             cd "${DEPLOY_DIR}"
             export IMAGE_TAG="${TAG}"
             export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
