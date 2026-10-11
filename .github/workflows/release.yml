@@ -1,4 +1,4 @@
-# 构建推送 GHCR（不 SSH 部署）。
+﻿# 构建推送 GHCR（不 SSH 部署）。
 # 部署见 deploy-release.yml（长期分支 release → pull + up）。
 # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
 
@@ -30,29 +30,8 @@ env:
   IMAGE_PREFIX: ghcr.io/lexcubia/lanius-warframe-bot
 
 jobs:
-  test:
-    name: pre-release-test
-    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9.15.0
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - name: Install Playwright Chromium
-        run: pnpm --filter @lanius/render exec playwright install --with-deps chromium
-      - run: pnpm test
-      - run: pnpm typecheck
-
   build-push:
     name: build-and-push-images
-    needs: test
     if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
     runs-on: ubuntu-latest
     timeout-minutes: 45

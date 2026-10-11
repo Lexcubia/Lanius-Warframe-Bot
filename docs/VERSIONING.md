@@ -49,9 +49,15 @@ feature/*  fix/*  docs/*  …
 1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
 2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
 3. PR：`develop` → `main`（或经 `release/x.y.z`）。
-4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR）。
+4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR，无预检）。
 5. 确认 GHCR 镜像就绪后，将 `release` 分支快进到目标提交（或 Admin / `update-image.sh`）完成上线。
 6. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
+
+## 质量关卡
+
+- **本地**：husky + lint-staged 在 commit 前自动格式化与 lint 已暂存文件。
+- **CI**：`push` 到 `develop` / `main` 及所有 PR 触发 `ci.yml`（install → test → typecheck）。
+- **Release**：`release.yml` 仅负责构建推 GHCR，不再重复跑 test/typecheck（避免发布前卡预检）。
 
 ## 相关
 
