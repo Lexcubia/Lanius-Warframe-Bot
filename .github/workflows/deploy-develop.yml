@@ -59,8 +59,8 @@ jobs:
               docker compose up -d
             fi
             docker compose ps
-            # 等待 bot 启动后打印菜单/面板同步日志，便于排查
-            sleep 8
-            docker compose logs bot --tail 80 || true
+            # 等待菜单/面板同步（含超限探测）完成后再拉日志
+            sleep 35
+            docker compose logs bot --tail 120 || true
             curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
               curl -fsS "http://127.0.0.1/api/lanius/v1/health"
