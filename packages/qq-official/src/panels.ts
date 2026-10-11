@@ -117,11 +117,25 @@ async function syncOneScope(
     if (!detail.includes('30013') && !detail.includes('超出数量')) {
       throw error;
     }
-    const freed = await freeForeignPanelSlots(options, remark, 4);
-    if (freed === 0) {
-      return { scope, panelId: '', action: 'failed', detail };
+    const freed = await freeForeignPanelSlots(options, remark, 8);
+    if (freed > 0) {
+      return await createPanel(options, scope, items, remark);
     }
-    return await createPanel(options, scope, items, remark);
+    // 列表为空却仍报超限：把各场景原始列表打进 detail，便于对照开放平台后台
+    const probes: Record<string, unknown> = {};
+    for (const probeScope of DEFAULT_SCOPES) {
+      probes[probeScope] = await qqOpenApiJson(
+        options,
+        'GET',
+        `/v2/panels?scope=${encodeURIComponent(probeScope)}&limit=50`,
+      );
+    }
+    return {
+      scope,
+      panelId: '',
+      action: 'failed',
+      detail: `${detail}; freed=0; probes=${JSON.stringify(probes).slice(0, 1800)}`,
+    };
   }
 }
 
