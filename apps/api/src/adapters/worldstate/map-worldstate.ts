@@ -1,5 +1,7 @@
 import type { InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
 
+import { mapOpenWorldCycles } from './map-cycles.js';
+import { mapFissures } from './map-fissures.js';
 import {
   resolveChallengeLabels,
   resolveFactionLabel,
@@ -37,9 +39,14 @@ export function mapWorldstate(
     .map(mapInvasion)
     .filter((row): row is InvasionDto => row !== null);
 
+  const nowMs = Date.parse(fetchedAt);
+  const fissureNow = Number.isFinite(nowMs) ? nowMs : Date.now();
+
   return {
     realm,
     fetchedAt,
+    cycles: mapOpenWorldCycles(raw),
+    fissures: mapFissures(raw, fissureNow),
     invasions,
     nightwave: mapNightwave(raw.SeasonInfo),
   };

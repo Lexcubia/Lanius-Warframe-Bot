@@ -1,0 +1,125 @@
+# 在生产机探测 QQ 指令面板 list/create 原始响应。
+
+name: Dump QQ panels
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    name: dump-qq-panels
+    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Dump panels over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 5m
+          script: |
+            set -euo pipefail
+            python3 <<'PY'
+            import json, re, ssl, urllib.error, urllib.request
+            from pathlib import Path
+
+            text = Path("/opt/lanius/secrets/config.local.yaml").read_text(encoding="utf-8")
+
+            def grab(key: str) -> str:
+                m = re.search(rf"(?:^|\n)\s*{key}:\s*[\"']?([^\n\"']+)", text)
+                if not m:
+                    raise SystemExit(f"missing {key}")
+                return m.group(1).strip()
+
+            app_id = grab("appId")
+            secret = grab("appSecret")
+            ctx = ssl.create_default_context()
+
+            def call(method, url, body=None, token=None):
+                headers = {"Content-Type": "application/json; charset=utf-8"}
+                if token:
+                    headers["Authorization"] = f"QQBot {token}"
+                data = None if body is None else json.dumps(body).encode()
+                request = urllib.request.Request(url, data=data, headers=headers, method=method)
+                try:
+                    with urllib.request.urlopen(request, context=ctx, timeout=30) as resp:
+                        raw = resp.read().decode()
+                        print(method, resp.status, url)
+                        print(raw[:4000])
+                        return raw
+                except urllib.error.HTTPError as e:
+                    raw = e.read().decode()
+                    print(method, e.code, url)
+                    print(raw[:4000])
+                    return raw
+
+            tok_raw = call(
+                "POST",
+                "https://api.bot.qq.com/app/getAppAccessToken",
+                {"appId": app_id, "clientSecret": secret},
+            )
+            token = json.loads(tok_raw).get("access_token")
+            if not token:
+                raise SystemExit("no token")
+
+            for scope in ("c2c", "group", "channel", "dm"):
+                print("=" * 20, "LIST", scope)
+                call(
+                    "GET",
+                    f"https://api.bot.qq.com/v2/panels?scope={scope}&limit=50",
+                    token=token,
+                )
+
+            print("=" * 20, "CREATE c2c all")
+            call(
+                "POST",
+                "https://api.bot.qq.com/v2/panels",
+                {
+                    "scope": "c2c",
+                    "target_type": "all",
+                    "panel": {
+                        "items": [{"type": "command", "name": "/help", "desc": "help"}],
+                        "remark": "lanius-probe",
+                    },
+                },
+                token=token,
+            )
+
+            print("=" * 20, "CREATE group specific")
+            call(
+                "POST",
+                "https://api.bot.qq.com/v2/panels",
+                {
+                    "scope": "group",
+                    "target_type": "specific",
+                    "group_openids": ["24CC3A6A2EFF240D9A45754B0693D89A"],
+                    "panel": {
+                        "items": [{"type": "command", "name": "/help", "desc": "help"}],
+                        "remark": "lanius-probe",
+                    },
+                },
+                token=token,
+            )
+
+            print("=" * 20, "CREATE channel all")
+            call(
+                "POST",
+                "https://api.bot.qq.com/v2/panels",
+                {
+                    "scope": "channel",
+                    "target_type": "all",
+                    "panel": {
+                        "items": [{"type": "command", "name": "/help", "desc": "help"}],
+                        "remark": "lanius-probe",
+                    },
+                },
+                token=token,
+            )
+            PY

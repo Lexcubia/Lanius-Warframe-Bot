@@ -5,6 +5,7 @@ import { findCommandByRoot } from '@lanius/core';
  */
 export type BotIntent =
   | { type: 'worldstate' }
+  | { type: 'fissures' }
   | { type: 'invasions' }
   | { type: 'nightwave' }
   | { type: 'help' }

@@ -13,6 +13,7 @@ function sampleConfig(): BotConfig {
       appId: 'id',
       appSecret: 'secret',
       callbackPath: '/qq/callback',
+      panelIds: {},
     },
     bot: {
       host: '127.0.0.1',

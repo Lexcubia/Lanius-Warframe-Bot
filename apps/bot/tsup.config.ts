@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 /**
  * Bot 生产打包：打入 `@lanius/*` workspace 源码。
- * 含原生绑定的依赖（如 `@resvg/resvg-js`）保持 external。
+ * 含原生绑定 / 浏览器驱动的依赖保持 external。
  */
 export default defineConfig({
   entry: ['src/index.ts'],
@@ -18,5 +18,9 @@ export default defineConfig({
     '@fontsource/ibm-plex-sans',
     '@fontsource/noto-sans-sc',
     '@fontsource/rajdhani',
+    'playwright',
+    'vite',
+    '@vitejs/plugin-vue',
+    'vue',
   ],
 });

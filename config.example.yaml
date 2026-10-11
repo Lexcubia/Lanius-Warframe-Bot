@@ -31,7 +31,7 @@ bot:
   host: '127.0.0.1'
   port: 8788
   apiBaseUrl: 'http://127.0.0.1:8787'
-  defaultReplyMode: text # text | image
+  defaultReplyMode: image # text | image
   # Local/dev: acknowledge sends without calling Tencent APIs.
   dryRun: true
   # Optional deep link appended to QQ text replies.

@@ -1,0 +1,15 @@
+/**
+ * Chromium 截图宿主页：去掉浏览器默认边距，保证节点截图像素对齐。
+ */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+}
+
+#app {
+  display: inline-block;
+  margin: 0;
+  padding: 0;
+}

@@ -15,7 +15,8 @@
       "import": "./src/tokens.ts",
       "default": "./src/tokens.ts"
     },
-    "./tokens.css": "./src/tokens.css"
+    "./tokens.css": "./src/tokens.css",
+    "./assets/*": "./assets/*"
   },
   "main": "./src/index.ts",
   "types": "./src/index.ts",

@@ -28,6 +28,39 @@ export type UpstreamSeasonInfo = {
 };
 
 /**
+ * 上游赏金联盟任务（用于平原/扎里曼周期对齐）。
+ */
+export type UpstreamSyndicateMission = {
+  Tag?: string;
+  Activation?: { $date?: { $numberLong?: string } };
+  Expiry?: { $date?: { $numberLong?: string } };
+};
+
+/**
+ * 上游星图虚空裂隙（`ActiveMissions`）。
+ */
+export type UpstreamActiveMission = {
+  _id?: { $oid?: string };
+  Node?: string;
+  MissionType?: string;
+  Modifier?: string;
+  Hard?: boolean;
+  Activation?: { $date?: { $numberLong?: string } };
+  Expiry?: { $date?: { $numberLong?: string } };
+};
+
+/**
+ * 上游九重天虚空风暴（`VoidStorms`，不含星图 ActiveMissions）。
+ */
+export type UpstreamVoidStorm = {
+  _id?: { $oid?: string };
+  Node?: string;
+  ActiveMissionTier?: string;
+  Activation?: { $date?: { $numberLong?: string } };
+  Expiry?: { $date?: { $numberLong?: string } };
+};
+
+/**
  * Root fields read from the official worldState JSON document.
  */
 export type UpstreamWorldstate = {
@@ -35,4 +68,7 @@ export type UpstreamWorldstate = {
   Invasions?: UpstreamInvasion[];
   EventInvasions?: UpstreamInvasion[];
   SeasonInfo?: UpstreamSeasonInfo;
+  SyndicateMissions?: UpstreamSyndicateMission[];
+  ActiveMissions?: UpstreamActiveMission[];
+  VoidStorms?: UpstreamVoidStorm[];
 };

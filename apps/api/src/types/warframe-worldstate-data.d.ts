@@ -37,4 +37,22 @@ declare module 'warframe-worldstate-data/utilities' {
    * @returns 描述文案
    */
   export function languageDesc(uniqueName: string, locale?: string): string;
+
+  /**
+   * 将任务类型键（`MT_*` 或英文名）解析为显示名。
+   *
+   * @param missionTypeKey - 如 `MT_SURVIVAL` / `Survival`
+   * @param locale - 字典 locale
+   * @returns 可读任务类型名
+   */
+  export function missionType(missionTypeKey: string, locale?: string): string;
+
+  /**
+   * 由节点键反查任务类型显示名。
+   *
+   * @param nodeKey - 如 `SolNode189`
+   * @param locale - 字典 locale
+   * @returns 可读任务类型名
+   */
+  export function nodeMissionType(nodeKey: string, locale?: string): string;
 }

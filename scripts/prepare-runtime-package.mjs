@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 /**
- * Bot 在打包 `@lanius/render` 后仍需的原生/字体运行时依赖。
+ * Bot 在打包 `@lanius/render` 后仍需的运行时依赖（原生 / 字体 / Chromium 截图）。
  */
 const BOT_RUNTIME_EXTRAS = {
   '@resvg/resvg-js': '^2.6.2',
@@ -17,6 +17,7 @@ const BOT_RUNTIME_EXTRAS = {
   '@fontsource/ibm-plex-sans': '^5.2.5',
   '@fontsource/noto-sans-sc': '^5.2.5',
   '@fontsource/rajdhani': '^5.2.5',
+  playwright: '^1.51.0',
 };
 
 /**

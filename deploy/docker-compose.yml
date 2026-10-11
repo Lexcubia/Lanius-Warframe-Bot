@@ -1,7 +1,8 @@
-# Lanius 生产编排。在服务器 deploy/ 目录执行：
-#   IMAGE_TAG=v0.1.0 docker compose pull && docker compose up -d
+# Lanius 生产编排。在仓库 deploy/ 目录执行：
+#   GHCR：IMAGE_TAG=v0.1.0 docker compose pull && docker compose up -d
+#   源码构建：IMAGE_TAG=v0.1.0 docker compose build && docker compose up -d
 #
-# 镜像默认来自 GHCR；本地构建可改用 build: 覆盖（见 docs/DEPLOY.md）。
+# build.context 为仓库根（deploy 的上一级）。
 
 name: lanius
 
@@ -24,6 +25,9 @@ services:
 
   api:
     image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/api:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -53,6 +57,9 @@ services:
 
   web:
     image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/web:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -71,6 +78,9 @@ services:
 
   bot:
     image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/bot:${IMAGE_TAG:-latest}
+    build:
+      context: ..
+      dockerfile: apps/bot/Dockerfile
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -80,6 +90,9 @@ services:
       # 覆盖 YAML 中的本机地址，指向 compose 内网 api
       LANIUS_API_BASE: http://api:8787
       PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://localhost}
+      # Vue 卡片宿主预构建目录（镜像内路径；Playwright 节点截图）
+      LANIUS_CARD_HOST_DIR: /app/card-host
+      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
     volumes:
       - ${LANIUS_CONFIG_FILE:-./config.local.yaml}:/config/config.local.yaml:ro
     expose:
