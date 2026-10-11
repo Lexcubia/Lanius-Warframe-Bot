@@ -17,6 +17,19 @@ export type CaptureVueCardInput = {
 };
 
 /**
+ * 卡片宿主注入到 `globalThis` 的挂载 API（避免 Node 侧依赖 DOM lib）。
+ */
+type CardHostGlobals = {
+  __LANIUS_MOUNT_CARD__?: (payload: {
+    kind: CardKind;
+    worldstate: WorldstateDto;
+    locale: Locale;
+    stale?: boolean;
+  }) => void;
+  __LANIUS_CARD_READY__?: boolean;
+};
+
+/**
  * 卡片根节点选择器（与 `QqCardShell` 的 `data-lanius-card-root` 对齐）。
  */
 const CARD_ROOT_SELECTOR = '[data-lanius-card-root]';
@@ -75,7 +88,8 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   await page.setViewportSize({ width: width + 24, height: 1200 });
   await page.evaluate(
     (payload) => {
-      const mount = window.__LANIUS_MOUNT_CARD__;
+      const host = globalThis as unknown as CardHostGlobals;
+      const mount = host.__LANIUS_MOUNT_CARD__;
       if (typeof mount !== 'function') {
         throw new Error('card-host mount API missing');
       }
@@ -89,27 +103,29 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
     },
   );
 
-  await page.waitForFunction(() => window.__LANIUS_CARD_READY__ === true);
+  await page.waitForFunction(() => {
+    const host = globalThis as unknown as CardHostGlobals;
+    return host.__LANIUS_CARD_READY__ === true;
+  });
   const root = page.locator(CARD_ROOT_SELECTOR);
   await root.waitFor({ state: 'visible' });
-  // 等待本地图标与字体布局稳定后再截
-  await page.evaluate(async () => {
-    if (document.fonts?.ready) {
+  // 浏览器内脚本用字符串形式，避免 bot typecheck 引入 DOM 类型
+  await page.evaluate(`async () => {
+    if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
     }
     const images = Array.from(document.images);
     await Promise.all(
-      images.map(
-        (img: HTMLImageElement) =>
-          img.complete
-            ? Promise.resolve()
-            : new Promise<void>((resolve) => {
-                img.addEventListener('load', () => resolve(), { once: true });
-                img.addEventListener('error', () => resolve(), { once: true });
-              }),
+      images.map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              img.addEventListener('load', () => resolve(), { once: true });
+              img.addEventListener('error', () => resolve(), { once: true });
+            }),
       ),
     );
-  });
+  }`);
 
   const png = await root.screenshot({
     type: 'png',
@@ -138,8 +154,19 @@ async function ensureSharedPage(
   });
   sharedPage = await context.newPage();
   await sharedPage.goto(origin, { waitUntil: 'networkidle' });
-  await sharedPage.waitForFunction(
-    () => typeof window.__LANIUS_MOUNT_CARD__ === 'function',
-  );
+  await pageWaitForMountApi(sharedPage);
   return sharedPage;
+}
+
+/**
+ * 等待宿主页暴露挂载函数。
+ *
+ * @param page - Playwright Page
+ * @returns 无返回值
+ */
+async function pageWaitForMountApi(page: Page): Promise<void> {
+  await page.waitForFunction(() => {
+    const host = globalThis as unknown as CardHostGlobals;
+    return typeof host.__LANIUS_MOUNT_CARD__ === 'function';
+  });
 }

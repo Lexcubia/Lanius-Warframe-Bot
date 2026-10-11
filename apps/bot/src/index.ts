@@ -71,7 +71,6 @@ async function syncQqUi(
   }
 
   // c2c 可尝试 all；群面板在收到 GROUP_AT / GROUP_ADD 时按 specific 绑定。
-  // 官方 GET 列表可能恒为空，依赖 knownPanelIds / panelIdStorePath 做 PUT。
   const panels = await syncQqCommandPanels(buildQqPanelSyncOptions(config, cache));
   const failed = panels.filter((row) => row.action === 'failed');
   if (failed.length > 0) {
