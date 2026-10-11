@@ -1,0 +1,30 @@
+# 仅 SSH 拉取生产 bot 近期日志，不重建镜像。
+
+name: Fetch bot logs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  logs:
+    name: fetch-bot-logs
+    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    steps:
+      - name: Tail bot logs over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            set -euo pipefail
+            DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
+            cd "${DEPLOY_DIR}"
+            docker compose logs bot --tail 250
