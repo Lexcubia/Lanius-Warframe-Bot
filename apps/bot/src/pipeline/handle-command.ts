@@ -37,6 +37,10 @@ import {
   formatNightwaveText,
   formatWorldstateText,
 } from '../formatters/worldstate-text.js';
+import {
+  buildFissureShortcutKeyboard,
+  fissureShortcutMarkdownHint,
+} from '../qq/build-fissure-keyboard.js';
 
 /**
  * 会话级可变偏好（MVP 进程内内存）。
@@ -244,19 +248,28 @@ export async function handleCommand(
     stale: envelope.meta.stale,
   };
 
+  // 裂隙：Markdown + 底部指令按钮，便于 QQ 内一键筛选
+  if (moduleKind === 'fissures') {
+    return replyFissuresWithShortcuts({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () => renderFissuresCard(renderInput),
+    });
+  }
+
   return replyTextOrImage({
     deps,
     target,
     text,
     preferImage: deps.prefs.replyMode === 'image',
     render: () =>
-      moduleKind === 'fissures'
-        ? renderFissuresCard(renderInput)
-        : moduleKind === 'invasions'
-          ? renderInvasionsCard(renderInput)
-          : moduleKind === 'nightwave'
-            ? renderNightwaveCard(renderInput)
-            : renderWorldstateCard(renderInput),
+      moduleKind === 'invasions'
+        ? renderInvasionsCard(renderInput)
+        : moduleKind === 'nightwave'
+          ? renderNightwaveCard(renderInput)
+          : renderWorldstateCard(renderInput),
     label: moduleKind,
   });
 }
@@ -392,6 +405,97 @@ async function handleSubscribe(
     : `Subscribed ${intent.moduleId} (${frequency})`;
   const sent = await deps.qq.sendText(target, msg);
   return sent.ok ? 'subscribe-on' : `send-failed:${sent.detail ?? 'unknown'}`;
+}
+
+/**
+ * 裂隙回复：优先 Markdown + 快捷指令按钮；图片模式先出图再附带按钮条。
+ *
+ * @param options - 发送选项
+ * @returns 结果摘要
+ */
+async function replyFissuresWithShortcuts(options: {
+  deps: HandleCommandDeps;
+  target: QqSendTarget;
+  text: string;
+  preferImage: boolean;
+  render: () => Promise<Buffer>;
+}): Promise<string> {
+  const { deps, target, text, preferImage, render } = options;
+  const locale = deps.prefs.locale;
+  const keyboard = buildFissureShortcutKeyboard({
+    locale,
+    enter: target.scene === 'c2c',
+    botAppId: deps.config.qq.appId,
+  });
+  const mdBody = toFissureMarkdown(text);
+
+  if (!preferImage) {
+    const sent = await deps.qq.sendMarkdown(target, mdBody, keyboard);
+    if (sent.ok) {
+      return 'markdown-fissures';
+    }
+    const fallback = await deps.qq.sendText(target, text);
+    if (!fallback.ok) {
+      return `send-failed:${fallback.detail ?? sent.detail ?? 'unknown'}`;
+    }
+    return 'markdown-fallback-text';
+  }
+
+  try {
+    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+    const img = await deps.qq.sendImage(target, png);
+    if (img.ok) {
+      // 图片消息无法挂按钮：再发一条短 Markdown 承载 keyboard
+      const tip = await deps.qq.sendMarkdown(
+        target,
+        fissureShortcutMarkdownHint(locale),
+        keyboard,
+      );
+      return tip.ok ? 'image+markdown-fissures' : 'image';
+    }
+    const fallback = await deps.qq.sendMarkdown(
+      target,
+      `${mdBody}\n\n${locale === 'en' ? '_(image send failed; text fallback)_' : '_（图片发送失败，已降级文本）_'}`,
+      keyboard,
+    );
+    if (fallback.ok) {
+      return 'image-fallback-markdown';
+    }
+    const plain = await deps.qq.sendText(target, text);
+    return plain.ok
+      ? 'image-fallback-text'
+      : `send-failed:${plain.detail ?? img.detail ?? 'unknown'}`;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[lanius-bot] image render failed (fissures): ${detail}`);
+    const fallback = await deps.qq.sendMarkdown(
+      target,
+      `${mdBody}\n\n${locale === 'en' ? '_(image render failed; text fallback)_' : '_（图片渲染失败，已降级文本）_'}`,
+      keyboard,
+    );
+    if (fallback.ok) {
+      return `image-fallback-render:${detail.slice(0, 160)}`;
+    }
+    const plain = await deps.qq.sendText(target, text);
+    return plain.ok
+      ? `image-fallback-text:${detail.slice(0, 80)}`
+      : `send-failed:${plain.detail ?? detail}`;
+  }
+}
+
+/**
+ * 将裂隙纯文本转为简 Markdown（保留换行，标题行加粗）。
+ *
+ * @param text - formatFissuresText 产出
+ * @returns Markdown content
+ */
+function toFissureMarkdown(text: string): string {
+  const lines = text.split('\n');
+  if (lines.length === 0) {
+    return text;
+  }
+  const [head, ...rest] = lines;
+  return [`**${head.replace(/^\*+|\*+$/g, '').trim()}**`, ...rest].join('\n');
 }
 
 /**

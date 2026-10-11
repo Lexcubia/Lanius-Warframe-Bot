@@ -1,5 +1,9 @@
 import type { AccessTokenCache } from './access-token.js';
 import { getAppAccessToken } from './access-token.js';
+import {
+  toQqKeyboardPayload,
+  type QqKeyboardContent,
+} from './keyboard.js';
 
 /**
  * 官方 QQ 下行消息的目标通道描述。
@@ -121,6 +125,61 @@ export class QqOfficialClient {
     } catch (error) {
       return {
         ok: false,
+        detail: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * 发送自定义 Markdown 消息（`msg_type=2`），可选挂载底部 keyboard 按钮。
+   * 群/单聊已开放自定义 Markdown；频道可能需内邀——失败时由调用方降级文本。
+   *
+   * @param target - 频道/会话目标
+   * @param content - Markdown 正文（勿依赖外链；群场景会剥 http URL）
+   * @param keyboard - 可选自定义按钮（需与 markdown 同发）
+   * @returns 发送确认；dry-run 时不发起网络 I/O
+   */
+  async sendMarkdown(
+    target: QqSendTarget,
+    content: string,
+    keyboard?: QqKeyboardContent,
+  ): Promise<QqSendResult> {
+    const safeContent = stripHttpUrls(content).trim();
+    if (!safeContent) {
+      return { ok: false, detail: 'empty markdown content after URL strip' };
+    }
+
+    if (this.dryRun) {
+      return {
+        ok: true,
+        messageId: `dry-md-${target.targetId}`,
+        detail: safeContent.slice(0, 80),
+      };
+    }
+
+    if (!target.targetId) {
+      return { ok: false, detail: 'missing targetId' };
+    }
+
+    try {
+      const path = messagePath(target);
+      const body: Record<string, unknown> = {
+        msg_type: 2,
+        markdown: { content: safeContent },
+      };
+      if (keyboard && keyboard.rows.length > 0) {
+        body.keyboard = toQqKeyboardPayload({
+          ...keyboard,
+          botAppId: keyboard.botAppId ?? this.appId,
+        });
+      }
+      this.applyPassiveReplyFields(body, target);
+      const result = await this.openApiPost<{ id?: string }>(path, body);
+      return { ok: true, messageId: result.id };
+    } catch (error) {
+      return {
+        ok: false,
+        degraded: true,
         detail: error instanceof Error ? error.message : String(error),
       };
     }

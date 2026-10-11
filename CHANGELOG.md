@@ -20,6 +20,7 @@
 - 官方 PublicExport 物品图标目录（`CatalogItemDto.iconUrl`）；伤害元素本地 PNG；信条/终幕 valence 进度条。
 - 开放世界周期六地分色主题与环形进度中心图标（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）。
 - 虚空裂隙三维筛选（遗物 / 任务类型 / 普通·钢铁之路·九重天）与路径色标。
+- QQ 裂隙回复支持 Markdown + 底部指令按钮（纪元 / 路径档一键筛选；图片模式附带按钮条）。
 - 午夜电波挑战标注每日 / 每周（`kind` + `kindLabel`），列表按周期分组。
 - 数据源说明 [docs/DATA_SOURCES.md](./docs/DATA_SOURCES.md)。
 
