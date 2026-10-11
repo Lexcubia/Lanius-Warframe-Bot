@@ -75,23 +75,31 @@ Internet
 
 GHCR 推送使用 `GITHUB_TOKEN`（workflow 内 `packages: write`），无需额外 PAT（除非你改用其它 registry）。
 
-## 服务器首次安装
+## 服务器首次安装（源码构建，推荐国内机房）
 
-1. 安装 Docker Engine + Compose 插件。
-2. 创建目录并放入编排文件（从发布 tag / 仓库 `deploy/` 复制）：
+国内机房拉 GHCR 层常极慢；生产推荐 **clone 仓库 + `docker compose build`**。`release.yml` 部署步骤亦按此执行。
+
+1. 安装 Docker Engine + Compose 插件；建议配置 Docker Hub 镜像加速（如 DaoCloud / 腾讯云 mirror），便于拉取 `node` 基础镜像。
+2. Clone 仓库并准备运行时文件：
 
    ```bash
-   mkdir -p /opt/lanius && cd /opt/lanius
-   # 放入 docker-compose.yml、Caddyfile、.env、config.local.yaml
+   mkdir -p /opt/lanius
+   git clone https://github.com/Lexcubia/Lanius-Warframe-Bot.git /opt/lanius/repo
+   ln -sfn /opt/lanius/repo/deploy /opt/lanius/deploy
+   cd /opt/lanius/repo
+   git checkout v0.1.0   # 或目标 tag
+   cp config.example.yaml deploy/config.local.yaml
+   cp deploy/.env.example deploy/.env
    ```
 
-3. 从仓库根 `config.example.yaml` 复制为 `config.local.yaml`，填入 QQ / admin 等密钥；生产建议：
+3. 编辑 `deploy/config.local.yaml`：填入 QQ / admin 密钥；生产建议：
 
    - `bot.dryRun: false`（确认回调与发信就绪后）
-   - `bot.publicSiteBaseUrl` 可被 compose 的 `PUBLIC_SITE_BASE_URL` 覆盖
+   - `bot.publicSiteBaseUrl: https://warframe.xxxx.com`（亦可由 compose 的 `PUBLIC_SITE_BASE_URL` 覆盖）
    - `api.host` / `bot.host` 可保持 `127.0.0.1`；容器内由 `HOST=0.0.0.0` 覆盖
+   - 配置文件需容器用户可读（例如 `chmod 644 deploy/config.local.yaml`）
 
-4. 复制 [deploy/.env.example](../deploy/.env.example) 为 `.env`：
+4. 编辑 `deploy/.env`：
 
    ```env
    DOMAIN=warframe.xxxx.com
@@ -99,39 +107,39 @@ GHCR 推送使用 `GITHUB_TOKEN`（workflow 内 `packages: write`），无需额
    IMAGE_TAG=v0.1.0
    GHCR_IMAGE_PREFIX=ghcr.io/lexcubia/lanius-warframe-bot
    LANIUS_CONFIG_FILE=./config.local.yaml
+   LANIUS_RUNTIME_DEFAULT=../config/default
+   LANIUS_RUNTIME_LOCAL=../config/local
    ```
 
 5. DNS：将 `DOMAIN` A/AAAA 指到服务器；Caddy 自动申请证书。
 
-6. 若 GHCR 包为 private，先在服务器：
-
-   ```bash
-   echo "$GHCR_TOKEN" | docker login ghcr.io -u USERNAME --password-stdin
-   ```
-
-   公开包可跳过登录。
+6. GitHub Environment `production` 的 `DEPLOY_PATH` 设为 **`/opt/lanius/repo/deploy`**（或指向该目录的软链）。
 
 7. 启动：
 
    ```bash
-   cd /opt/lanius
-   docker compose pull
+   cd /opt/lanius/repo/deploy
+   export IMAGE_TAG=v0.1.0
+   docker compose build
    docker compose up -d
    docker compose ps
    curl -fsS "https://$DOMAIN/api/lanius/v1/health"
    ```
 
-## 本地构建镜像（可选）
+后续发版（与 Actions 一致）：在仓库根 `git fetch --tags && git checkout -f tags/vX.Y.Z`，再于 `deploy/` 执行 `docker compose build && up -d`。
 
-在仓库根目录：
+## 使用 GHCR 拉取（可选）
+
+网络畅通时可：
 
 ```bash
-docker build -f apps/api/Dockerfile -t lanius-api:local .
-docker build -f apps/web/Dockerfile -t lanius-web:local .
-docker build -f apps/bot/Dockerfile -t lanius-bot:local .
+cd /opt/lanius/repo/deploy
+export IMAGE_TAG=v0.1.0
+docker compose pull
+docker compose up -d
 ```
 
-自托管用户可不依赖官方 GHCR：改 `deploy/docker-compose.yml` 的 `image:` 或增加 `build:` 段后本地 `compose up --build`。
+私有包需先 `docker login ghcr.io`。
 
 ## 同域与 QQ 回调
 
