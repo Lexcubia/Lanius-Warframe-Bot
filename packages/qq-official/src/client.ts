@@ -202,7 +202,7 @@ export class QqOfficialClient {
     const text = await response.text();
     let parsed: T & { code?: number; message?: string; msg?: string };
     try {
-      parsed = JSON.parse(text) as T & {
+      parsed = (text ? JSON.parse(text) : {}) as T & {
         code?: number;
         message?: string;
         msg?: string;
@@ -210,7 +210,9 @@ export class QqOfficialClient {
     } catch {
       throw new Error(`QQ OpenAPI POST ${path} non-json: HTTP ${response.status}`);
     }
-    if (!response.ok || parsed.code != null) {
+    // 官方成功响应常带 code:0，仅非 0 视为失败
+    const businessFailed = parsed.code != null && Number(parsed.code) !== 0;
+    if (!response.ok || businessFailed) {
       throw new Error(
         `QQ OpenAPI POST ${path} failed: HTTP ${response.status} code=${parsed.code ?? 'n/a'} message=${parsed.message ?? parsed.msg ?? text.slice(0, 200)}`,
       );

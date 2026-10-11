@@ -1,5 +1,5 @@
 /**
- * `@lanius/qq-official` — 官方 QQ 验签、发信与指令面板（仅 bot 使用）。
+ * `@lanius/qq-official` — 官方 QQ 验签、发信、菜单与指令面板（仅 bot 使用）。
  */
 
 export {
@@ -14,6 +14,18 @@ export {
   type QqSendResult,
   type QqSendTarget,
 } from './client.js';
+export {
+  syncQqCustomMenu,
+  type QqMenuSendItem,
+  type SyncQqCustomMenuOptions,
+  type SyncQqCustomMenuResult,
+} from './menu.js';
+export {
+  qqOpenApiJson,
+  truncateChars,
+  truncateWeightedChars,
+  type QqOpenApiOptions,
+} from './open-api.js';
 export {
   syncQqCommandPanels,
   type QqPanelCommandItem,
