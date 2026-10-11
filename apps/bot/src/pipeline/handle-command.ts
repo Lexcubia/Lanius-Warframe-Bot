@@ -18,14 +18,12 @@ import {
   type WorldstateDto,
 } from '@lanius/core';
 import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
+import { uploadCardPng } from '@lanius/qq-official';
 
 import type { BotConfig } from '../config.js';
 import type { BotIntent } from '../commands/parse-command.js';
 import { formatHelpText } from '../formatters/help-text.js';
-import {
-  formatMarketText,
-  formatRivenText,
-} from '../formatters/market-text.js';
+import { formatMarketText, formatRivenText } from '../formatters/market-text.js';
 import {
   formatRotationText,
   formatVarziaText,
@@ -84,8 +82,7 @@ export async function handleCommand(
     });
   const gateCtx = {
     scene:
-      deps.scene ??
-      (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
+      deps.scene ?? (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
     targetId: target.targetId,
     userId: deps.userId ?? '',
   };
@@ -281,10 +278,7 @@ export async function handleCommand(
  * @param locale - 语言
  * @returns 摘要串；无条件时为空串
  */
-function summarizeFissureFilter(
-  filter: FissureQueryFilter,
-  locale: Locale,
-): string {
+function summarizeFissureFilter(filter: FissureQueryFilter, locale: Locale): string {
   const zh = locale !== 'en';
   const eraLabel: Record<string, { zh: string; en: string }> = {
     lith: { zh: '古纪', en: 'Lith' },
@@ -345,10 +339,7 @@ async function handleSubscribe(
         ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
         : [
             zh ? '当前订阅：' : 'Subscriptions:',
-            ...rows.map(
-              (row) =>
-                `· ${row.moduleId} (${row.frequency})`,
-            ),
+            ...rows.map((row) => `· ${row.moduleId} (${row.frequency})`),
             zh
               ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
               : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
@@ -359,12 +350,7 @@ async function handleSubscribe(
 
   if (intent.action === 'off') {
     if (!intent.moduleId) {
-      return sendFail(
-        deps,
-        target,
-        locale,
-        zh ? '请指定要退订的模块' : 'module required',
-      );
+      return sendFail(deps, target, locale, zh ? '请指定要退订的模块' : 'module required');
     }
     const envelope = await api.disableSubscription({
       scene,
@@ -374,20 +360,13 @@ async function handleSubscribe(
     if (!envelope.ok) {
       return sendFail(deps, target, locale, envelope.error.message);
     }
-    const msg = zh
-      ? `已退订：${intent.moduleId}`
-      : `Unsubscribed: ${intent.moduleId}`;
+    const msg = zh ? `已退订：${intent.moduleId}` : `Unsubscribed: ${intent.moduleId}`;
     const sent = await deps.qq.sendText(target, msg);
     return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
   }
 
   if (!intent.moduleId) {
-    return sendFail(
-      deps,
-      target,
-      locale,
-      zh ? '请指定要订阅的模块' : 'module required',
-    );
+    return sendFail(deps, target, locale, zh ? '请指定要订阅的模块' : 'module required');
   }
   const frequency = intent.frequency ?? 'on_change';
   const envelope = await api.upsertSubscription({
@@ -443,14 +422,26 @@ async function replyFissuresWithShortcuts(options: {
 
   try {
     const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+    // 优先：Markdown 嵌图单条（需开关开启 + 已配 COS）。
+    const cos = deps.config.bot.cos;
+    if (deps.config.bot.markdownImage !== false && cos) {
+      const uploaded = await uploadCardPng(cos, png);
+      if (uploaded.ok && uploaded.url) {
+        const size = pngImageSize(png) ?? { width: 640, height: 534 };
+        const md = fissureImageMarkdown(locale, uploaded.url, size);
+        const sent = await deps.qq.sendMarkdown(target, md, keyboard);
+        if (sent.ok) {
+          return 'markdown-image+keyboard';
+        }
+        // 嵌图 markdown 失败则落到下方两条路径。
+      } else {
+        console.warn(`[lanius-bot] cos upload failed: ${uploaded.detail ?? 'unknown'}`);
+      }
+    }
+    // 回退：QQ 富媒体不支持挂按钮，发图片 + 一条 Markdown 按钮提示。
     const img = await deps.qq.sendImage(target, png);
     if (img.ok) {
-      // 图片消息无法挂按钮：再发一条短 Markdown 承载 keyboard
-      const tip = await deps.qq.sendMarkdown(
-        target,
-        fissureShortcutMarkdownHint(locale),
-        keyboard,
-      );
+      const tip = await deps.qq.sendMarkdown(target, fissureShortcutMarkdownHint(locale), keyboard);
       return tip.ok ? 'image+markdown-fissures' : 'image';
     }
     const fallback = await deps.qq.sendMarkdown(
@@ -497,6 +488,47 @@ function toFissureMarkdown(text: string): string {
   }
   const rest = lines.slice(1);
   return [`**${head.replace(/^\*+|\*+$/g, '').trim()}**`, ...rest].join('\n');
+}
+
+/**
+ * 裂隙 Markdown 嵌图消息体（图片 + 底部快捷键盘的单条消息）。
+ *
+ * 语法：QQ 自定义 Markdown 支持 `![alt #Wpx #Hpx](url)` 内嵌公网图片。
+ *
+ * @param locale - 语言
+ * @param imageUrl - 卡片图公网 URL（COS）
+ * @param size - PNG 宽高（`#Wpx #Hpx`）
+ * @returns Markdown content
+ */
+function fissureImageMarkdown(
+  locale: Locale,
+  imageUrl: string,
+  size: { width: number; height: number },
+): string {
+  const title = locale === 'en' ? 'Void Fissures' : '虚空裂隙';
+  // 官方嵌图语法 `![text #Wpx #Hpx](url)`，标注使用图片原始尺寸。
+  const dim = ` #${size.width}px #${size.height}px`;
+  const hint = locale === 'en' ? 'Tap a button below to filter.' : '点击下方按钮快速筛选。';
+  return `**${title}**\n\n![text${dim}](${imageUrl})\n\n${hint}`;
+}
+
+/**
+ * 读取 PNG 头部 IHDR 的宽高（不依赖完整解码）。
+ *
+ * @param png - PNG 字节
+ * @returns 宽高；非法或读取失败返回 `null`
+ */
+function pngImageSize(png: Buffer): { width: number; height: number } | null {
+  // PNG: 8 字节签名 + IHDR(长度4+类型4+宽4+高4)。宽高于偏移 16/20。
+  if (png.length < 24 || png.readUInt32BE(12) !== 0x49484452) {
+    return null;
+  }
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  if (width <= 0 || height <= 0) {
+    return null;
+  }
+  return { width, height };
 }
 
 /**
@@ -567,8 +599,7 @@ async function sendFail(
   locale: Locale,
   message: string,
 ): Promise<string> {
-  const fail =
-    locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
+  const fail = locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
   const sent = await deps.qq.sendText(target, fail);
   if (!sent.ok) {
     return `send-failed:${sent.detail ?? 'unknown'}`;
