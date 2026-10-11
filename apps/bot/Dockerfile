@@ -14,6 +14,7 @@ FROM base AS build
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/bot/package.json apps/bot/
 COPY packages/core/package.json packages/core/
+COPY packages/config/package.json packages/config/
 COPY packages/api/package.json packages/api/
 COPY packages/qq-official/package.json packages/qq-official/
 COPY packages/render/package.json packages/render/
@@ -22,6 +23,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --filter @lanius/bot...
 COPY apps/bot apps/bot
 COPY packages/core packages/core
+COPY packages/config packages/config
 COPY packages/api packages/api
 COPY packages/qq-official packages/qq-official
 COPY packages/render packages/render
