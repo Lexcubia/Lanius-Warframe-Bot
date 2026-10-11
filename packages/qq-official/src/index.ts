@@ -21,6 +21,7 @@ export {
   type QqKeyboardContent,
   type QqKeyboardRow,
 } from './keyboard.js';
+export { uploadCardPng, type CosUploadConfig, type CosUploadResult } from './cos-upload.js';
 export {
   syncQqCustomMenu,
   type QqMenuSendItem,
@@ -33,11 +34,7 @@ export {
   truncateWeightedChars,
   type QqOpenApiOptions,
 } from './open-api.js';
-export {
-  loadQqPanelIdStore,
-  saveQqPanelIdStore,
-  type QqPanelIdStore,
-} from './panel-id-store.js';
+export { loadQqPanelIdStore, saveQqPanelIdStore, type QqPanelIdStore } from './panel-id-store.js';
 export {
   ensureQqGroupCommandPanel,
   reclaimOrphanPanels,

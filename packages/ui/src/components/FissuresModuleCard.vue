@@ -92,9 +92,7 @@ const items = computed((): FissureDto[] => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() =>
-  props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
-);
+const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
 </script>
 
 <template>
@@ -115,16 +113,13 @@ const stamp = computed(() =>
         <div class="fissures__main">
           <div class="fissures__top">
             <span class="fissures__era">{{ label(item.eraLabel) }}</span>
-            <span
-              class="fissures__path"
-              :class="`fissures__path--${item.path}`"
-            >{{ pathTag(item.path) }}</span>
+            <span class="fissures__path" :class="`fissures__path--${item.path}`">{{
+              pathTag(item.path)
+            }}</span>
+            <time class="fissures__remain">{{ formatRemain(item.remainingMs, locale) }}</time>
           </div>
-          <p class="fissures__mission">
-            {{ label(item.missionType) }} · {{ label(item.node) }}
-          </p>
+          <p class="fissures__mission">{{ label(item.missionType) }} · {{ label(item.node) }}</p>
         </div>
-        <time class="fissures__remain">{{ formatRemain(item.remainingMs, locale) }}</time>
       </li>
     </ul>
     <p v-else class="fissures__empty">
@@ -145,12 +140,12 @@ const stamp = computed(() =>
 
 .fissures__row {
   /*
-   * 卡片内禁止换行/省略（截图需完整可见）；
-   * 容器仍 flex-wrap，按内容宽度自适应每行 1–3 个（basis 1/3 封顶）。
+   * 卡片内禁止换行；三列等宽（basis 1/3），
+   * 超长节点名以省略号截断，避免撑大容器。
    */
   box-sizing: border-box;
   flex: 1 1 calc((100% - 16px) / 3);
-  min-width: min(100%, max-content);
+  min-width: 0;
   max-width: 100%;
   display: flex;
   flex-wrap: nowrap;
@@ -232,13 +227,17 @@ const stamp = computed(() =>
   font-size: 12px;
   color: var(--lanius-text);
   white-space: nowrap;
-  overflow: visible;
-  text-overflow: clip;
+  /* 节点名过长时截断而非撑大容器 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .fissures__remain {
+  /* 位于第一行（纪元/路径标签）末尾，避免独立列被节点名挤占 */
   flex: 0 0 auto;
   margin-left: auto;
+  padding-left: 8px;
   white-space: nowrap;
   font-size: 12px;
   font-weight: 700;

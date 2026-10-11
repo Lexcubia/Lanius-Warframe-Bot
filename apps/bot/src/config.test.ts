@@ -25,6 +25,7 @@ function sampleConfig(): BotConfig {
       pushIntervalMs: 60_000,
       commandPrefix: '/',
       commandPrefixPolicy: 'optional',
+      markdownImage: true,
       image: {
         maxPerUserPerMinute: 5,
         renderTimeoutMs: 4000,

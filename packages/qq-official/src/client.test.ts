@@ -51,10 +51,7 @@ describe('QqOfficialClient.sendText', () => {
       dryRun: true,
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
-    const result = await client.sendText(
-      { scene: 'c2c', targetId: 'u1', msgId: 'm1' },
-      'ping',
-    );
+    const result = await client.sendText({ scene: 'c2c', targetId: 'u1', msgId: 'm1' }, 'ping');
     expect(result.ok).toBe(true);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -112,6 +109,37 @@ describe('QqOfficialClient.sendMarkdown', () => {
     expect(body.keyboard.content.rows).toHaveLength(1);
     expect(body.msg_id).toBe('m1');
   });
+
+  it('keeps image markdown url but strips bare links', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({ id: 'md-2' }),
+      });
+
+    const client = createQqOfficialClient({
+      appId: '42',
+      appSecret: 'secret',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    await client.sendMarkdown(
+      { scene: 'c2c', targetId: 'u1', msgId: 'm2' },
+      '**虚空裂隙**\n\n![虚空裂隙 #640px #534px](https://cos.lexcubia.com/lanius/cards/a.png)\n\n见 https://example.com/x',
+    );
+
+    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(sendInit.body)) as {
+      markdown: { content: string };
+    };
+    // 图片语法内 URL 保留；裸链被剥除
+    expect(body.markdown.content).toContain('](https://cos.lexcubia.com/lanius/cards/a.png)');
+    expect(body.markdown.content).not.toContain('https://example.com/x');
+  });
 });
 
 describe('QqOfficialClient.sendImage', () => {
@@ -124,8 +152,7 @@ describe('QqOfficialClient.sendImage', () => {
       })
       .mockResolvedValueOnce({
         ok: true,
-        text: async () =>
-          JSON.stringify({ code: 0, file_info: 'FILEINFO', file_uuid: 'fu1' }),
+        text: async () => JSON.stringify({ code: 0, file_info: 'FILEINFO', file_uuid: 'fu1' }),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -138,10 +165,7 @@ describe('QqOfficialClient.sendImage', () => {
       fetchImpl: fetchImpl as unknown as typeof fetch,
     });
 
-    const result = await client.sendImage(
-      { scene: 'group', targetId: 'g1', msgId: 'm1' },
-      png,
-    );
+    const result = await client.sendImage({ scene: 'group', targetId: 'g1', msgId: 'm1' }, png);
 
     expect(result).toMatchObject({ ok: true, messageId: 'img-1' });
     expect(fetchImpl).toHaveBeenCalledTimes(3);
