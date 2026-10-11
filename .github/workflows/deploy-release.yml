@@ -61,5 +61,6 @@ jobs:
             export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
             export COMPOSE_FILE=docker-compose.app.yml
             bash ./update-image.sh "${TAG}"
+            docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
             curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
               curl -fsS "http://127.0.0.1/api/lanius/v1/health"
