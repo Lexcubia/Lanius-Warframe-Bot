@@ -53,6 +53,9 @@ const hasContent = computed(() => {
   text-align: center;
   display: grid;
   gap: 0.45rem;
+  max-width: 100%;
+  overflow-x: clip;
+  word-break: break-word;
 }
 
 .site-footer__copy {

@@ -22,6 +22,8 @@ export type UpstreamSeasonInfo = {
   Phase?: number;
   ActiveChallenges?: Array<{
     Challenge?: string;
+    /** 官方偶发布尔：true=每日；缺省时从 Challenge 路径推断 */
+    Daily?: boolean;
     _id?: { $oid?: string };
     expiry?: { $date?: { $numberLong?: string } };
   }>;
@@ -71,4 +73,9 @@ export type UpstreamWorldstate = {
   SyndicateMissions?: UpstreamSyndicateMission[];
   ActiveMissions?: UpstreamActiveMission[];
   VoidStorms?: UpstreamVoidStorm[];
+  /** 虚空商人 Baro */
+  VoidTraders?: unknown[];
+  /** 瓦奇娅（部分版本字段名） */
+  VaultTrader?: unknown;
+  PrimeVaultTraders?: unknown[];
 };

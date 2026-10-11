@@ -54,11 +54,18 @@ export {
 } from './dto/meta.js';
 
 export {
+  CatalogItemDtoSchema,
+  type CatalogItemDto,
+} from './dto/item.js';
+
+export {
   FissureDtoSchema,
   FissureEraSchema,
   FissurePathSchema,
   InvasionDtoSchema,
   LocalizedNameSchema,
+  NightwaveChallengeDtoSchema,
+  NightwaveChallengeKindSchema,
   NightwaveDtoSchema,
   OpenWorldCycleDtoSchema,
   OpenWorldCycleIdSchema,
@@ -68,6 +75,8 @@ export {
   type FissurePath,
   type InvasionDto,
   type LocalizedName,
+  type NightwaveChallengeDto,
+  type NightwaveChallengeKind,
   type NightwaveDto,
   type OpenWorldCycleDto,
   type OpenWorldCycleId,
@@ -87,9 +96,54 @@ export {
   LANIUS_COMMAND_CATALOG,
   buildHelpDto,
   findCommandByRoot,
+  resolveModuleToken,
   type CommandDef,
   type CommandParamDef,
 } from './commands/catalog.js';
+
+export {
+  GATED_MODULE_IDS,
+  ModuleIdSchema,
+  type ModuleId,
+} from './modules.js';
+
+export {
+  MarketItemDtoSchema,
+  MarketSearchDtoSchema,
+  RivenSearchDtoSchema,
+  RivenSummaryDtoSchema,
+  type MarketItemDto,
+  type MarketSearchDto,
+  type RivenSearchDto,
+  type RivenSummaryDto,
+} from './dto/market.js';
+
+export {
+  TraderItemDtoSchema,
+  VoidTraderDtoSchema,
+  VarziaDtoSchema,
+  ValenceElementSchema,
+  RotationWeaponDtoSchema,
+  WeaponRotationDtoSchema,
+  VALENCE_BONUS_MAX_PCT,
+  type TraderItemDto,
+  type VoidTraderDto,
+  type VarziaDto,
+  type ValenceElement,
+  type RotationWeaponDto,
+  type WeaponRotationDto,
+} from './dto/traders.js';
+
+export {
+  PushDispatchDtoSchema,
+  PushFrequencySchema,
+  SubscribableModuleIdSchema,
+  SubscriptionDtoSchema,
+  type PushDispatchDto,
+  type PushFrequency,
+  type SubscribableModuleId,
+  type SubscriptionDto,
+} from './dto/subscription.js';
 
 export {
   SiteDtoSchema,
@@ -106,3 +160,21 @@ export {
   type LabelOverride,
   type LabelsConfig,
 } from './dto/labels.js';
+
+export {
+  FISSURE_ERA_ORDER,
+  FISSURE_PATH_ORDER,
+  applyFissureQueryFilter,
+  canonicalMissionFilterKey,
+  collectMissionTypeOptions,
+  emptyFissureFilter,
+  filterFissures,
+  isFissureFilterActive,
+  isFissureQueryActive,
+  parseFissureFilterTokens,
+  resolveMissionTypeKeys,
+  toggleFilterValue,
+  type FissureFilterState,
+  type FissureMissionOption,
+  type FissureQueryFilter,
+} from './fissures/filter-fissures.js';

@@ -2,21 +2,268 @@ html,
 body,
 #__nuxt {
   min-height: 100%;
+  max-width: 100%;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: clip;
+}
+
+#__nuxt {
+  overflow-x: clip;
 }
 
 body {
   margin: 0;
+  overflow-x: clip;
   color: var(--lanius-text);
   font-family: var(--lanius-font-body);
+  line-height: 1.5;
   background:
-    radial-gradient(900px 480px at 8% -8%, rgba(20, 184, 166, 0.18), transparent 55%),
-    radial-gradient(760px 420px at 92% 0%, rgba(255, 122, 89, 0.14), transparent 52%),
-    radial-gradient(640px 360px at 50% 100%, rgba(56, 189, 248, 0.1), transparent 55%),
-    linear-gradient(180deg, #f7fbff 0%, var(--lanius-void) 42%, #eef6fb 100%);
+    radial-gradient(900px 480px at 8% -8%, rgba(78, 183, 232, 0.22), transparent 55%),
+    radial-gradient(760px 420px at 92% 0%, rgba(255, 122, 110, 0.18), transparent 52%),
+    radial-gradient(640px 360px at 50% 100%, rgba(95, 208, 176, 0.14), transparent 55%),
+    linear-gradient(180deg, #fffaf5 0%, var(--lanius-void) 42%, #f3f8ff 100%);
   background-attachment: fixed;
+}
+
+/* 主内容区通用防横滚与换行 */
+main,
+.page,
+.home,
+.stack {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
+  background: transparent;
+}
+
+@media (max-width: 720px) {
+  body {
+    background-attachment: scroll;
+  }
+}
+
+/* 暗色仅给 Admin；公开站由 anime.css 的 body.theme-anime 接管，勿在此覆盖 */
+html.theme-dark body:not(.theme-anime) {
+  background:
+    radial-gradient(900px 480px at 8% -8%, rgba(78, 183, 232, 0.12), transparent 55%),
+    radial-gradient(760px 420px at 92% 0%, rgba(255, 122, 110, 0.1), transparent 52%),
+    radial-gradient(640px 360px at 50% 100%, rgba(95, 208, 176, 0.08), transparent 55%),
+    linear-gradient(180deg, #121a24 0%, #0f1722 42%, #0c1218 100%);
+  color: #e8eef5;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
+  height: auto;
 }
 
 a {
   color: inherit;
   text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid rgba(58, 167, 214, 0.55);
+  outline-offset: 2px;
+}
+
+/* 公开页通用头区 / 状态 / 搜索条，提升跨页一致性与窄屏适配 */
+.page__header {
+  margin-bottom: clamp(0.85rem, 2vw, 1.25rem);
+}
+
+.page__header h1 {
+  margin: 0 0 0.45rem;
+  font-family: var(--lanius-font-display);
+  color: var(--lanius-brand);
+  font-size: clamp(1.55rem, 4.2vw, 2.35rem);
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
+
+.eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--lanius-accent-dim);
+  font-family: var(--lanius-font-display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--lanius-text-muted);
+  margin: 0;
+  line-height: 1.55;
+}
+
+.state {
+  color: var(--lanius-text-muted);
+}
+
+.state--error {
+  color: var(--lanius-danger);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.retry {
+  width: fit-content;
+  border: 1px solid var(--lanius-border-bright);
+  background: var(--lanius-panel);
+  color: var(--lanius-text);
+  padding: 0.55rem 0.95rem;
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: 2.5rem;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.85rem 0 1rem;
+}
+
+.tabs button {
+  border: 1px solid var(--lanius-border);
+  background: var(--lanius-panel);
+  color: var(--lanius-text-muted);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  cursor: pointer;
+  min-height: 2.5rem;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.tabs button.active {
+  color: var(--lanius-text);
+  border-color: var(--lanius-accent);
+  background: rgba(78, 183, 232, 0.12);
+  font-weight: 600;
+}
+
+.search {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  width: min(640px, 100%);
+  margin: 1rem 0 1.25rem;
+}
+
+.search input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  border: 1px solid var(--lanius-border-bright);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--lanius-text);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  min-height: 2.75rem;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.search button {
+  border: 0;
+  border-radius: 10px;
+  padding: 0 1.1rem;
+  min-height: 2.75rem;
+  background: linear-gradient(135deg, var(--lanius-accent), var(--lanius-highlight));
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 0 0 auto;
+  transition:
+    filter 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.panel {
+  padding: clamp(0.9rem, 2vw, 1.2rem);
+  border: 1px solid var(--lanius-border);
+  border-radius: 14px;
+  background: linear-gradient(
+    165deg,
+    var(--lanius-panel),
+    var(--lanius-panel-raised)
+  );
+  min-width: 0;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+@media (hover: hover) {
+  .retry:hover {
+    border-color: rgba(78, 183, 232, 0.5);
+    background: #fff;
+    color: var(--lanius-accent-dim);
+    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
+  }
+
+  .tabs button:hover:not(.active) {
+    border-color: rgba(78, 183, 232, 0.45);
+    background: rgba(78, 183, 232, 0.08);
+    color: var(--lanius-accent-dim);
+  }
+
+  .search input:hover {
+    border-color: rgba(78, 183, 232, 0.45);
+  }
+
+  .search button:hover {
+    filter: brightness(1.05);
+    box-shadow: 0 8px 18px rgba(78, 183, 232, 0.28);
+    transform: translateY(-1px);
+  }
+
+  .panel:hover {
+    border-color: rgba(78, 183, 232, 0.35);
+    box-shadow: 0 10px 24px rgba(62, 78, 110, 0.1);
+  }
+}
+
+/* 公开页看板：QQ 模块卡铺满内容区（截图仍走 card-host 默认 640） */
+.page,
+.home .stack {
+  --lanius-card-width: 100%;
+}
+
+.page :deep(.lanius-qq-shell),
+.home :deep(.lanius-qq-shell) {
+  width: 100%;
+  max-width: none;
 }

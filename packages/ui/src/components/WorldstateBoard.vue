@@ -1,9 +1,12 @@
 <script setup lang="ts">
-import type { LocalizedName, WorldstateDto } from '@lanius/core';
+import type { LocalizedName, OpenWorldCycleDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
 
+import { resolveOpenWorldCycleTheme } from '../lib/open-world-cycle-theme.js';
+import OpenWorldCycleIcon from './OpenWorldCycleIcon.vue';
+
 /**
- * Nuxt 页面使用的共享世界状态看板 props。
+ * 世界状态模块看板：仅开放世界周期（入侵 / 午夜电波为独立模块，不在此嵌套）。
  */
 const props = defineProps<{
   /** 来自 Lanius API 的规范化 worldstate DTO。 */
@@ -57,28 +60,12 @@ function remain(remainingMs: number): string {
 }
 
 /**
- * 按状态取 SVG 环强调色。
- *
- * @param state - 状态键
- * @returns CSS 颜色
- */
-function ringColor(state: string): string {
-  if (state === 'day' || state === 'fass' || state === 'warm' || state === 'anger') {
-    return '#f0a030';
-  }
-  if (state === 'night' || state === 'vome' || state === 'cold' || state === 'corpus') {
-    return '#3aa7d6';
-  }
-  return 'var(--lanius-accent)';
-}
-
-/**
- * 为单条周期计算 SVG 环几何与描边色（模板内只调用一次）。
+ * 为单条周期计算 SVG 环几何与地点主题色（模板内只调用一次）。
  *
  * @param cycle - 开放世界周期 DTO
  * @returns 圆环绘制参数
  */
-function cycleRing(cycle: { progress: number; state: string }): {
+function cycleRing(cycle: OpenWorldCycleDto): {
   r: number;
   cx: number;
   cy: number;
@@ -87,6 +74,7 @@ function cycleRing(cycle: { progress: number; state: string }): {
   thumbX: number;
   thumbY: number;
   color: string;
+  track: string;
 } {
   const cx = 36;
   const cy = 36;
@@ -94,6 +82,7 @@ function cycleRing(cycle: { progress: number; state: string }): {
   const circ = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, cycle.progress));
   const angle = -Math.PI / 2 + p * Math.PI * 2;
+  const theme = resolveOpenWorldCycleTheme(cycle.id);
   return {
     r,
     cx,
@@ -102,7 +91,8 @@ function cycleRing(cycle: { progress: number; state: string }): {
     circ,
     thumbX: cx + r * Math.cos(angle),
     thumbY: cy + r * Math.sin(angle),
-    color: ringColor(cycle.state),
+    color: theme.accent,
+    track: theme.track,
   };
 }
 </script>
@@ -131,44 +121,53 @@ function cycleRing(cycle: { progress: number; state: string }): {
         class="lanius-ws__cycle"
       >
         <template v-for="ring in [cycleRing(cycle)]" :key="`${cycle.id}-ring`">
-          <h3>{{ label(cycle.name) }}</h3>
-          <svg
-            class="lanius-ws__ring"
-            viewBox="0 0 72 72"
-            width="72"
-            height="72"
-            aria-hidden="true"
-          >
-            <circle
-              class="lanius-ws__ring-track"
-              :cx="ring.cx"
-              :cy="ring.cy"
-              :r="ring.r"
-              fill="none"
-              stroke-width="7"
+          <h3 :style="{ color: ring.color }">{{ label(cycle.name) }}</h3>
+          <div class="lanius-ws__ring-wrap">
+            <svg
+              class="lanius-ws__ring"
+              viewBox="0 0 72 72"
+              width="72"
+              height="72"
+              aria-hidden="true"
+            >
+              <circle
+                class="lanius-ws__ring-track"
+                :cx="ring.cx"
+                :cy="ring.cy"
+                :r="ring.r"
+                fill="none"
+                stroke-width="7"
+                :stroke="ring.track"
+              />
+              <circle
+                class="lanius-ws__ring-active"
+                :cx="ring.cx"
+                :cy="ring.cy"
+                :r="ring.r"
+                fill="none"
+                stroke-width="7"
+                stroke-linecap="round"
+                :stroke="ring.color"
+                :stroke-dasharray="`${ring.dash} ${ring.circ}`"
+                transform="rotate(-90 36 36)"
+              />
+              <circle
+                class="lanius-ws__ring-thumb"
+                :cx="ring.thumbX"
+                :cy="ring.thumbY"
+                r="5"
+                :fill="ring.color"
+                stroke="#fff"
+                stroke-width="2"
+              />
+            </svg>
+            <OpenWorldCycleIcon
+              class="lanius-ws__ring-icon"
+              :cycle-id="cycle.id"
+              :color="ring.color"
+              :size="22"
             />
-            <circle
-              class="lanius-ws__ring-active"
-              :cx="ring.cx"
-              :cy="ring.cy"
-              :r="ring.r"
-              fill="none"
-              stroke-width="7"
-              stroke-linecap="round"
-              :stroke="ring.color"
-              :stroke-dasharray="`${ring.dash} ${ring.circ}`"
-              transform="rotate(-90 36 36)"
-            />
-            <circle
-              class="lanius-ws__ring-thumb"
-              :cx="ring.thumbX"
-              :cy="ring.thumbY"
-              r="5"
-              :fill="ring.color"
-              stroke="#fff"
-              stroke-width="2"
-            />
-          </svg>
+          </div>
           <p class="lanius-ws__cycle-state" :style="{ color: ring.color }">
             {{ label(cycle.stateLabel) }}
           </p>
@@ -178,51 +177,6 @@ function cycleRing(cycle: { progress: number; state: string }): {
         </template>
       </article>
     </div>
-
-    <div class="lanius-ws__grid">
-      <article class="lanius-ws__panel">
-        <h3>{{ t('入侵', 'Invasions') }}</h3>
-        <ul v-if="worldstate.invasions.length" class="lanius-ws__list">
-          <li v-for="row in worldstate.invasions.slice(0, 8)" :key="row.id">
-            <div class="lanius-ws__row-top">
-              <strong>{{ label(row.node) }}</strong>
-              <span v-if="row.completionPct !== undefined">{{ row.completionPct }}%</span>
-            </div>
-            <p class="lanius-ws__muted">
-              {{ label(row.attackingFaction) }} → {{ label(row.defendingFaction) }}
-            </p>
-            <div
-              v-if="row.completionPct !== undefined"
-              class="lanius-ws__bar"
-              :style="{ '--pct': `${row.completionPct}%` }"
-            />
-          </li>
-        </ul>
-        <p v-else class="lanius-ws__muted">{{ t('当前无活跃入侵', 'No active invasions') }}</p>
-      </article>
-
-      <article class="lanius-ws__panel">
-        <h3>{{ t('午夜电波', 'Nightwave') }}</h3>
-        <template v-if="worldstate.nightwave">
-          <p class="lanius-ws__muted">
-            {{ t('赛季', 'Season') }} {{ worldstate.nightwave.season ?? '—' }} ·
-            {{ t('阶段', 'Phase') }} {{ worldstate.nightwave.phase ?? '—' }}
-          </p>
-          <ul class="lanius-ws__list">
-            <li
-              v-for="challenge in worldstate.nightwave.activeChallenges.slice(0, 6)"
-              :key="challenge.id"
-            >
-              <strong>{{ label(challenge.title) || challenge.id }}</strong>
-              <p v-if="challenge.description" class="lanius-ws__muted">
-                {{ label(challenge.description) }}
-              </p>
-            </li>
-          </ul>
-        </template>
-        <p v-else class="lanius-ws__muted">{{ t('暂无午夜电波数据', 'No Nightwave data') }}</p>
-      </article>
-    </div>
   </section>
 </template>
 
@@ -230,14 +184,19 @@ function cycleRing(cycle: { progress: number; state: string }): {
 .lanius-ws {
   color: var(--lanius-text);
   font-family: var(--lanius-font-body);
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: clip;
 }
 
 .lanius-ws__header {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   align-items: flex-end;
   margin-bottom: 1rem;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .lanius-ws__eyebrow {
@@ -262,13 +221,13 @@ function cycleRing(cycle: { progress: number; state: string }): {
 }
 
 .lanius-ws__live {
-  background: var(--lanius-accent);
+  background: linear-gradient(135deg, var(--lanius-highlight), var(--lanius-bar-defend));
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   padding: 0.2rem 0.55rem;
-  border-radius: 999px;
+  border-radius: 8px;
 }
 
 .lanius-ws__time {
@@ -286,6 +245,7 @@ function cycleRing(cycle: { progress: number; state: string }): {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 0.65rem;
   margin-bottom: 1.25rem;
+  max-width: 100%;
 }
 
 @media (max-width: 900px) {
@@ -300,27 +260,57 @@ function cycleRing(cycle: { progress: number; state: string }): {
   }
 }
 
+@media (max-width: 360px) {
+  .lanius-ws__cycles {
+    grid-template-columns: 1fr;
+  }
+}
+
 .lanius-ws__cycle {
-  background: var(--lanius-panel);
+  background: var(--lanius-panel-raised);
   border: 1px solid var(--lanius-border);
-  border-radius: 0.85rem;
+  border-radius: 1rem;
   padding: 0.75rem;
   text-align: center;
+  box-shadow: 0 4px 14px rgba(62, 78, 110, 0.06);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+@media (hover: hover) {
+  .lanius-ws__cycle:hover {
+    border-color: rgba(78, 183, 232, 0.45);
+    background: #fff;
+    box-shadow: 0 10px 22px rgba(62, 78, 110, 0.12);
+    transform: translateY(-2px);
+  }
 }
 
 .lanius-ws__cycle h3 {
   margin: 0 0 0.35rem;
   font-size: 0.85rem;
-  color: var(--lanius-brand);
+  font-weight: 700;
+}
+
+.lanius-ws__ring-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0.35rem auto 0.5rem;
 }
 
 .lanius-ws__ring {
   display: block;
-  margin: 0.35rem auto 0.5rem;
 }
 
-.lanius-ws__ring-track {
-  stroke: var(--lanius-border-bright);
+.lanius-ws__ring-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  pointer-events: none;
 }
 
 .lanius-ws__cycle-state {
@@ -333,72 +323,5 @@ function cycleRing(cycle: { progress: number; state: string }): {
   margin: 0.25rem 0 0;
   font-size: 0.85rem;
   font-weight: 700;
-}
-
-.lanius-ws__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-@media (max-width: 720px) {
-  .lanius-ws__grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.lanius-ws__panel {
-  background: var(--lanius-panel);
-  border: 1px solid var(--lanius-border);
-  border-radius: 0.9rem;
-  padding: 1rem;
-}
-
-.lanius-ws__panel h3 {
-  margin: 0 0 0.75rem;
-  color: var(--lanius-brand);
-  font-family: var(--lanius-font-display);
-}
-
-.lanius-ws__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.lanius-ws__row-top {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.lanius-ws__muted {
-  margin: 0.2rem 0 0;
-  color: var(--lanius-text-muted);
-  font-size: 0.85rem;
-}
-
-.lanius-ws__bar {
-  margin-top: 0.4rem;
-  height: 0.3rem;
-  border-radius: 999px;
-  background: var(--lanius-border);
-  position: relative;
-  overflow: hidden;
-}
-
-.lanius-ws__bar::after {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: var(--pct, 0%);
-  background: linear-gradient(
-    90deg,
-    var(--lanius-bar-attack),
-    var(--lanius-bar-defend)
-  );
 }
 </style>

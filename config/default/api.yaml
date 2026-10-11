@@ -1,0 +1,8 @@
+# API 监听与上游（可提交默认；覆盖写 config/local/api.yaml）
+host: '127.0.0.1'
+port: 8787
+# adminToken: 写在 local，勿提交
+upstream:
+  worldstateUrl: 'https://api.warframe.com/cdn/worldState.php'
+  warframeMarketUrl: 'https://api.warframe.market/v1'
+  timeoutMs: 8000

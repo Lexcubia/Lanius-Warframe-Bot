@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from 'node:fs';
+
 import { chromium, type Browser, type LaunchOptions } from 'playwright';
 
 /**
@@ -6,11 +8,34 @@ import { chromium, type Browser, type LaunchOptions } from 'playwright';
 let browser: Browser | null = null;
 
 /**
+ * 是否运行在 Docker / OCI 容器内（存在 `/.dockerenv` 或 cgroup 含 docker/kubepods）。
+ *
+ * @returns 判定为容器环境时为 `true`
+ */
+function runningInContainer(): boolean {
+  try {
+    if (existsSync('/.dockerenv')) {
+      return true;
+    }
+    const cgroup = readFileSync('/proc/1/cgroup', 'utf8');
+    return /docker|kubepods|containerd/i.test(cgroup);
+  } catch {
+    return process.env.LANIUS_PLAYWRIGHT_NO_SANDBOX === '1';
+  }
+}
+
+/**
  * 无头启动公共参数。
+ * 容器内非 root 用户需 `--no-sandbox`，否则 Chromium 无法拉起。
  */
 const LAUNCH_ARGS: LaunchOptions = {
   headless: true,
-  args: ['--disable-dev-shm-usage'],
+  args: [
+    '--disable-dev-shm-usage',
+    ...(runningInContainer() || process.env.LANIUS_PLAYWRIGHT_NO_SANDBOX === '1'
+      ? ['--no-sandbox', '--disable-setuid-sandbox']
+      : []),
+  ],
 };
 
 /**

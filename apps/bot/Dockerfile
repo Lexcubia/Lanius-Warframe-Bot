@@ -53,10 +53,27 @@ ENV NODE_ENV=production \
 # Chromium 运行时系统库（与 playwright install-deps 对齐的精简集；层可缓存）
 RUN --mount=type=cache,id=lanius-bot-apt,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,id=lanius-bot-apt-lists,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update \
- && apt-get install -y --no-install-recommends \
+    set -eux; \
+    # slim 尚未装 ca-certificates，镜像源须用 http（勿用 https）
+    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+      sed -i \
+        -e 's|https\?://deb.debian.org|http://mirrors.aliyun.com|g' \
+        -e 's|https\?://security.debian.org|http://mirrors.aliyun.com|g' \
+        /etc/apt/sources.list.d/debian.sources; \
+    fi; \
+    if [ -f /etc/apt/sources.list ]; then \
+      sed -i \
+        -e 's|https\?://deb.debian.org|http://mirrors.aliyun.com|g' \
+        -e 's|https\?://security.debian.org|http://mirrors.aliyun.com|g' \
+        -e 's/deb.debian.org/mirrors.aliyun.com/g' \
+        -e 's/security.debian.org/mirrors.aliyun.com/g' \
+        /etc/apt/sources.list; \
+    fi; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
       ca-certificates \
       fonts-liberation \
+      fonts-wqy-microhei \
       libasound2 \
       libatk-bridge2.0-0 \
       libatk1.0-0 \

@@ -26,7 +26,11 @@ FROM node:22-bookworm-slim AS deps
 WORKDIR /out
 COPY .npmrc ./
 COPY --from=build /out/package.json ./package.json
-RUN npm install --omit=dev
+# better-sqlite3 原生编译
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && npm install --omit=dev \
+ && rm -rf /var/lib/apt/lists/*
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app
@@ -36,8 +40,8 @@ ENV NODE_ENV=production \
     LANIUS_CONFIG=/config/config.local.yaml \
     LANIUS_RUNTIME_CONFIG_ROOT=/runtime-config
 RUN useradd --system --uid 10001 --create-home lanius \
- && mkdir -p /runtime-config/default /runtime-config/local \
- && chown -R lanius:lanius /runtime-config
+ && mkdir -p /runtime-config/default /runtime-config/local /data \
+ && chown -R lanius:lanius /runtime-config /data
 COPY --from=deps --chown=lanius:lanius /out/node_modules ./node_modules
 COPY --from=build --chown=lanius:lanius /out/package.json ./package.json
 COPY --from=build --chown=lanius:lanius /out/dist ./dist

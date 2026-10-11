@@ -8,6 +8,7 @@ import pino from 'pino';
 
 import { loadBotConfig, resolveRepoRoot, type BotConfig } from './config.js';
 import { createBotApp } from './create-app.js';
+import { startPushWorker } from './push/push-worker.js';
 import { buildQqMenuItems } from './qq/build-panel-items.js';
 import { buildQqPanelSyncOptions } from './qq/panel-sync-options.js';
 
@@ -35,6 +36,15 @@ function main(): void {
   // 启动后同步自定义菜单 + 指令面板；失败只打日志，不阻断回调服务。
   if (!config.bot.dryRun) {
     void syncQqUi(config, qq.getAccessTokenCache(), logger);
+  }
+
+  if (config.bot.pushIntervalMs > 0) {
+    startPushWorker({
+      config,
+      qq,
+      logger,
+      intervalMs: config.bot.pushIntervalMs,
+    });
   }
 }
 

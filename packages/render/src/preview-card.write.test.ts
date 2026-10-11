@@ -7,8 +7,11 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { shutdownVueCardCapture } from './chromium/capture-vue-card.js';
 import {
   renderFissuresCard,
+  renderHelpCard,
   renderInvasionsCard,
+  renderMarketCard,
   renderNightwaveCard,
+  renderRivenCard,
   renderWorldstateCard,
 } from './render-worldstate.js';
 
@@ -125,14 +128,26 @@ const sample = {
       id: '1',
       node: { zh: 'Draco（谷神星）', en: 'Draco (Ceres)' },
       attackingFaction: { zh: 'Corpus', en: 'Corpus' },
-      defendingFaction: { zh: '格林尼尔', en: 'Grineer' },
+      defendingFaction: { zh: 'Grineer', en: 'Grineer' },
       completionPct: 18,
       expired: false,
+      attackerReward: {
+        uniqueName: '/Lotus/Types/Items/MiscItems/OrokinCatalyst',
+        name: { zh: 'Orokin 催化剂', en: 'Orokin Catalyst' },
+        iconUrl:
+          'https://content.warframe.com/PublicExport/Lotus/Interface/Icons/Store/OrokinCatalyst.png',
+      },
+      defenderReward: {
+        uniqueName: '/Lotus/Types/Items/MiscItems/OrokinReactor',
+        name: { zh: 'Orokin 反应堆', en: 'Orokin Reactor' },
+        iconUrl:
+          'https://content.warframe.com/PublicExport/Lotus/Interface/Icons/Store/OrokinReactor.png',
+      },
     },
     {
       id: '2',
       node: { zh: 'Abaddon（欧罗巴）', en: 'Abaddon (Europa)' },
-      attackingFaction: { zh: '格林尼尔', en: 'Grineer' },
+      attackingFaction: { zh: 'Grineer', en: 'Grineer' },
       defendingFaction: { zh: 'Corpus', en: 'Corpus' },
       completionPct: 53,
       expired: false,
@@ -144,6 +159,8 @@ const sample = {
     activeChallenges: [
       {
         id: 'd1',
+        kind: 'daily' as const,
+        kindLabel: { zh: '每日', en: 'Daily' },
         title: { zh: '每日 吸引力', en: 'Daily Attraction' },
         description: {
           zh: '使用磁力伤害击杀 150 名敌人',
@@ -152,6 +169,8 @@ const sample = {
       },
       {
         id: 'w1',
+        kind: 'weekly' as const,
+        kindLabel: { zh: '每周', en: 'Weekly' },
         title: { zh: '屏住你的呼吸', en: 'Hold Your Breath' },
         description: {
           zh: '在赤毒生存任务中生存超过 20 分钟',
@@ -162,13 +181,76 @@ const sample = {
   },
 };
 
+const helpSample = {
+  title: { zh: '命令帮助', en: 'Help' },
+  intro: {
+    zh: '以下为常用查询命令（示例数据）。',
+    en: 'Common query commands (sample).',
+  },
+  lines: [
+    {
+      id: 'ws',
+      command: '/世界状态',
+      aliases: ['/ws'],
+      summary: { zh: '开放世界周期', en: 'Open-world cycles' },
+      usage: { zh: '/世界状态', en: '/worldstate' },
+      params: [],
+      examples: ['/世界状态'],
+    },
+    {
+      id: 'fis',
+      command: '/裂隙',
+      aliases: ['/fissures'],
+      summary: { zh: '虚空裂隙列表', en: 'Void fissures' },
+      usage: { zh: '/裂隙', en: '/fissures' },
+      params: [],
+      examples: ['/裂隙'],
+    },
+  ],
+};
+
+const marketSample = {
+  query: 'primed',
+  items: [
+    {
+      urlName: 'primed_continuity',
+      name: { zh: 'Primed Continuity', en: 'Primed Continuity' },
+      lowestSell: 45,
+      highestBuy: 38,
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      urlName: 'primed_flow',
+      name: { zh: 'Primed Flow', en: 'Primed Flow' },
+      lowestSell: 52,
+      highestBuy: 44,
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+};
+
+const rivenSample = {
+  query: 'lanka',
+  results: [
+    {
+      weaponUrlName: 'lanka',
+      weaponName: { zh: 'Lanka', en: 'Lanka' },
+      minPlatinum: 120,
+      medianPlatinum: 180,
+      maxPlatinum: 260,
+      sampleCount: 24,
+      updatedAt: new Date().toISOString(),
+    },
+  ],
+};
+
 describe('preview card write', () => {
   afterAll(async () => {
     await shutdownVueCardCapture();
   });
 
   it(
-    'writes four module PNGs for visual inspection',
+    'writes module PNGs for visual inspection',
     async () => {
       mkdirSync(outDir, { recursive: true });
       const input = { locale: 'zh' as const, worldstate: sample };
@@ -176,17 +258,31 @@ describe('preview card write', () => {
       const fissures = await renderFissuresCard(input);
       const invasions = await renderInvasionsCard(input);
       const nightwave = await renderNightwaveCard(input);
+      const help = await renderHelpCard({ locale: 'zh', help: helpSample });
+      const market = await renderMarketCard({
+        locale: 'zh',
+        market: marketSample,
+      });
+      const riven = await renderRivenCard({ locale: 'zh', riven: rivenSample });
+
       writeFileSync(resolve(outDir, 'preview-worldstate.png'), cycles);
       writeFileSync(resolve(outDir, 'preview-fissures.png'), fissures);
       writeFileSync(resolve(outDir, 'preview-invasions.png'), invasions);
       writeFileSync(resolve(outDir, 'preview-nightwave.png'), nightwave);
+      writeFileSync(resolve(outDir, 'preview-help.png'), help);
+      writeFileSync(resolve(outDir, 'preview-market.png'), market);
+      writeFileSync(resolve(outDir, 'preview-riven.png'), riven);
       // 兼容旧路径
       writeFileSync(resolve(outDir, 'preview.png'), cycles);
+
       expect(cycles.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
       expect(fissures.length).toBeGreaterThan(1000);
       expect(invasions.length).toBeGreaterThan(1000);
       expect(nightwave.length).toBeGreaterThan(1000);
+      expect(help.length).toBeGreaterThan(1000);
+      expect(market.length).toBeGreaterThan(1000);
+      expect(riven.length).toBeGreaterThan(1000);
     },
-    120_000,
+    180_000,
   );
 });

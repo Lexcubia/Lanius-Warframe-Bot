@@ -8,11 +8,12 @@ describe('mapWorldstate', () => {
   beforeEach(() => {
     setLabelOverrides({
       factions: {
-        FC_GRINEER: { zh: '格林尼尔', en: 'Grineer' },
+        FC_GRINEER: { zh: 'Grineer', en: 'Grineer' },
         FC_CORPUS: { zh: 'Corpus', en: 'Corpus' },
       },
       nodes: {},
       paths: {},
+      weapons: {},
     });
   });
 
@@ -54,6 +55,14 @@ describe('mapWorldstate', () => {
             countedItems: [
               {
                 ItemType: '/Lotus/Types/Recipes/Weapons/WeaponParts/DeraVandalStock',
+                ItemCount: 3,
+              },
+            ],
+          },
+          DefenderReward: {
+            countedItems: [
+              {
+                ItemType: '/Lotus/Types/Items/MiscItems/OrokinCatalyst',
                 ItemCount: 1,
               },
             ],
@@ -74,6 +83,11 @@ describe('mapWorldstate', () => {
         Season: 3,
         Phase: 1,
         ActiveChallenges: [
+          {
+            _id: { $oid: 'ch-2' },
+            Challenge:
+              '/Lotus/Types/Challenges/Seasons/Weekly/SeasonWeeklyCompleteMissions',
+          },
           {
             _id: { $oid: 'ch-1' },
             Challenge:
@@ -99,12 +113,25 @@ describe('mapWorldstate', () => {
     expect(dto.invasions).toHaveLength(1);
     expect(dto.invasions[0]?.node.en).toContain('Naga');
     expect(dto.invasions[0]?.attackingFaction).toEqual({
-      zh: '格林尼尔',
+      zh: 'Grineer',
       en: 'Grineer',
     });
     expect(dto.invasions[0]?.defendingFaction.en).toBe('Corpus');
-    expect(dto.invasions[0]?.attackerReward?.en.toLowerCase()).toContain('dera');
+    expect(dto.invasions[0]?.attackerReward?.name.en.toLowerCase()).toContain(
+      'dera',
+    );
+    expect(dto.invasions[0]?.attackerReward?.uniqueName).toContain(
+      'DeraVandalStock',
+    );
+    expect(dto.invasions[0]?.attackerReward?.quantity).toBe(3);
+    expect(dto.invasions[0]?.defenderReward?.quantity).toBe(1);
     expect(dto.invasions[0]?.completionPct).toBe(50);
+    expect(dto.nightwave?.activeChallenges.map((c) => c.kind)).toEqual([
+      'daily',
+      'weekly',
+    ]);
+    expect(dto.nightwave?.activeChallenges[0]?.kindLabel.zh).toBe('每日');
+    expect(dto.nightwave?.activeChallenges[1]?.kindLabel.zh).toBe('每周');
     expect(dto.nightwave?.activeChallenges[0]?.title?.en).toBeTruthy();
     expect(dto.nightwave?.activeChallenges[0]?.title?.en).not.toContain('/Lotus/');
     expect(JSON.stringify(dto)).not.toContain('AttackerMissionInfo');

@@ -137,15 +137,27 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
       seenMsgIds.set(dedupeKey, now);
     }
 
-    const parsed = parseCommand(inbound.content);
+    const parsed = parseCommand(inbound.content, {
+      prefix: config.bot.commandPrefix,
+      prefixPolicy: config.bot.commandPrefixPolicy,
+    });
     if (!parsed.matched || !parsed.intent) {
-      return c.json({ ok: true, ignored: true, reason: 'no_command' });
+      // prefix_required / no_root：后续可在此接入 Agent（自然语言 → 模块查询）
+      return c.json({
+        ok: true,
+        ignored: true,
+        reason: parsed.reason ?? 'no_command',
+      });
     }
 
     const outcome = await handleCommand(parsed.intent, inbound.target, {
       config,
       qq,
       prefs,
+      scene:
+        inbound.target.scene === 'group' || inbound.target.scene === 'c2c'
+          ? inbound.target.scene
+          : 'c2c',
     });
     logger.info(
       {

@@ -10,6 +10,8 @@ describe('command catalog', () => {
     expect(findCommandByRoot('fissures')?.id).toBe('fissures');
     expect(findCommandByRoot('模式')?.id).toBe('mode');
     expect(findCommandByRoot('help')?.id).toBe('help');
+    expect(findCommandByRoot('wm')?.id).toBe('market');
+    expect(findCommandByRoot('zk')?.id).toBe('riven');
     expect(findCommandByRoot('wf')).toBeUndefined();
   });
 

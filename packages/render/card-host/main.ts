@@ -1,11 +1,24 @@
-import type { Locale, WorldstateDto } from '@lanius/core';
+import type {
+  HelpDto,
+  Locale,
+  MarketSearchDto,
+  RivenSearchDto,
+  WorldstateDto,
+} from '@lanius/core';
 import {
   CyclesModuleCard,
   FissuresModuleCard,
+  HelpModuleCard,
   InvasionsModuleCard,
+  MarketModuleCard,
   NightwaveModuleCard,
+  RivenModuleCard,
 } from '@lanius/ui';
 import '@lanius/ui/tokens.css';
+import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
+import '@fontsource/noto-sans-sc/chinese-simplified-700.css';
+import '@fontsource/noto-sans-sc/latin-400.css';
+import '@fontsource/noto-sans-sc/latin-700.css';
 import { createApp, type App, type Component } from 'vue';
 
 import './host.css';
@@ -13,16 +26,26 @@ import './host.css';
 /**
  * 卡片宿主可挂载的模块种类。
  */
-export type CardHostKind = 'cycles' | 'fissures' | 'invasions' | 'nightwave';
+export type CardHostKind =
+  | 'cycles'
+  | 'fissures'
+  | 'invasions'
+  | 'nightwave'
+  | 'help'
+  | 'market'
+  | 'riven';
 
 /**
  * Playwright `page.evaluate` 注入的挂载载荷。
  */
 export type CardHostPayload = {
   kind: CardHostKind;
-  worldstate: WorldstateDto;
   locale: Locale;
   stale?: boolean;
+  worldstate?: WorldstateDto;
+  help?: HelpDto;
+  market?: MarketSearchDto;
+  riven?: RivenSearchDto;
 };
 
 /**
@@ -36,7 +59,7 @@ declare global {
 }
 
 /**
- * 当前 Vue 应用实例；重复挂载前先卸载。
+ * 当前 Vue 应用实例。
  */
 let activeApp: App | null = null;
 
@@ -56,6 +79,12 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return InvasionsModuleCard;
     case 'nightwave':
       return NightwaveModuleCard;
+    case 'help':
+      return HelpModuleCard;
+    case 'market':
+      return MarketModuleCard;
+    case 'riven':
+      return RivenModuleCard;
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown card kind: ${_exhaustive}`);
@@ -64,9 +93,9 @@ function resolveCardComponent(kind: CardHostKind): Component {
 }
 
 /**
- * 将指定模块卡片挂载到 `#app`，供节点截图。
+ * 将指定模块卡片挂载到 `#app`。
  *
- * @param payload - 种类、DTO 与 locale
+ * @param payload - 种类与载荷
  * @returns 无返回值
  */
 function mountCard(payload: CardHostPayload): void {
@@ -80,11 +109,20 @@ function mountCard(payload: CardHostPayload): void {
     activeApp = null;
   }
   const Card = resolveCardComponent(payload.kind);
-  activeApp = createApp(Card, {
-    worldstate: payload.worldstate,
+  const props: Record<string, unknown> = {
     locale: payload.locale,
     stale: payload.stale ?? false,
-  });
+  };
+  if (payload.kind === 'help') {
+    props.help = payload.help;
+  } else if (payload.kind === 'market') {
+    props.market = payload.market;
+  } else if (payload.kind === 'riven') {
+    props.riven = payload.riven;
+  } else {
+    props.worldstate = payload.worldstate;
+  }
+  activeApp = createApp(Card, props);
   activeApp.mount(root);
   window.__LANIUS_CARD_READY__ = true;
 }

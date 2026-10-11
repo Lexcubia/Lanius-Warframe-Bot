@@ -1,16 +1,36 @@
 import { createLaniusApiClient } from '@lanius/api';
 import {
   renderFissuresCard,
+  renderHelpCard,
   renderInvasionsCard,
+  renderMarketCard,
   renderNightwaveCard,
+  renderRivenCard,
   renderWorldstateCard,
 } from '@lanius/render';
-import { buildHelpDto, type Locale } from '@lanius/core';
+import {
+  applyFissureQueryFilter,
+  buildHelpDto,
+  isFissureQueryActive,
+  pickLocalized,
+  type FissureQueryFilter,
+  type Locale,
+  type WorldstateDto,
+} from '@lanius/core';
 import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
 
 import type { BotConfig } from '../config.js';
 import type { BotIntent } from '../commands/parse-command.js';
 import { formatHelpText } from '../formatters/help-text.js';
+import {
+  formatMarketText,
+  formatRivenText,
+} from '../formatters/market-text.js';
+import {
+  formatRotationText,
+  formatVarziaText,
+  formatVoidTraderText,
+} from '../formatters/traders-text.js';
 import {
   formatFissuresText,
   formatInvasionsText,
@@ -34,10 +54,12 @@ export type HandleCommandDeps = {
   qq: QqOfficialClient;
   prefs: SessionPrefs;
   apiClient?: ReturnType<typeof createLaniusApiClient>;
+  scene?: 'group' | 'c2c';
+  userId?: string;
 };
 
 /**
- * 处理已解析的 Bot 意图：调用 Lanius API，格式化文本/图片，经 QQ 下行。
+ * 处理已解析的 Bot 意图。
  *
  * @param intent - 已解析的命令意图
  * @param target - 官方 QQ 发送目标
@@ -52,7 +74,21 @@ export async function handleCommand(
   const locale = deps.prefs.locale;
   const api =
     deps.apiClient ??
-    createLaniusApiClient({ baseUrl: deps.config.bot.apiBaseUrl });
+    createLaniusApiClient({
+      baseUrl: deps.config.bot.apiBaseUrl,
+      adminToken: deps.config.api?.adminToken,
+    });
+  const gateCtx = {
+    scene:
+      deps.scene ??
+      (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
+    targetId: target.targetId,
+    userId: deps.userId ?? '',
+  };
+  const publicQuery = {
+    realm: deps.config.defaults.realm,
+    locale,
+  };
 
   if (intent.type === 'mode') {
     deps.prefs.replyMode = intent.mode;
@@ -68,37 +104,105 @@ export async function handleCommand(
   }
 
   if (intent.type === 'help' || intent.type === 'unknown') {
-    const envelope = await api.getHelp().catch(() => null);
-    const help = envelope && envelope.ok ? envelope.data : buildHelpDto();
+    const envelope = await api
+      .getHelp(intent.type === 'help' ? intent.module : undefined)
+      .catch(() => null);
+    const help =
+      envelope && envelope.ok
+        ? envelope.data
+        : buildHelpDto({
+            moduleId: undefined,
+          });
     const text = formatHelpText(help, locale, {
       unknownRaw: intent.type === 'unknown' ? intent.raw : undefined,
     });
-    const sent = await deps.qq.sendText(target, text);
-    if (!sent.ok) {
-      return `send-failed:${sent.detail ?? 'unknown'}`;
-    }
-    return text;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () => renderHelpCard({ help, locale }),
+      label: 'help',
+    });
   }
 
-  const envelope = await api.getWorldstate({
-    realm: deps.config.defaults.realm,
-    locale,
-  });
+  if (intent.type === 'market') {
+    const envelope = await api.getMarketItems(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatMarketText(envelope.data, locale);
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () => renderMarketCard({ market: envelope.data, locale }),
+      label: 'market',
+    });
+  }
+
+  if (intent.type === 'riven') {
+    const envelope = await api.getRiven(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatRivenText(envelope.data, locale);
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () => renderRivenCard({ riven: envelope.data, locale }),
+      label: 'riven',
+    });
+  }
+
+  if (intent.type === 'subscribe') {
+    return handleSubscribe(intent, target, deps, api, gateCtx, locale);
+  }
+
+  if (intent.type === 'voidTrader') {
+    const envelope = await api.getVoidTrader(publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatVoidTraderText(envelope.data, locale, {
+      stale: envelope.meta.stale,
+    });
+    const sent = await deps.qq.sendText(target, text);
+    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+  }
+
+  if (intent.type === 'varzia') {
+    const envelope = await api.getVarzia(publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatVarziaText(envelope.data, locale, {
+      stale: envelope.meta.stale,
+    });
+    const sent = await deps.qq.sendText(target, text);
+    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+  }
+
+  if (intent.type === 'tenetRotation' || intent.type === 'codaRotation') {
+    const kind = intent.type === 'tenetRotation' ? 'tenet' : 'coda';
+    const envelope = await api.getWeaponRotation(kind, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatRotationText(envelope.data, locale);
+    const sent = await deps.qq.sendText(target, text);
+    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+  }
+
+  const envelope = await api.getWorldstate(publicQuery);
 
   if (!envelope.ok) {
-    const fail =
-      locale === 'en'
-        ? `Query failed: ${envelope.error.message}`
-        : `查询失败：${envelope.error.message}`;
-    const sent = await deps.qq.sendText(target, fail);
-    if (!sent.ok) {
-      return `send-failed:${sent.detail ?? 'unknown'}`;
-    }
-    return fail;
+    return sendFail(deps, target, locale, envelope.error.message);
   }
 
-  // QQ 群聊禁止消息内带 URL；公开站导流留给 Web，不拼进下行文本。
-  // 世界状态 / 裂隙 / 入侵 / 午夜电波为独立模块，按意图分别格式化与出图。
   const moduleKind =
     intent.type === 'fissures'
       ? 'fissures'
@@ -107,9 +211,21 @@ export async function handleCommand(
         : intent.type === 'nightwave'
           ? 'nightwave'
           : 'worldstate';
+
+  let worldstate: WorldstateDto = envelope.data;
+  let filterSummary: string | undefined;
+  if (intent.type === 'fissures' && intent.filter && isFissureQueryActive(intent.filter)) {
+    const applied = applyFissureQueryFilter(envelope.data.fissures, intent.filter);
+    worldstate = { ...envelope.data, fissures: applied.items };
+    filterSummary = summarizeFissureFilter(intent.filter, locale);
+  }
+
   const text =
     moduleKind === 'fissures'
-      ? formatFissuresText(envelope.data, locale, { stale: envelope.meta.stale })
+      ? formatFissuresText(worldstate, locale, {
+          stale: envelope.meta.stale,
+          filterSummary,
+        })
       : moduleKind === 'invasions'
         ? formatInvasionsText(envelope.data, locale, {
             stale: envelope.meta.stale,
@@ -122,54 +238,237 @@ export async function handleCommand(
               stale: envelope.meta.stale,
             });
 
-  if (deps.prefs.replyMode === 'image') {
-    try {
-      const renderInput = {
-        worldstate: envelope.data,
-        locale,
-        stale: envelope.meta.stale,
-      };
-      const renderPromise =
-        moduleKind === 'fissures'
-          ? renderFissuresCard(renderInput)
-          : moduleKind === 'invasions'
-            ? renderInvasionsCard(renderInput)
-            : moduleKind === 'nightwave'
-              ? renderNightwaveCard(renderInput)
-              : renderWorldstateCard(renderInput);
-      const png = await withTimeout(
-        renderPromise,
-        deps.config.bot.image.renderTimeoutMs,
-      );
-      const sent = await deps.qq.sendImage(target, png);
-      if (sent.ok) {
-        return 'image';
-      }
-      const fallback = await deps.qq.sendText(
-        target,
-        `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
-      );
-      if (!fallback.ok) {
-        return `send-failed:${fallback.detail ?? 'unknown'}`;
-      }
-      return 'image-fallback-send';
-    } catch {
-      const fallback = await deps.qq.sendText(
-        target,
-        `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
-      );
-      if (!fallback.ok) {
-        return `send-failed:${fallback.detail ?? 'unknown'}`;
-      }
-      return 'image-fallback-render';
+  const renderInput = {
+    worldstate,
+    locale,
+    stale: envelope.meta.stale,
+  };
+
+  return replyTextOrImage({
+    deps,
+    target,
+    text,
+    preferImage: deps.prefs.replyMode === 'image',
+    render: () =>
+      moduleKind === 'fissures'
+        ? renderFissuresCard(renderInput)
+        : moduleKind === 'invasions'
+          ? renderInvasionsCard(renderInput)
+          : moduleKind === 'nightwave'
+            ? renderNightwaveCard(renderInput)
+            : renderWorldstateCard(renderInput),
+    label: moduleKind,
+  });
+}
+
+/**
+ * 将裂隙筛选查询格式化为短摘要（QQ 文案用）。
+ *
+ * @param filter - 命令行查询
+ * @param locale - 语言
+ * @returns 摘要串；无条件时为空串
+ */
+function summarizeFissureFilter(
+  filter: FissureQueryFilter,
+  locale: Locale,
+): string {
+  const zh = locale !== 'en';
+  const eraLabel: Record<string, { zh: string; en: string }> = {
+    lith: { zh: '古纪', en: 'Lith' },
+    meso: { zh: '前纪', en: 'Meso' },
+    neo: { zh: '中纪', en: 'Neo' },
+    axi: { zh: '后纪', en: 'Axi' },
+    requiem: { zh: '安魂', en: 'Requiem' },
+    omnia: { zh: '全能', en: 'Omnia' },
+  };
+  const pathLabel: Record<string, { zh: string; en: string }> = {
+    normal: { zh: '普通', en: 'Normal' },
+    steelPath: { zh: '钢铁之路', en: 'Steel Path' },
+    empyrean: { zh: '九重天', en: 'Empyrean' },
+  };
+  const parts: string[] = [];
+  for (const era of filter.eras) {
+    parts.push(pickLocalized(eraLabel[era] ?? { zh: era, en: era }, locale));
+  }
+  for (const path of filter.paths) {
+    parts.push(pickLocalized(pathLabel[path] ?? { zh: path, en: path }, locale));
+  }
+  for (const hint of filter.missionHints) {
+    parts.push(hint);
+  }
+  return parts.join(zh ? ' · ' : ' · ');
+}
+
+/**
+ * 处理订阅列表 / 订阅 / 退订。
+ *
+ * @param intent - subscribe 意图
+ * @param target - QQ 目标
+ * @param deps - 依赖
+ * @param api - API 客户端
+ * @param gateCtx - 场景上下文
+ * @param locale - 语言
+ * @returns 结果摘要
+ */
+async function handleSubscribe(
+  intent: Extract<BotIntent, { type: 'subscribe' }>,
+  target: QqSendTarget,
+  deps: HandleCommandDeps,
+  api: ReturnType<typeof createLaniusApiClient>,
+  gateCtx: { scene: 'group' | 'c2c'; targetId: string; userId: string },
+  locale: Locale,
+): Promise<string> {
+  const zh = locale === 'zh';
+  const scene = gateCtx.scene;
+
+  if (intent.action === 'list') {
+    const envelope = await api.listSubscriptions(scene, gateCtx.targetId);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
     }
+    const rows = envelope.data.subscriptions.filter((row) => row.enabled);
+    const lines =
+      rows.length === 0
+        ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
+        : [
+            zh ? '当前订阅：' : 'Subscriptions:',
+            ...rows.map(
+              (row) =>
+                `· ${row.moduleId} (${row.frequency})`,
+            ),
+            zh
+              ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
+              : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
+          ];
+    const sent = await deps.qq.sendText(target, lines.join('\n'));
+    return sent.ok ? 'subscribe-list' : `send-failed:${sent.detail ?? 'unknown'}`;
   }
 
-  const sent = await deps.qq.sendText(target, text);
+  if (intent.action === 'off') {
+    if (!intent.moduleId) {
+      return sendFail(
+        deps,
+        target,
+        locale,
+        zh ? '请指定要退订的模块' : 'module required',
+      );
+    }
+    const envelope = await api.disableSubscription({
+      scene,
+      targetId: gateCtx.targetId,
+      moduleId: intent.moduleId,
+    });
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const msg = zh
+      ? `已退订：${intent.moduleId}`
+      : `Unsubscribed: ${intent.moduleId}`;
+    const sent = await deps.qq.sendText(target, msg);
+    return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
+  }
+
+  if (!intent.moduleId) {
+    return sendFail(
+      deps,
+      target,
+      locale,
+      zh ? '请指定要订阅的模块' : 'module required',
+    );
+  }
+  const frequency = intent.frequency ?? 'on_change';
+  const envelope = await api.upsertSubscription({
+    scene,
+    targetId: gateCtx.targetId,
+    moduleId: intent.moduleId,
+    frequency,
+    userId: gateCtx.userId,
+  });
+  if (!envelope.ok) {
+    return sendFail(deps, target, locale, envelope.error.message);
+  }
+  const msg = zh
+    ? `已订阅 ${intent.moduleId}（频率：${frequency}）`
+    : `Subscribed ${intent.moduleId} (${frequency})`;
+  const sent = await deps.qq.sendText(target, msg);
+  return sent.ok ? 'subscribe-on' : `send-failed:${sent.detail ?? 'unknown'}`;
+}
+
+/**
+ * 按偏好发送文本或图片（失败降级文本）。
+ *
+ * @param options - 发送选项
+ * @returns 结果摘要
+ */
+async function replyTextOrImage(options: {
+  deps: HandleCommandDeps;
+  target: QqSendTarget;
+  text: string;
+  preferImage: boolean;
+  render: () => Promise<Buffer>;
+  label: string;
+}): Promise<string> {
+  const { deps, target, text, preferImage, render, label } = options;
+  const locale = deps.prefs.locale;
+
+  if (!preferImage) {
+    const sent = await deps.qq.sendText(target, text);
+    if (!sent.ok) {
+      return `send-failed:${sent.detail ?? 'unknown'}`;
+    }
+    return 'text';
+  }
+
+  try {
+    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+    const sent = await deps.qq.sendImage(target, png);
+    if (sent.ok) {
+      return 'image';
+    }
+    const fallback = await deps.qq.sendText(
+      target,
+      `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
+    );
+    if (!fallback.ok) {
+      return `send-failed:${fallback.detail ?? 'unknown'}`;
+    }
+    return 'image-fallback-send';
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    console.error(`[lanius-bot] image render failed (${label}): ${detail}`);
+    const fallback = await deps.qq.sendText(
+      target,
+      `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
+    );
+    if (!fallback.ok) {
+      return `send-failed:${fallback.detail ?? 'unknown'}`;
+    }
+    return `image-fallback-render:${detail.slice(0, 160)}`;
+  }
+}
+
+/**
+ * 发送查询失败文本。
+ *
+ * @param deps - 依赖
+ * @param target - 目标
+ * @param locale - 语言
+ * @param message - 错误信息
+ * @returns 摘要
+ */
+async function sendFail(
+  deps: HandleCommandDeps,
+  target: QqSendTarget,
+  locale: Locale,
+  message: string,
+): Promise<string> {
+  const fail =
+    locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
+  const sent = await deps.qq.sendText(target, fail);
   if (!sent.ok) {
     return `send-failed:${sent.detail ?? 'unknown'}`;
   }
-  return 'text';
+  return fail;
 }
 
 /**

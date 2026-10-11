@@ -11,9 +11,9 @@ describe('findContentBottom', () => {
     for (let y = 0; y < 3; y += 1) {
       for (let x = 0; x < width; x += 1) {
         const o = (y * width + x) * 4;
-        pixels[o] = 238;
-        pixels[o + 1] = 246;
-        pixels[o + 2] = 251;
+        pixels[o] = 255;
+        pixels[o + 1] = 248;
+        pixels[o + 2] = 242;
         pixels[o + 3] = 255;
       }
     }
@@ -27,9 +27,9 @@ describe('findContentBottom', () => {
     for (let y = 4; y < 6; y += 1) {
       for (let x = 0; x < width; x += 1) {
         const o = (y * width + x) * 4;
-        pixels[o] = 238;
-        pixels[o + 1] = 246;
-        pixels[o + 2] = 251;
+        pixels[o] = 255;
+        pixels[o + 1] = 248;
+        pixels[o + 2] = 242;
         pixels[o + 3] = 255;
       }
     }
@@ -45,7 +45,7 @@ describe('rasterizeCard', () => {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: '#eef6fb',
+        background: '#fff8f2',
         padding: 12,
       },
       children: [
@@ -53,7 +53,7 @@ describe('rasterizeCard', () => {
           style: {
             display: 'flex',
             fontSize: 18,
-            color: '#2486bb',
+            color: '#2f8fc4',
             marginBottom: 8,
           },
           children: '两遍渲染测高',
@@ -64,7 +64,7 @@ describe('rasterizeCard', () => {
             height: 80,
             background: '#ffffff',
             borderRadius: 8,
-            color: '#1a3348',
+            color: '#2a3142',
           },
           children: 'body',
         }),

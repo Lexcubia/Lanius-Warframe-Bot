@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FissureDto, FissurePath, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { computed } from 'vue';
 
 import axiUrl from '../../assets/relics/axi.png';
 import lithUrl from '../../assets/relics/lith.png';
@@ -9,6 +10,7 @@ import neoUrl from '../../assets/relics/neo.png';
 import omniaUrl from '../../assets/relics/omnia.png';
 import requiemUrl from '../../assets/relics/requiem.png';
 import { formatRemain } from '../lib/format-remain.js';
+import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
 /**
@@ -18,7 +20,7 @@ const props = defineProps<{
   worldstate: WorldstateDto;
   locale: 'zh' | 'en';
   stale?: boolean;
-  /** 最多展示条数 */
+  /** 最多展示条数；默认 14（QQ 卡片高度预算） */
   maxItems?: number;
 }>();
 
@@ -57,36 +59,42 @@ function iconFor(era: string): string {
 }
 
 /**
- * 路径短标签。
+ * 路径短标签（普通 / 钢铁之路 / 九重天均展示，便于色标区分）。
  *
  * @param path - 裂隙路径档
- * @returns 短标签；普通档不额外标
+ * @returns 短标签文案
  */
-function pathTag(path: FissurePath): string | null {
+function pathTag(path: FissurePath): string {
   if (path === 'steelPath') {
     return props.locale === 'en' ? 'Steel Path' : '钢铁之路';
   }
   if (path === 'empyrean') {
     return props.locale === 'en' ? 'Empyrean' : '九重天';
   }
-  return null;
+  return props.locale === 'en' ? 'Normal' : '普通';
 }
 
 /**
- * 按路径档排序后的展示列表。
+ * 按路径档排序后的展示列表（响应 props 变化）。
  *
  * @returns 截断后的裂隙行
  */
-function orderedItems(): FissureDto[] {
+const items = computed((): FissureDto[] => {
   const limit = props.maxItems ?? 14;
   const ranked = [...props.worldstate.fissures].sort(
     (a, b) => PATH_ORDER.indexOf(a.path) - PATH_ORDER.indexOf(b.path),
   );
-  return ranked.slice(0, limit);
-}
+  return ranked.slice(0, Math.max(0, limit));
+});
 
-const items = orderedItems();
-const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, '');
+/**
+ * 抓取时间戳短文案。
+ *
+ * @returns 卡片副标题用时间
+ */
+const stamp = computed(() =>
+  props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
+);
 </script>
 
 <template>
@@ -98,17 +106,19 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   >
     <ul v-if="items.length" class="fissures">
       <li v-for="item in items" :key="item.id" class="fissures__row">
-        <img
+        <OfficialItemIcon
           class="fissures__icon"
-          :src="iconFor(item.era)"
+          :icon-url="iconFor(item.era)"
           :alt="label(item.eraLabel)"
-          width="36"
-          height="36"
+          :size="36"
         />
         <div class="fissures__main">
           <div class="fissures__top">
             <span class="fissures__era">{{ label(item.eraLabel) }}</span>
-            <span v-if="pathTag(item.path)" class="fissures__path">{{ pathTag(item.path) }}</span>
+            <span
+              class="fissures__path"
+              :class="`fissures__path--${item.path}`"
+            >{{ pathTag(item.path) }}</span>
           </div>
           <p class="fissures__mission">
             {{ label(item.missionType) }} · {{ label(item.node) }}
@@ -129,37 +139,60 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .fissures__row {
+  /*
+   * 卡片内禁止换行/省略（截图需完整可见）；
+   * 容器仍 flex-wrap，按内容宽度自适应每行 1–3 个（basis 1/3 封顶）。
+   */
+  box-sizing: border-box;
+  flex: 1 1 calc((100% - 16px) / 3);
+  min-width: min(100%, max-content);
+  max-width: 100%;
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 10px;
+  white-space: nowrap;
   background: var(--lanius-panel-raised);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+@media (hover: hover) {
+  .fissures__row:hover {
+    border-color: rgba(78, 183, 232, 0.45);
+    background: #fff;
+    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
+    transform: translateY(-1px);
+  }
 }
 
 .fissures__icon {
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
 }
 
 .fissures__main {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  white-space: nowrap;
 }
 
 .fissures__top {
   display: flex;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  white-space: nowrap;
 }
 
 .fissures__era {
@@ -173,8 +206,25 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 6px;
-  background: #fff4e8;
-  color: #d97706;
+  letter-spacing: 0.02em;
+}
+
+/* 普通：晴空青 */
+.fissures__path--normal {
+  background: rgba(56, 148, 186, 0.14);
+  color: #2a7a9a;
+}
+
+/* 钢铁之路：冷钢灰 */
+.fissures__path--steelPath {
+  background: rgba(90, 102, 122, 0.18);
+  color: #4a5568;
+}
+
+/* 九重天：虚空靛 */
+.fissures__path--empyrean {
+  background: rgba(88, 92, 196, 0.16);
+  color: #4a4eb8;
 }
 
 .fissures__mission {
@@ -182,12 +232,14 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   font-size: 12px;
   color: var(--lanius-text);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .fissures__remain {
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  margin-left: auto;
+  white-space: nowrap;
   font-size: 12px;
   font-weight: 700;
   color: var(--lanius-accent);

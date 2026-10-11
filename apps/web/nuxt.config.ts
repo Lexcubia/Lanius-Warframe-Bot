@@ -4,14 +4,33 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-10-01',
   modules: ['@nuxt/ui', '@nuxtjs/i18n'],
-  css: ['@lanius/ui/tokens.css', '~/assets/css/main.css'],
+  // Nuxt UI 内置 color-mode：公开站不跟系统暗色，避免与暖底 anime 冲突
+  colorMode: {
+    preference: 'light',
+    fallback: 'light',
+    storageKey: 'lanius.nuxt-color-mode',
+  },
+  css: [
+    '@lanius/ui/tokens.css',
+    '~/assets/css/main.css',
+    '~/assets/css/anime.css',
+    '~/assets/css/admin.css',
+  ],
   app: {
     head: {
       title: 'Lanius',
       link: [
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;500;600;700&display=swap',
+          href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap',
+        },
+      ],
+      // 公开站固定亮色暖底；仅 Admin 路径才恢复本地暗色偏好
+      script: [
+        {
+          key: 'lanius-color-mode',
+          innerHTML:
+            "(function(){try{var p=location.pathname;var admin=p==='/admin'||/\\/admin\\/?$/.test(p);if(!admin){document.documentElement.classList.remove('theme-dark');document.documentElement.style.colorScheme='light';document.documentElement.classList.add('theme-anime-boot');return;}var m=localStorage.getItem('lanius.colorMode');var d=m==='dark'||(m!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('theme-dark');document.documentElement.style.colorScheme='dark';}}catch(e){}})();",
         },
       ],
     },

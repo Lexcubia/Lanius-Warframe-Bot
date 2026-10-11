@@ -81,8 +81,11 @@ export function buildNightwaveCardTree(options: NightwaveCardOptions): SatoriNod
             }),
           ],
         }),
-        ...challenges.map((challenge, index) =>
-          el('div', {
+        ...challenges.map((challenge, index) => {
+          const kindTag = pickLocalized(challenge.kindLabel, locale);
+          const isDaily = challenge.kind === 'daily';
+          const isWeekly = challenge.kind === 'weekly';
+          return el('div', {
             key: challenge.id,
             style: {
               display: 'flex',
@@ -95,23 +98,29 @@ export function buildNightwaveCardTree(options: NightwaveCardOptions): SatoriNod
               el('div', {
                 style: {
                   display: 'flex',
-                  width: 22,
-                  height: 22,
                   marginRight: 8,
-                  borderRadius: 8,
+                  borderRadius: 6,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: index % 2 === 0 ? '#e8f5fc' : '#fff4e8',
-                  color:
-                    index % 2 === 0
-                      ? laniusTokens.color.brand
-                      : laniusTokens.color.warn,
-                  fontSize: 12,
+                  paddingLeft: 6,
+                  paddingRight: 6,
+                  paddingTop: 2,
+                  paddingBottom: 2,
+                  background: isDaily
+                    ? '#e8f5fc'
+                    : isWeekly
+                      ? '#fff4e8'
+                      : '#f1f5f9',
+                  color: isDaily
+                    ? laniusTokens.color.brand
+                    : isWeekly
+                      ? laniusTokens.color.warn
+                      : laniusTokens.color.textMuted,
+                  fontSize: 10,
                   fontWeight: 700,
-                  fontFamily: 'Rajdhani',
                   flexShrink: 0,
                 },
-                children: String(index + 1),
+                children: kindTag,
               }),
               el('div', {
                 style: {
@@ -151,8 +160,8 @@ export function buildNightwaveCardTree(options: NightwaveCardOptions): SatoriNod
                 ].filter(Boolean),
               }),
             ],
-          }),
-        ),
+          });
+        }),
       ];
 
   return buildQqShell({
