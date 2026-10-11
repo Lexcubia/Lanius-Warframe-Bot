@@ -27,6 +27,11 @@ export {
   type QqOpenApiOptions,
 } from './open-api.js';
 export {
+  loadQqPanelIdStore,
+  saveQqPanelIdStore,
+  type QqPanelIdStore,
+} from './panel-id-store.js';
+export {
   ensureQqGroupCommandPanel,
   reclaimOrphanPanels,
   syncQqCommandPanels,

@@ -6,6 +6,8 @@ describe('command catalog', () => {
   it('resolves independent roots without a global prefix', () => {
     expect(findCommandByRoot('世界状态')?.id).toBe('worldstate');
     expect(findCommandByRoot('WS')?.id).toBe('worldstate');
+    expect(findCommandByRoot('裂隙')?.id).toBe('fissures');
+    expect(findCommandByRoot('fissures')?.id).toBe('fissures');
     expect(findCommandByRoot('模式')?.id).toBe('mode');
     expect(findCommandByRoot('help')?.id).toBe('help');
     expect(findCommandByRoot('wf')).toBeUndefined();

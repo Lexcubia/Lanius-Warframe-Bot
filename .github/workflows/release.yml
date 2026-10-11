@@ -44,6 +44,8 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Install Playwright Chromium
+        run: pnpm --filter @lanius/render exec playwright install --with-deps chromium
       - run: pnpm test
       - run: pnpm typecheck
 

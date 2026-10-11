@@ -20,7 +20,7 @@ export type CommandParamDef = {
  */
 export type CommandDef = {
   /** 稳定 id，供解析与测试使用 */
-  id: 'worldstate' | 'invasions' | 'nightwave' | 'mode' | 'help';
+  id: 'worldstate' | 'fissures' | 'invasions' | 'nightwave' | 'mode' | 'help';
   /** 帮助页主展示命令（含前导 `/`） */
   command: string;
   /** 可触发的根词（书写时省略前导 `/`；英文别名小写） */
@@ -44,8 +44,8 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     command: '/世界状态',
     roots: ['世界状态', 'worldstate', 'ws'],
     summary: {
-      zh: '查看国际服世界状态（入侵 + 夜浪）',
-      en: 'International world state (invasions + Nightwave)',
+      zh: '查看开放世界周期（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）',
+      en: 'Open-world cycles (Earth / Cetus / Cambion / Vallis / Duviri / Zariman)',
     },
     usage: {
       zh: '/世界状态',
@@ -53,6 +53,21 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     },
     params: [],
     examples: ['/世界状态', '/worldstate', '/ws'],
+  },
+  {
+    id: 'fissures',
+    command: '/虚空裂隙',
+    roots: ['虚空裂隙', '裂隙', 'fissures', 'fissure'],
+    summary: {
+      zh: '查看虚空裂隙（纪元 / 任务类型 / 普通·钢铁·九重天）',
+      en: 'Void Fissures by era, mission type, and path',
+    },
+    usage: {
+      zh: '/虚空裂隙',
+      en: '/fissures',
+    },
+    params: [],
+    examples: ['/虚空裂隙', '/裂隙', '/fissures'],
   },
   {
     id: 'invasions',
@@ -71,18 +86,18 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
   },
   {
     id: 'nightwave',
-    command: '/夜浪',
-    roots: ['夜浪', 'nightwave', 'nw'],
+    command: '/午夜电波',
+    roots: ['午夜电波', '电波', '夜浪', 'nightwave', 'nw'],
     summary: {
-      zh: '查看夜浪赛季挑战',
+      zh: '查看午夜电波赛季挑战',
       en: 'Show Nightwave season challenges',
     },
     usage: {
-      zh: '/夜浪',
+      zh: '/午夜电波',
       en: '/nightwave',
     },
     params: [],
-    examples: ['/夜浪', '/nightwave', '/nw'],
+    examples: ['/午夜电波', '/电波', '/nightwave', '/nw'],
   },
   {
     id: 'mode',
