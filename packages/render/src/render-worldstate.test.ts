@@ -100,7 +100,7 @@ const sampleWorldstate = {
     activeChallenges: [
       {
         id: 'c1',
-        kind: 'daily',
+        kind: 'daily' as const,
         kindLabel: { zh: '每日', en: 'Daily' },
         title: { zh: '每日击杀', en: 'Daily Kill' },
       },
