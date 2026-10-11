@@ -8,10 +8,6 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
 FROM base AS build
-# better-sqlite3 原生编译工具链（python3 + make + g++）
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/core/package.json packages/core/
@@ -32,11 +28,7 @@ FROM node:22-bookworm-slim AS deps
 WORKDIR /out
 COPY .npmrc ./
 COPY --from=build /out/package.json ./package.json
-# better-sqlite3 原生编译
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && npm install --omit=dev \
- && rm -rf /var/lib/apt/lists/*
+RUN npm install --omit=dev
 
 FROM node:22-bookworm-slim AS runner
 WORKDIR /app

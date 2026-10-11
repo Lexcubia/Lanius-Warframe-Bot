@@ -10,10 +10,6 @@ WORKDIR /app
 
 # --- API build ---
 FROM base AS build-api
-# better-sqlite3 原生编译工具链
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/core/package.json packages/core/
@@ -32,10 +28,6 @@ RUN pnpm --filter @lanius/server build \
 
 # --- Web build ---
 FROM base AS build-web
-# better-sqlite3 原生编译工具链（peer dep 会触发安装）
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/core/package.json packages/core/
@@ -81,6 +73,7 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # apt 国内镜像 + redis + supervisor + Chromium 系统库（bot）
+# 镜像源替换兼容 deb822(debian.sources) 与传统 .list 两种格式；失败后回退官方源
 RUN set -eux; \
     if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
       sed -i \
@@ -88,6 +81,12 @@ RUN set -eux; \
         -e 's|https\?://security.debian.org|http://mirrors.aliyun.com|g' \
         /etc/apt/sources.list.d/debian.sources; \
     fi; \
+    for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do \
+      [ -f "$f" ] && sed -i \
+        -e 's|https\?://deb.debian.org|http://mirrors.aliyun.com|g' \
+        -e 's|https\?://security.debian.org|http://mirrors.aliyun.com|g' \
+        "$f" || true; \
+    done; \
     apt-get update; \
     apt-get install -y --no-install-recommends \
       ca-certificates \
@@ -113,18 +112,14 @@ RUN set -eux; \
       libxrandr2 \
       xdg-utils; \
     rm -rf /var/lib/apt/lists/*; \
-    mkdir -p /data/redis /var/log/supervisor /ms-playwright /runtime-config/default /runtime-config/local /config
+    mkdir -p /data/redis /var/log/supervisor /ms-playwright /runtime-config/default /runtime-config/local /config; \
+    # 关键自检：supervisord 必须存在，否则构建即失败（避免运行期 Restarting 才发现）
+    command -v supervisord >/dev/null 2>&1 || { echo 'FATAL: supervisord not installed' >&2; exit 1; }
 
 COPY --from=build-api /out/api /app/api
 COPY --from=build-api /out/runtime-default /runtime-config/default
 WORKDIR /app/api
-# better-sqlite3 需编译原生模块
-RUN apt-get update \
- && apt-get install -y --no-install-recommends python3 make g++ \
- && npm install --omit=dev \
- && apt-get purge -y python3 make g++ \
- && apt-get autoremove -y \
- && rm -rf /var/lib/apt/lists/*
+RUN npm install --omit=dev
 
 COPY --from=build-web /app/apps/web/.output /app/web/.output
 
