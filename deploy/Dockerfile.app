@@ -32,6 +32,10 @@ RUN pnpm --filter @lanius/server build \
 
 # --- Web build ---
 FROM base AS build-web
+# better-sqlite3 原生编译工具链（peer dep 会触发安装）
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/web/package.json apps/web/
 COPY packages/core/package.json packages/core/
