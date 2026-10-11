@@ -1,4 +1,10 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import {
+  createPrivateKey,
+  createPublicKey,
+  sign,
+  verify,
+  type KeyObject,
+} from 'node:crypto';
 
 /**
  * 官方 QQ 回调验签所需的最小请求形状。
@@ -20,12 +26,82 @@ export type VerifyQqCallbackOptions = {
 };
 
 /**
- * 使用 HMAC-SHA256 校验官方 QQ 回调签名。
- * header 名可注入，便于平台文档变更时局部调整。
+ * Webhook URL 校验（`op:13`）签名入参。
+ */
+export type SignQqWebhookValidationOptions = {
+  /** BotSecret，与开放平台「开发设置」中一致。 */
+  appSecret: string;
+  /** 平台下发的 `d.plain_token`。 */
+  plainToken: string;
+  /** 平台下发的 `d.event_ts`（字符串形式）。 */
+  eventTs: string;
+};
+
+/** Ed25519 PKCS8 DER 前缀（后接 32 字节 seed）。 */
+const ED25519_PKCS8_PREFIX = Buffer.from(
+  '302e020100300506032b657004220420',
+  'hex',
+);
+
+/**
+ * 按官方文档将 BotSecret 扩展为 32 字节 Ed25519 seed：
+ * 反复倍增直至长度 ≥ 32，再截取前 32 字节。
+ *
+ * @param botSecret - 开放平台 BotSecret（通常为 ASCII）
+ * @returns 供 `ed25519.NewKeyFromSeed` 等价用法的 32 字节 seed
+ */
+export function expandBotSecretToEd25519Seed(botSecret: string): Buffer {
+  let seed = botSecret;
+  while (Buffer.byteLength(seed, 'utf8') < 32) {
+    seed = seed + seed;
+  }
+  return Buffer.from(seed, 'utf8').subarray(0, 32);
+}
+
+/**
+ * 从 BotSecret 派生 Ed25519 私钥（PKCS8）。
+ *
+ * @param botSecret - 开放平台 BotSecret
+ * @returns Node `KeyObject` 私钥
+ */
+function ed25519PrivateKeyFromBotSecret(botSecret: string): KeyObject {
+  const seed = expandBotSecretToEd25519Seed(botSecret);
+  const der = Buffer.concat([ED25519_PKCS8_PREFIX, seed]);
+  return createPrivateKey({ key: der, format: 'der', type: 'pkcs8' });
+}
+
+/**
+ * 从 BotSecret 派生对应的 Ed25519 公钥。
+ *
+ * @param botSecret - 开放平台 BotSecret
+ * @returns Node `KeyObject` 公钥
+ */
+function ed25519PublicKeyFromBotSecret(botSecret: string): KeyObject {
+  return createPublicKey(ed25519PrivateKeyFromBotSecret(botSecret));
+}
+
+/**
+ * 对 Webhook URL 校验请求签名：`sign(event_ts + plain_token)`，返回十六进制。
+ * 对应开放平台文档「Webhook 配置」中的 Validation 响应。
+ *
+ * @param options - BotSecret 与平台下发的 plain_token / event_ts
+ * @returns 64 字节签名的小写十六进制字符串
+ */
+export function signQqWebhookValidation(
+  options: SignQqWebhookValidationOptions,
+): string {
+  const privateKey = ed25519PrivateKeyFromBotSecret(options.appSecret);
+  const message = Buffer.from(`${options.eventTs}${options.plainToken}`, 'utf8');
+  return sign(null, message, privateKey).toString('hex');
+}
+
+/**
+ * 使用 Ed25519 校验官方 QQ 回调签名。
+ * 消息为 `timestamp + rawBody`；公钥由 BotSecret 按文档 seed 规则派生。
  *
  * @param request - 入站 HTTP 回调的原始 body 与 headers
  * @param options - appSecret 以及可选的 header 名覆盖
- * @returns 签名匹配时为 `true`，否则为 `false`
+ * @returns 签名合法时为 `true`，否则为 `false`
  */
 export function verifyQqCallback(
   request: QqCallbackRequest,
@@ -40,21 +116,37 @@ export function verifyQqCallback(
     return false;
   }
 
-  // MVP：HMAC-SHA256(secret, timestamp + rawBody) 十六进制比对。
-  const expected = createHmac('sha256', options.appSecret)
-    .update(`${timestamp}${request.rawBody}`)
-    .digest('hex');
+  const signatureBytes = parseHexSignature(signature);
+  if (!signatureBytes) {
+    return false;
+  }
 
   try {
-    const left = Buffer.from(expected, 'utf8');
-    const right = Buffer.from(signature, 'utf8');
-    if (left.length !== right.length) {
-      return false;
-    }
-    return timingSafeEqual(left, right);
+    const publicKey = ed25519PublicKeyFromBotSecret(options.appSecret);
+    const message = Buffer.from(`${timestamp}${request.rawBody}`, 'utf8');
+    return verify(null, message, publicKey, signatureBytes);
   } catch {
     return false;
   }
+}
+
+/**
+ * 将十六进制签名解析为原始字节。
+ *
+ * @param signature - header 中的十六进制签名（大小写不敏感）
+ * @returns 64 字节 Buffer；格式非法时为 `null`
+ */
+function parseHexSignature(signature: string): Buffer | null {
+  const normalized = signature.trim().toLowerCase();
+  if (!/^[0-9a-f]+$/.test(normalized) || normalized.length % 2 !== 0) {
+    return null;
+  }
+  const bytes = Buffer.from(normalized, 'hex');
+  // Ed25519 签名固定 64 字节
+  if (bytes.length !== 64) {
+    return null;
+  }
+  return bytes;
 }
 
 /**

@@ -10,7 +10,10 @@ export {
   type QqSendTarget,
 } from './client.js';
 export {
+  expandBotSecretToEd25519Seed,
+  signQqWebhookValidation,
   verifyQqCallback,
   type QqCallbackRequest,
+  type SignQqWebhookValidationOptions,
   type VerifyQqCallbackOptions,
 } from './verify.js';
