@@ -1,4 +1,8 @@
-import { createQqOfficialClient, verifyQqCallback } from '@lanius/qq-official';
+import {
+  createQqOfficialClient,
+  signQqWebhookValidation,
+  verifyQqCallback,
+} from '@lanius/qq-official';
 import { Hono } from 'hono';
 import type { Logger } from 'pino';
 
@@ -36,15 +40,30 @@ export function createBotApp(config: BotConfig, logger: Logger) {
       headers[key] = value;
     });
 
-    // 平台 URL 校验 / challenge 可能不带签名。
+    // Webhook URL 校验（op:13）：按文档用 BotSecret 对 event_ts+plain_token 做 Ed25519 签名并原样回传 plain_token。
     try {
       const payload = JSON.parse(rawBody) as {
-        d?: { content?: string; channel_id?: string };
+        d?: {
+          content?: string;
+          channel_id?: string;
+          plain_token?: string;
+          event_ts?: string | number;
+        };
         op?: number;
-        type?: string;
       };
-      if (payload.op === 13 || payload.type === 'url_verification') {
-        return c.json(payload);
+      if (payload.op === 13) {
+        const plainToken = payload.d?.plain_token;
+        const eventTs = payload.d?.event_ts;
+        if (plainToken == null || eventTs == null || plainToken === '') {
+          logger.warn('qq webhook validation missing plain_token or event_ts');
+          return c.json({ ok: false, error: 'invalid_validation_payload' }, 400);
+        }
+        const signature = signQqWebhookValidation({
+          appSecret: config.qq.appSecret,
+          plainToken,
+          eventTs: String(eventTs),
+        });
+        return c.json({ plain_token: plainToken, signature });
       }
     } catch {
       // 普通事件继续走签名校验
