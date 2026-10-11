@@ -39,10 +39,9 @@ jobs:
             SERVICE='${{ inputs.service }}'
             test -f "${SECRETS_FILE}" || { echo "missing ${SECRETS_FILE}"; exit 1; }
             cd "${REPO_ROOT}"
-            # 生产 clone 可能只有 detached / 单分支；用 origin/develop 强制对齐
-            git fetch origin develop
-            git checkout -B develop origin/develop
-            git reset --hard origin/develop
+            # 生产 clone 常为浅克隆/无 remote-tracking；fetch 进本地 develop 再硬对齐
+            git fetch --force origin "refs/heads/develop:refs/heads/develop"
+            git checkout -f develop
             git log -1 --oneline
             cd "${DEPLOY_DIR}"
             if [ -f .env ]; then
