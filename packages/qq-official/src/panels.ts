@@ -99,15 +99,52 @@ async function syncOneScope(
   remark: string,
 ): Promise<SyncQqCommandPanelResult> {
   const existing = await listPanels(options, scope);
-  const ours = existing.find((row) => row.panel?.remark === remark);
+  // 优先更新本产品 remark；否则复用该场景已有面板（避免 20 个上限占满无法创建）
+  const target = existing.find((row) => row.panel?.remark === remark) ?? existing[0];
 
-  if (ours?.panel_id) {
-    await qqOpenApiJson(options, 'PUT', `/v2/panels/${ours.panel_id}`, {
+  if (target?.panel_id) {
+    await qqOpenApiJson(options, 'PUT', `/v2/panels/${target.panel_id}`, {
       panel: { items, remark },
     });
-    return { scope, panelId: ours.panel_id, action: 'updated' };
+    return { scope, panelId: target.panel_id, action: 'updated' };
   }
 
+  try {
+    return await createPanel(options, scope, items, remark);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    // 40030013：机器人全局面板数达上限，先删掉非本产品面板再创建一次
+    if (!detail.includes('30013') && !detail.includes('超出数量')) {
+      throw error;
+    }
+    const freed = await freeForeignPanelSlots(options, remark, 4);
+    if (freed === 0) {
+      return { scope, panelId: '', action: 'failed', detail };
+    }
+    return await createPanel(options, scope, items, remark);
+  }
+}
+
+/**
+ * 创建全局面板。
+ *
+ * @param options - OpenAPI 选项
+ * @param scope - 场景
+ * @param items - 面板元素
+ * @param remark - 产品备注
+ * @returns 创建结果
+ */
+async function createPanel(
+  options: SyncQqCommandPanelsOptions,
+  scope: QqPanelScope,
+  items: Array<{
+    type: 'command';
+    name: string;
+    desc: string;
+    only_admin: boolean;
+  }>,
+  remark: string,
+): Promise<SyncQqCommandPanelResult> {
   const created = await qqOpenApiJson<{ panel_id?: string }>(
     options,
     'POST',
@@ -130,6 +167,39 @@ async function syncOneScope(
 }
 
 /**
+ * 删除若干非本产品 remark 的面板，腾出全局配额。
+ *
+ * @param options - OpenAPI 选项
+ * @param remark - 本产品备注（保留）
+ * @param maxDelete - 最多删除个数
+ * @returns 实际删除数量
+ */
+async function freeForeignPanelSlots(
+  options: SyncQqCommandPanelsOptions,
+  remark: string,
+  maxDelete: number,
+): Promise<number> {
+  let deleted = 0;
+  for (const scope of DEFAULT_SCOPES) {
+    if (deleted >= maxDelete) {
+      break;
+    }
+    const rows = await listPanels(options, scope);
+    for (const row of rows) {
+      if (deleted >= maxDelete) {
+        break;
+      }
+      if (!row.panel_id || row.panel?.remark === remark) {
+        continue;
+      }
+      await qqOpenApiJson(options, 'DELETE', `/v2/panels/${row.panel_id}`);
+      deleted += 1;
+    }
+  }
+  return deleted;
+}
+
+/**
  * 拉取某场景下已有面板列表（首页，足够定位本产品 remark）。
  *
  * @param options - 凭据与 fetch
@@ -146,14 +216,37 @@ async function listPanels(
     panel?: { remark?: string };
   }>
 > {
-  const data = await qqOpenApiJson<{
-    records?: Array<{
-      panel_id?: string;
-      version?: number;
-      panel?: { remark?: string };
-    }>;
-  }>(options, 'GET', `/v2/panels?scope=${encodeURIComponent(scope)}&limit=50`);
-  return data.records ?? [];
+  const data = await qqOpenApiJson<Record<string, unknown>>(
+    options,
+    'GET',
+    `/v2/panels?scope=${encodeURIComponent(scope)}&limit=50`,
+  );
+  const nested =
+    data.data && typeof data.data === 'object'
+      ? (data.data as Record<string, unknown>)
+      : undefined;
+  const raw = (data.records ??
+    data.list ??
+    nested?.records ??
+    nested?.list ??
+    []) as Array<Record<string, unknown>>;
+
+  return raw.map((row) => {
+    const panel =
+      row.panel && typeof row.panel === 'object'
+        ? (row.panel as { remark?: string })
+        : undefined;
+    return {
+      panel_id:
+        typeof row.panel_id === 'string'
+          ? row.panel_id
+          : typeof row.id === 'string'
+            ? row.id
+            : undefined,
+      version: typeof row.version === 'number' ? row.version : undefined,
+      panel,
+    };
+  });
 }
 
 /** 再导出缓存类型，便于调用方标注。 */
