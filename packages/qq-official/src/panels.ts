@@ -40,12 +40,13 @@ export type SyncQqCommandPanelResult = {
   detail?: string;
 };
 
-const DEFAULT_SCOPES: readonly QqPanelScope[] = ['group', 'channel', 'c2c', 'dm'];
+/** 默认只同步群 + 单聊，降低 10QPM 触顶与无用频道配额占用。 */
+const DEFAULT_SCOPES: readonly QqPanelScope[] = ['group', 'c2c'];
 const DEFAULT_REMARK = 'lanius-mvp-commands';
 
 /**
  * 将 Lanius 指令同步为官方「指令面板」（创建或按 remark 更新）。
- * 单场景失败不阻断其它场景。
+ * 单场景失败不阻断其它场景；场景间间隔以避免 100017 频控。
  *
  * @param options - 凭据、场景与指令项
  * @returns 各场景同步结果列表
@@ -55,15 +56,19 @@ export async function syncQqCommandPanels(
 ): Promise<SyncQqCommandPanelResult[]> {
   const scopes = options.scopes ?? DEFAULT_SCOPES;
   const remark = options.remark ?? DEFAULT_REMARK;
-  const items = options.items.map((item) => ({
+  // 面板元素宜精简；超限错误码 30013 也可能指向 items 数量
+  const items = options.items.slice(0, 8).map((item) => ({
     type: 'command' as const,
     name: truncateChars(item.name, 14),
     desc: truncateChars(item.desc, 30),
-    only_admin: false,
   }));
 
   const results: SyncQqCommandPanelResult[] = [];
-  for (const scope of scopes) {
+  for (let i = 0; i < scopes.length; i += 1) {
+    const scope = scopes[i]!;
+    if (i > 0) {
+      await sleepMs(7000);
+    }
     try {
       results.push(await syncOneScope(options, scope, items, remark));
     } catch (error) {
@@ -76,6 +81,18 @@ export async function syncQqCommandPanels(
     }
   }
   return results;
+}
+
+/**
+ * 异步等待指定毫秒。
+ *
+ * @param ms - 等待时长（毫秒）
+ * @returns 无返回值
+ */
+function sleepMs(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 /**
@@ -94,7 +111,6 @@ async function syncOneScope(
     type: 'command';
     name: string;
     desc: string;
-    only_admin: boolean;
   }>,
   remark: string,
 ): Promise<SyncQqCommandPanelResult> {
@@ -113,28 +129,20 @@ async function syncOneScope(
     return await createPanel(options, scope, items, remark);
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    // 40030013：机器人全局面板数达上限，先删掉非本产品面板再创建一次
+    // 40030013：列表常为空却仍超限——多见于后台残留配额，需人工在开放平台删除旧面板
     if (!detail.includes('30013') && !detail.includes('超出数量')) {
       throw error;
     }
     const freed = await freeForeignPanelSlots(options, remark, 8);
     if (freed > 0) {
+      await sleepMs(7000);
       return await createPanel(options, scope, items, remark);
-    }
-    // 列表为空却仍报超限：把各场景原始列表打进 detail，便于对照开放平台后台
-    const probes: Record<string, unknown> = {};
-    for (const probeScope of DEFAULT_SCOPES) {
-      probes[probeScope] = await qqOpenApiJson(
-        options,
-        'GET',
-        `/v2/panels?scope=${encodeURIComponent(probeScope)}&limit=50`,
-      );
     }
     return {
       scope,
       panelId: '',
       action: 'failed',
-      detail: `${detail}; freed=0; probes=${JSON.stringify(probes).slice(0, 1800)}`,
+      detail: `${detail}; listEmpty=${existing.length === 0}; hint=在QQ开放平台删除旧指令面板后重启bot`,
     };
   }
 }
@@ -155,7 +163,6 @@ async function createPanel(
     type: 'command';
     name: string;
     desc: string;
-    only_admin: boolean;
   }>,
   remark: string,
 ): Promise<SyncQqCommandPanelResult> {

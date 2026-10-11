@@ -61,8 +61,12 @@ export async function qqOpenApiJson<T>(
   const businessCode = parsed.code;
   const businessFailed = businessCode != null && Number(businessCode) !== 0;
   if (!response.ok || businessFailed) {
+    const limit =
+      typeof (parsed as { limit?: unknown }).limit !== 'undefined'
+        ? ` limit=${String((parsed as { limit?: unknown }).limit)}`
+        : '';
     throw new Error(
-      `QQ OpenAPI ${method} ${path} failed: HTTP ${response.status} code=${businessCode ?? 'n/a'} message=${parsed.message ?? parsed.msg ?? text.slice(0, 200)}`,
+      `QQ OpenAPI ${method} ${path} failed: HTTP ${response.status} code=${businessCode ?? 'n/a'} message=${parsed.message ?? parsed.msg ?? ''}${limit} body=${text.slice(0, 300)}`,
     );
   }
   return parsed;
