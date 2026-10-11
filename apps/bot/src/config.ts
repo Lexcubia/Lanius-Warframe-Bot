@@ -18,7 +18,7 @@ export const BotConfigSchema = z.object({
       host: z.string().default('127.0.0.1'),
       port: z.number().int().positive().default(8788),
       apiBaseUrl: z.string().url().default('http://127.0.0.1:8787'),
-      defaultReplyMode: z.enum(['text', 'image']).default('text'),
+      defaultReplyMode: z.enum(['text', 'image']).default('image'),
       dryRun: z.boolean().default(true),
       publicSiteBaseUrl: z.string().url().optional(),
       image: z
