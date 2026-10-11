@@ -50,7 +50,10 @@ export async function handleCommand(
       locale === 'en'
         ? `Reply mode set to ${intent.mode}.`
         : `已切换为${intent.mode === 'image' ? '图片' : '文本'}模式。`;
-    await deps.qq.sendText(target, msg);
+    const sent = await deps.qq.sendText(target, msg);
+    if (!sent.ok) {
+      return `send-failed:${sent.detail ?? 'unknown'}`;
+    }
     return msg;
   }
 
@@ -60,7 +63,10 @@ export async function handleCommand(
     const text = formatHelpText(help, locale, {
       unknownRaw: intent.type === 'unknown' ? intent.raw : undefined,
     });
-    await deps.qq.sendText(target, text);
+    const sent = await deps.qq.sendText(target, text);
+    if (!sent.ok) {
+      return `send-failed:${sent.detail ?? 'unknown'}`;
+    }
     return text;
   }
 
@@ -74,17 +80,16 @@ export async function handleCommand(
       locale === 'en'
         ? `Query failed: ${envelope.error.message}`
         : `查询失败：${envelope.error.message}`;
-    await deps.qq.sendText(target, fail);
+    const sent = await deps.qq.sendText(target, fail);
+    if (!sent.ok) {
+      return `send-failed:${sent.detail ?? 'unknown'}`;
+    }
     return fail;
   }
 
-  const siteUrl = deps.config.bot.publicSiteBaseUrl
-    ? `${deps.config.bot.publicSiteBaseUrl.replace(/\/$/, '')}/${locale}/worldstate`
-    : undefined;
-
+  // QQ 群聊禁止消息内带 URL；公开站导流留给 Web，不拼进下行文本。
   const text = formatWorldstateText(envelope.data, locale, {
     stale: envelope.meta.stale,
-    siteUrl,
   });
 
   // MVP：入侵/夜浪意图仍复用完整 worldstate 卡片与文本。
@@ -104,21 +109,30 @@ export async function handleCommand(
       if (sent.ok) {
         return 'image';
       }
-      await deps.qq.sendText(
+      const fallback = await deps.qq.sendText(
         target,
         `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
       );
+      if (!fallback.ok) {
+        return `send-failed:${fallback.detail ?? 'unknown'}`;
+      }
       return 'image-fallback-send';
     } catch {
-      await deps.qq.sendText(
+      const fallback = await deps.qq.sendText(
         target,
         `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
       );
+      if (!fallback.ok) {
+        return `send-failed:${fallback.detail ?? 'unknown'}`;
+      }
       return 'image-fallback-render';
     }
   }
 
-  await deps.qq.sendText(target, text);
+  const sent = await deps.qq.sendText(target, text);
+  if (!sent.ok) {
+    return `send-failed:${sent.detail ?? 'unknown'}`;
+  }
   return 'text';
 }
 

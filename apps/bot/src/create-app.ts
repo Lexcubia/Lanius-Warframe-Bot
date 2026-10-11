@@ -2,6 +2,7 @@ import {
   createQqOfficialClient,
   signQqWebhookValidation,
   verifyQqCallback,
+  type QqOfficialClient,
 } from '@lanius/qq-official';
 import { Hono } from 'hono';
 import type { Logger } from 'pino';
@@ -9,15 +10,27 @@ import type { Logger } from 'pino';
 import type { BotConfig } from './config.js';
 import { parseCommand } from './commands/parse-command.js';
 import { handleCommand, type SessionPrefs } from './pipeline/handle-command.js';
+import {
+  parseInboundQqMessage,
+  type QqInboundPayload,
+} from './qq/parse-inbound-event.js';
+
+/**
+ * 构建 Bot HTTP 应用的结果。
+ */
+export type BotAppBundle = {
+  app: Hono;
+  qq: QqOfficialClient;
+};
 
 /**
  * 构建 Bot HTTP 应用（健康检查 + 官方 QQ 回调）。
  *
  * @param config - 已加载的 Bot 配置
  * @param logger - 结构化日志实例
- * @returns 可对外服务的 Hono 应用
+ * @returns 可对外服务的 Hono 应用与 QQ 客户端（供启动时同步面板）
  */
-export function createBotApp(config: BotConfig, logger: Logger) {
+export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
   const app = new Hono();
   const qq = createQqOfficialClient({
     appId: config.qq.appId,
@@ -28,6 +41,8 @@ export function createBotApp(config: BotConfig, logger: Logger) {
     replyMode: config.bot.defaultReplyMode,
     locale: config.defaults.locale,
   };
+  /** 短时去重：官方可能对同一 msg_id 重推。 */
+  const seenMsgIds = new Map<string, number>();
 
   app.get('/health', (c) =>
     c.json({ ok: true, service: 'lanius-bot', dryRun: config.bot.dryRun }),
@@ -42,14 +57,8 @@ export function createBotApp(config: BotConfig, logger: Logger) {
 
     // Webhook URL 校验（op:13）：按文档用 BotSecret 对 event_ts+plain_token 做 Ed25519 签名并原样回传 plain_token。
     try {
-      const payload = JSON.parse(rawBody) as {
-        d?: {
-          content?: string;
-          channel_id?: string;
-          plain_token?: string;
-          event_ts?: string | number;
-        };
-        op?: number;
+      const payload = JSON.parse(rawBody) as QqInboundPayload & {
+        d?: { plain_token?: string; event_ts?: string | number };
       };
       if (payload.op === 13) {
         const plainToken = payload.d?.plain_token;
@@ -78,31 +87,66 @@ export function createBotApp(config: BotConfig, logger: Logger) {
       return c.json({ ok: false }, 401);
     }
 
-    let content = '';
-    let channelId = 'unknown';
+    let payload: QqInboundPayload;
     try {
-      const payload = JSON.parse(rawBody) as {
-        d?: { content?: string; channel_id?: string; group_openid?: string };
-      };
-      content = payload.d?.content ?? '';
-      channelId = payload.d?.channel_id ?? payload.d?.group_openid ?? 'unknown';
+      payload = JSON.parse(rawBody) as QqInboundPayload;
     } catch {
       return c.json({ ok: false, error: 'invalid_json' }, 400);
     }
 
-    const parsed = parseCommand(content);
-    if (!parsed.matched || !parsed.intent) {
-      return c.json({ ok: true, ignored: true });
+    const inbound = parseInboundQqMessage(payload);
+    if (!inbound) {
+      return c.json({ ok: true, ignored: true, reason: 'non_message_event' });
     }
 
-    const outcome = await handleCommand(parsed.intent, { channelId }, {
+    const dedupeKey = inbound.target.msgId;
+    if (dedupeKey) {
+      const now = Date.now();
+      pruneSeenMsgIds(seenMsgIds, now);
+      if (seenMsgIds.has(dedupeKey)) {
+        return c.json({ ok: true, ignored: true, reason: 'duplicate_msg' });
+      }
+      seenMsgIds.set(dedupeKey, now);
+    }
+
+    const parsed = parseCommand(inbound.content);
+    if (!parsed.matched || !parsed.intent) {
+      return c.json({ ok: true, ignored: true, reason: 'no_command' });
+    }
+
+    const outcome = await handleCommand(parsed.intent, inbound.target, {
       config,
       qq,
       prefs,
     });
-    logger.info({ channelId, outcome, intent: parsed.intent.type }, 'command handled');
+    logger.info(
+      {
+        scene: inbound.target.scene,
+        targetId: inbound.target.targetId,
+        eventType: inbound.eventType,
+        outcome,
+        intent: parsed.intent.type,
+      },
+      'command handled',
+    );
     return c.json({ ok: true, outcome });
   });
 
-  return app;
+  return { app, qq };
+}
+
+/**
+ * 清理超过 10 分钟的去重键，避免 Map 无限增长。
+ *
+ * @param seen - msg_id → 首次见到的时间戳
+ * @param nowMs - 当前时间
+ * @returns 无返回值
+ */
+function pruneSeenMsgIds(seen: Map<string, number>, nowMs: number): void {
+  const ttlMs = 10 * 60 * 1000;
+  for (const [key, at] of seen) {
+    if (nowMs - at > ttlMs) {
+      seen.delete(key);
+    }
+  }
 }
