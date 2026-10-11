@@ -51,6 +51,13 @@ jobs:
               grep -q '^LANIUS_CONFIG_FILE=' .env || echo "LANIUS_CONFIG_FILE=${SECRETS_FILE}" >> .env
               sed -i "s|^LANIUS_CONFIG_FILE=.*|LANIUS_CONFIG_FILE=${SECRETS_FILE}|" .env
             fi
+            PLAYWRIGHT_DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
+            if ! compgen -G "${PLAYWRIGHT_DIR}/chromium-*" > /dev/null; then
+              echo "missing Playwright Chromium under ${PLAYWRIGHT_DIR}"
+              echo "on the server run: bash ${REPO_ROOT}/deploy/prepare-playwright.sh"
+              exit 1
+            fi
+            export LANIUS_PLAYWRIGHT_DIR="${PLAYWRIGHT_DIR}"
             if [ -n "${SERVICE}" ]; then
               docker compose build "${SERVICE}"
               docker compose up -d "${SERVICE}"
