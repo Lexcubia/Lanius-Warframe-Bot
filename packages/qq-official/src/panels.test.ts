@@ -18,7 +18,7 @@ function mockFetch(
     respond: () => { ok?: boolean; body: unknown };
   }>,
 ): typeof fetch {
-  const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+  const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
     const url = String(input);
     const method = (init?.method ?? 'GET').toUpperCase();
     if (url.includes('getAppAccessToken')) {
@@ -82,7 +82,7 @@ describe('syncQqCommandPanels', () => {
   it('reclaims orphans then creates c2c when quota exceeded', async () => {
     let posted = 0;
     const deleted: string[] = [];
-    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       const method = (init?.method ?? 'GET').toUpperCase();
       if (url.includes('getAppAccessToken')) {
@@ -216,7 +216,7 @@ describe('ensureQqGroupCommandPanel', () => {
 describe('reclaimOrphanPanels', () => {
   it('keeps one lanius panel per scope and deletes the rest', async () => {
     const deleted: string[] = [];
-    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       const method = (init?.method ?? 'GET').toUpperCase();
       if (url.includes('getAppAccessToken')) {
