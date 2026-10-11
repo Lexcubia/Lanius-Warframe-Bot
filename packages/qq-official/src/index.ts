@@ -1,7 +1,12 @@
 /**
- * `@lanius/qq-official` — 官方 QQ 验签与发送辅助（仅 bot 使用）。
+ * `@lanius/qq-official` — 官方 QQ 验签、发信与指令面板（仅 bot 使用）。
  */
 
+export {
+  getAppAccessToken,
+  type AccessTokenCache,
+  type GetAppAccessTokenOptions,
+} from './access-token.js';
 export {
   createQqOfficialClient,
   QqOfficialClient,
@@ -9,6 +14,13 @@ export {
   type QqSendResult,
   type QqSendTarget,
 } from './client.js';
+export {
+  syncQqCommandPanels,
+  type QqPanelCommandItem,
+  type QqPanelScope,
+  type SyncQqCommandPanelResult,
+  type SyncQqCommandPanelsOptions,
+} from './panels.js';
 export {
   expandBotSecretToEd25519Seed,
   signQqWebhookValidation,
