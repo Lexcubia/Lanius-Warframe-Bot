@@ -491,10 +491,11 @@ async function replyFissuresWithShortcuts(options: {
  */
 function toFissureMarkdown(text: string): string {
   const lines = text.split('\n');
-  if (lines.length === 0) {
+  const head = lines[0];
+  if (!head) {
     return text;
   }
-  const [head, ...rest] = lines;
+  const rest = lines.slice(1);
   return [`**${head.replace(/^\*+|\*+$/g, '').trim()}**`, ...rest].join('\n');
 }
 
