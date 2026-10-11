@@ -2,6 +2,7 @@
  * 为 Docker runner 阶段生成可独立安装的 package.json（外部 npm 依赖）。
  * 用法：`node scripts/prepare-runtime-package.mjs api|bot <outDir>`
  */
+/* global process, console */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,6 +19,8 @@ const BOT_RUNTIME_EXTRAS = {
   '@fontsource/noto-sans-sc': '^5.2.5',
   '@fontsource/rajdhani': '^5.2.5',
   playwright: '^1.51.0',
+  // tsup external 的 CJS 依赖（来自 @lanius/config），运行时需存在于 node_modules
+  yaml: '^2.6.1',
 };
 
 /**
