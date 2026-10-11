@@ -17,7 +17,6 @@
     "@lanius/config": "workspace:*",
     "@lanius/core": "workspace:*",
     "bcryptjs": "^3.0.3",
-    "better-sqlite3": "^13.0.0",
     "hono": "^4.6.14",
     "ioredis": "^6.0.0",
     "pino": "^9.6.0",
@@ -27,7 +26,6 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
-    "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22.10.2",
     "tsup": "^8.3.5",
     "tsx": "^4.19.2",

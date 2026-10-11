@@ -1,12 +1,31 @@
 import { mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
-import Database from 'better-sqlite3';
 
 /**
- * SQLite 访问封装（better-sqlite3）。
+ * SQLite 访问封装（Node 22.5+ 内置 node:sqlite）。
+ *
+ * 为什么不直接 `import { DatabaseSync } from 'node:sqlite'`：
+ * esbuild 0.27 / Vite 5 的内置模块清单不含 Node 22.5 新增的 `sqlite`，
+ * 静态 import 会被误判为第三方包并剥掉 `node:` 前缀（产物变 `from 'sqlite'`），
+ * 且 Vitest 在解析阶段也会报 "Failed to load url sqlite"。
+ *
+ * 因此统一改为 `createRequire` + 拼接模块名的间接引用：打包器/测试器
+ * 无法静态分析该依赖，加载推迟到 Node 运行期完成（要求 Node >= 22.5）。
  */
+
+/** Node 内置 `DatabaseSync` 类型引用。 */
+type DatabaseSyncType = typeof import('node:sqlite').DatabaseSync;
+
+const requireModule = createRequire(import.meta.url);
+// 间接拼接模块名，避免被 esbuild/Vite 静态解析
+const sqliteModuleId = ['node', 'sqlite'].join(':');
+const { DatabaseSync } = requireModule(sqliteModuleId) as {
+  DatabaseSync: DatabaseSyncType;
+};
+
 export type LaniusDb = {
-  raw: Database.Database;
+  raw: InstanceType<DatabaseSyncType>;
   /**
    * 执行无返回 SQL。
    *
@@ -30,10 +49,7 @@ export type LaniusDb = {
    * @param params - 绑定参数
    * @returns 行或 undefined
    */
-  get<T extends Record<string, unknown>>(
-    sql: string,
-    params?: unknown[],
-  ): T | undefined;
+  get<T extends Record<string, unknown>>(sql: string, params?: unknown[]): T | undefined;
   /**
    * 关闭数据库。
    *
@@ -52,8 +68,8 @@ export function openLaniusDb(filePath: string): LaniusDb {
   if (filePath !== ':memory:') {
     mkdirSync(dirname(filePath), { recursive: true });
   }
-  const raw = new Database(filePath);
-  raw.pragma('journal_mode = WAL');
+  const raw = new DatabaseSync(filePath);
+  raw.exec('PRAGMA journal_mode = WAL');
   raw.exec(`
     CREATE TABLE IF NOT EXISTS module_settings (
       module_id TEXT PRIMARY KEY,
@@ -116,13 +132,13 @@ export function openLaniusDb(filePath: string): LaniusDb {
   return {
     raw,
     run(sql, params = []) {
-      raw.prepare(sql).run(...params);
+      raw.prepare(sql).run(...(params as never[]));
     },
     all<T extends Record<string, unknown>>(sql: string, params: unknown[] = []) {
-      return raw.prepare(sql).all(...params) as T[];
+      return raw.prepare(sql).all(...(params as never[])) as T[];
     },
     get<T extends Record<string, unknown>>(sql: string, params: unknown[] = []) {
-      return raw.prepare(sql).get(...params) as T | undefined;
+      return raw.prepare(sql).get(...(params as never[])) as T | undefined;
     },
     close() {
       raw.close();
