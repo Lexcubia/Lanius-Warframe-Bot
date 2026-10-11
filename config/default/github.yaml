@@ -1,0 +1,6 @@
+# Admin 版本列表 / 选版更新
+owner: 'Lexcubia'
+repo: 'Lanius-Warframe-Bot'
+# token: 可选 PAT，写在 local
+deployDir: '/opt/lanius/repo/deploy'
+composeFile: 'docker-compose.app.yml'

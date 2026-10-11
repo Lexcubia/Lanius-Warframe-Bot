@@ -1,0 +1,3 @@
+# 管理后台（真实口令哈希写 config/local/admin.yaml）
+username: 'admin'
+# passwordHash / sessionSecret 仅写 local

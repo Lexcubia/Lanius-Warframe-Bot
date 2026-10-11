@@ -1,66 +1,19 @@
-# 将 develop 源码同步到生产并 compose build（不经 tag / GHCR）。
-# 用于热修回调验签等需尽快上线的改动。
+# 已停用：develop 不再远程 build/部署。
+# 请将稳定版本推到长期分支 `release`，由 deploy-release.yml 执行 pull 换版；
+# 或使用 Admin「版本」页 / 宿主机 update-image.sh。
 
-name: Deploy develop
+name: Deploy develop (disabled)
 
 on:
   workflow_dispatch:
-    inputs:
-      service:
-        description: '仅重建的 compose 服务（空=全部）'
-        required: false
-        default: 'bot'
-        type: string
 
 permissions:
   contents: read
 
 jobs:
-  deploy:
-    name: deploy-develop-production
-    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+  disabled:
+    name: skipped
+    if: false
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    environment: production
     steps:
-      - name: Deploy develop over SSH
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 50m
-          script: |
-            set -euo pipefail
-            DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
-            REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
-            SECRETS_FILE="${LANIUS_SECRETS_FILE:-/opt/lanius/secrets/config.local.yaml}"
-            SERVICE='${{ inputs.service }}'
-            test -f "${SECRETS_FILE}" || { echo "missing ${SECRETS_FILE}"; exit 1; }
-            # 产品默认改为图片回复；生产 secrets 若仍为 text 则对齐
-            sed -i 's/\(defaultReplyMode:[[:space:]]*\)text/\1image/' "${SECRETS_FILE}" || true
-            cd "${REPO_ROOT}"
-            # 已处于 develop 时不能 fetch 进同名本地分支；用 FETCH_HEAD 硬对齐
-            git fetch origin develop
-            git checkout -B develop FETCH_HEAD
-            git reset --hard FETCH_HEAD
-            git log -1 --oneline
-            cd "${DEPLOY_DIR}"
-            if [ -f .env ]; then
-              grep -q '^LANIUS_CONFIG_FILE=' .env || echo "LANIUS_CONFIG_FILE=${SECRETS_FILE}" >> .env
-              sed -i "s|^LANIUS_CONFIG_FILE=.*|LANIUS_CONFIG_FILE=${SECRETS_FILE}|" .env
-            fi
-            if [ -n "${SERVICE}" ]; then
-              docker compose build "${SERVICE}"
-              docker compose up -d "${SERVICE}"
-            else
-              docker compose build
-              docker compose up -d
-            fi
-            docker compose ps
-            # 等待菜单/面板同步（含超限探测）完成后再拉日志
-            sleep 35
-            docker compose logs bot --tail 120 || true
-            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
-              curl -fsS "http://127.0.0.1/api/lanius/v1/health"
+      - run: echo "use release branch deploy instead"

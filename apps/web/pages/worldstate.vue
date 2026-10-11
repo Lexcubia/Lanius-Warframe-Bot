@@ -4,6 +4,7 @@ import type { WorldstateDto } from '@lanius/core';
 
 const { t, locale } = useI18n();
 const api = useLaniusApi();
+const localePath = useLocalePath();
 
 const { data, error, pending, refresh } = await useAsyncData(
   'worldstate',
@@ -26,6 +27,10 @@ const { data, error, pending, refresh } = await useAsyncData(
 
 <template>
   <div>
+    <p class="links">
+      <NuxtLink :to="localePath('/fissures')">{{ t('worldstate.toFissures') }}</NuxtLink>
+      <NuxtLink :to="localePath('/traders')">{{ t('nav.traders') }}</NuxtLink>
+    </p>
     <p v-if="pending" class="state">{{ t('worldstate.loading') }}</p>
     <div v-else-if="error" class="state state--error">
       <p>{{ t('worldstate.error') }}</p>
@@ -43,6 +48,29 @@ const { data, error, pending, refresh } = await useAsyncData(
 </template>
 
 <style scoped>
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin: 0 0 1rem;
+  font-size: 0.92rem;
+}
+.links a {
+  color: var(--lanius-accent);
+  transition: color 0.18s ease;
+}
+
+@media (hover: hover) {
+  .links a:hover {
+    color: var(--lanius-highlight);
+  }
+
+  .retry:hover {
+    border-color: rgba(78, 183, 232, 0.5);
+    color: var(--lanius-accent-dim);
+    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
+  }
+}
 .state {
   color: var(--lanius-text-muted);
 }
@@ -61,5 +89,9 @@ const { data, error, pending, refresh } = await useAsyncData(
   padding: 0.5rem 0.85rem;
   border-radius: 6px;
   cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 </style>

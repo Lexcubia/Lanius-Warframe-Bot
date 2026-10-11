@@ -26,12 +26,15 @@
 ```bash
 # 根目录 .npmrc 默认 registry.npmmirror.com（国内镜像）
 pnpm install
-cp config.example.yaml config.local.yaml   # 填入密钥；勿提交
+cp config/local/admin.yaml.example config/local/admin.yaml
+cp config/local/api.yaml.example config/local/api.yaml
+cp config/local/qq.yaml.example config/local/qq.yaml
+# 编辑 config/local/*；勿提交。亦兼容根目录旧版 config.local.yaml（启动时拆分）
 
 # 三个进程可并行
 pnpm dev:api    # http://127.0.0.1:8787
 pnpm dev:bot    # http://127.0.0.1:8788  （默认 dryRun=true）
-pnpm dev:web    # http://127.0.0.1:8790
+pnpm dev:web    # http://127.0.0.1:8790  （管理：/admin）
 ```
 
 API 试探：
@@ -57,10 +60,10 @@ pnpm test
 pnpm typecheck
 ```
 
-密钥放在 **`config.local.yaml` 和/或数据库**，不以环境变量为主存储。  
-允许非密钥例外：`NODE_ENV`、`PORT` / `HOST`、`LANIUS_CONFIG`、`LANIUS_API_BASE`、`LANIUS_RUNTIME_CONFIG_ROOT`。
+密钥放在 **`config/local/*.yaml` 和/或数据库**，不以环境变量为主存储。  
+允许非密钥例外：`NODE_ENV`、`PORT` / `HOST`、`LANIUS_CONFIG_ROOT`、`LANIUS_API_BASE`。
 
-备案页脚、派系显示名等**可运行时覆盖**的内容：见 [`config/README.md`](./config/README.md)（`default/` 回退 + `local/` 覆盖，重启即生效）。
+模块化配置与 Admin 热更新：见 [`config/README.md`](./config/README.md)。部署：[`docs/DEPLOY.md`](./docs/DEPLOY.md)。
 
 ## 规范与 Agent 入口
 

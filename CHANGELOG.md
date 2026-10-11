@@ -6,6 +6,41 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-12
+
+### Added
+
+- `@lanius/config` 模块化配置驱动（`config/default` + `config/local`）；Admin 全量配置编辑（密钥掩码）与进程内热加载。
+- Admin「版本」：拉取 GitHub Releases/tags，选版更新/回退（与 `deploy/update-image.sh` 同路径，pull 不 rebuild）。
+- 长期分支 `release` 自动部署工作流（SSH pull + up）；开源友好手动 / Docker 部署文档；主体单容器 `lanius-app`（api + web + bot + 内嵌 Redis）+ 旁路 Caddy。
+- Web Admin 控制台：会话探测 / logout、侧栏分区；ACL CRUD、轮换表单、帮助菜单、审计表、订阅与模块开关。
+- Web 公开站全模块查询页：裂隙、市场、紫卡、商人、轮换、帮助详解（`?module=`）、订阅说明；首页搜索跳转市场。
+- API 模块：市场、紫卡、商人、信条/终幕轮换、订阅、推送 tick/ack、Admin；Redis/内存缓存与 SQLite 仓储。
+- QQ：市场 / 商人文本格式化；推送 worker；裂隙 / 入侵 / 夜浪等模块卡片与 Web 同源。
+- 官方 PublicExport 物品图标目录（`CatalogItemDto.iconUrl`）；伤害元素本地 PNG；信条/终幕 valence 进度条。
+- 开放世界周期六地分色主题与环形进度中心图标（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）。
+- 虚空裂隙三维筛选（遗物 / 任务类型 / 普通·钢铁之路·九重天）与路径色标。
+- QQ 裂隙回复支持 Markdown + 底部指令按钮（纪元 / 路径档一键筛选；图片模式附带按钮条）。
+- 午夜电波挑战标注每日 / 每周（`kind` + `kindLabel`），列表按周期分组。
+- 数据源说明 [docs/DATA_SOURCES.md](./docs/DATA_SOURCES.md)。
+
+### Changed
+
+- `release.yml` 仅测试 + 推 GHCR（含 `lanius-app`），不再 SSH 部署；`deploy-develop` 停用。
+- 根单体 `config.local.yaml` 启动时拆分迁移到 `config/local/*`（兼容一轮）。
+- 公开导航与首页看板重构：主导航左侧悬浮轨；动漫风视觉；主区域禁止横向滚动。
+- 世界状态看板仅展示开放世界周期；入侵 / 午夜电波为独立模块。
+- 信条与终幕改为货架式 offerings（无「当前高亮」），valence 以进度条展示。
+- `@lanius/api` 客户端对 `fetch` 使用 `bind`，修复浏览器 SPA 切换时报 Illegal invocation。
+- 派系/节点中文显示对齐灰机 wiki；星图繁体星球名转简体。
+- 虚空商人 / 瓦奇娅货架与入侵奖励展示物品图标；入侵 `ItemCount > 1` 显示数量。
+
+### Fixed
+
+- 裂隙任务类型筛选芯片按展示名去重（避免 MT_* 与九重天节点键重复）。
+- 裂隙卡片内时间等文案禁止换行；遗物图标优先本地纪元资源。
+- 无官方图标时使用固定尺寸占位，保持列表对齐。
+
 ## [0.2.0] - 2026-10-11
 
 ### Added

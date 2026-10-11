@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { RealmSchema } from '../realm.js';
+import { CatalogItemDtoSchema } from './item.js';
 
 /**
  * Localized display name pair used on worldstate entities.
@@ -17,15 +18,15 @@ export type LocalizedName = z.infer<typeof LocalizedNameSchema>;
 
 /**
  * Single invasion mission normalized for Lanius clients.
- * 节点 / 阵营 / 奖励字段为中英可读显示名（`LocalizedName`）。
+ * 节点 / 阵营为双语名；奖励为带官方图标的物品引用。
  */
 export const InvasionDtoSchema = z.object({
   id: z.string().min(1),
   node: LocalizedNameSchema,
   attackingFaction: LocalizedNameSchema,
   defendingFaction: LocalizedNameSchema,
-  attackerReward: LocalizedNameSchema.optional(),
-  defenderReward: LocalizedNameSchema.optional(),
+  attackerReward: CatalogItemDtoSchema.optional(),
+  defenderReward: CatalogItemDtoSchema.optional(),
   completionPct: z.number().min(0).max(100).optional(),
   expired: z.boolean(),
 });
@@ -36,26 +37,52 @@ export const InvasionDtoSchema = z.object({
 export type InvasionDto = z.infer<typeof InvasionDtoSchema>;
 
 /**
+ * 午夜电波挑战周期：每日 / 每周 / 其他（无法识别时）。
+ */
+export const NightwaveChallengeKindSchema = z.enum([
+  'daily',
+  'weekly',
+  'other',
+]);
+
+/**
+ * 午夜电波单条挑战。
+ */
+export const NightwaveChallengeDtoSchema = z.object({
+  id: z.string().min(1),
+  /** 每日 / 每周 / 其他 */
+  kind: NightwaveChallengeKindSchema,
+  /** 周期档双语标签（如「每日」「每周」） */
+  kindLabel: LocalizedNameSchema,
+  title: LocalizedNameSchema.optional(),
+  description: LocalizedNameSchema.optional(),
+  reputation: z.number().int().optional(),
+  expiry: z.string().datetime().optional(),
+});
+
+/**
  * Nightwave / seasonal challenge summary for MVP worldstate.
  */
 export const NightwaveDtoSchema = z.object({
   season: z.number().int().nonnegative().optional(),
   phase: z.number().int().nonnegative().optional(),
-  activeChallenges: z.array(
-    z.object({
-      id: z.string().min(1),
-      title: LocalizedNameSchema.optional(),
-      description: LocalizedNameSchema.optional(),
-      reputation: z.number().int().optional(),
-      expiry: z.string().datetime().optional(),
-    }),
-  ),
+  activeChallenges: z.array(NightwaveChallengeDtoSchema),
 });
 
 /**
  * Normalized Nightwave slice embedded in worldstate.
  */
 export type NightwaveDto = z.infer<typeof NightwaveDtoSchema>;
+
+/**
+ * 午夜电波挑战周期档。
+ */
+export type NightwaveChallengeKind = z.infer<typeof NightwaveChallengeKindSchema>;
+
+/**
+ * 午夜电波单条挑战。
+ */
+export type NightwaveChallengeDto = z.infer<typeof NightwaveChallengeDtoSchema>;
 
 /**
  * 开放世界周期标识（世界状态模块主内容）。

@@ -1,0 +1,5 @@
+# QQ 官方凭据占位（真实值写 config/local/qq.yaml）
+appId: 'YOUR_QQ_APP_ID'
+appSecret: 'YOUR_QQ_APP_SECRET'
+callbackPath: '/qq/callback'
+panelIds: {}

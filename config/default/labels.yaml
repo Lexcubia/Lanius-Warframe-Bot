@@ -1,16 +1,17 @@
 # 显示名覆盖表（可提交的默认回退）。生产/本机覆盖：config/local/labels.yaml
 # 键为官方内部 id；值为可选 zh/en。未写的语言回退到 WFCD 字典或原键。
-# 重启 API 容器/进程后生效，无需重新发布镜像。
+# 中文派系名对齐灰机 wiki（warframe.huijiwiki.com）：专有名多保留英文拼写。
+# 热加载：Admin 保存 labels 模块或重启 API 后生效。
 
 factions:
   FC_GRINEER:
-    zh: '格林尼尔'
+    zh: 'Grineer'
     en: 'Grineer'
   FC_CORPUS:
     zh: 'Corpus'
     en: 'Corpus'
   FC_INFESTATION:
-    zh: '感染体'
+    zh: 'Infested'
     en: 'Infested'
   FC_OROKIN:
     zh: 'Orokin'
@@ -22,16 +23,16 @@ factions:
     zh: '堕落者'
     en: 'Corrupted'
   FC_NARMER:
-    zh: '纳摩'
+    zh: '合一众'
     en: 'Narmer'
   FC_MITW:
     zh: '墙中人'
     en: 'Man in the Wall'
   FC_SCALDRA:
-    zh: 'Scaldra'
+    zh: '炽蛇军'
     en: 'Scaldra'
   FC_TECHROT:
-    zh: 'Techrot'
+    zh: '科腐者'
     en: 'Techrot'
 
 # 后续同类覆盖可继续加段，例如：
@@ -46,3 +47,90 @@ factions:
 
 nodes: {}
 paths: {}
+
+# 轮换等场景的武器英文名 → 中文译名（对齐灰机 wiki / dict.zh 习惯）
+weapons:
+  'Tenet Arca Plasmor':
+    zh: '信条·弧电离子枪'
+    en: 'Tenet Arca Plasmor'
+  'Tenet Envoy':
+    zh: '信条·特使'
+    en: 'Tenet Envoy'
+  'Tenet Tetra':
+    zh: '信条·特拉'
+    en: 'Tenet Tetra'
+  'Tenet Cycron':
+    zh: '信条·赛克诺'
+    en: 'Tenet Cycron'
+  'Tenet Detron':
+    zh: '信条·德特昂'
+    en: 'Tenet Detron'
+  'Tenet Diplos':
+    zh: '信条·迪普洛斯'
+    en: 'Tenet Diplos'
+  'Tenet Flux Rifle':
+    zh: '信条·通量射线步枪'
+    en: 'Tenet Flux Rifle'
+  'Tenet Spirex':
+    zh: '信条·斯派勒克斯'
+    en: 'Tenet Spirex'
+  'Tenet Agendus':
+    zh: '信条·集议'
+    en: 'Tenet Agendus'
+  'Tenet Exec':
+    zh: '信条·执行者'
+    en: 'Tenet Exec'
+  'Tenet Livia':
+    zh: '信条·莉薇娅'
+    en: 'Tenet Livia'
+  'Tenet Grigori':
+    zh: '信条·格里戈里'
+    en: 'Tenet Grigori'
+  'Tenet Ferrox':
+    zh: '信条·铁磁枝'
+    en: 'Tenet Ferrox'
+  'Coda Hema':
+    zh: '终幕·血肢'
+    en: 'Coda Hema'
+  'Coda Sporothrix':
+    zh: '终幕·斯孢丝菌'
+    en: 'Coda Sporothrix'
+  'Coda Synapse':
+    zh: '终幕·突触脑脊髓炎'
+    en: 'Coda Synapse'
+  'Coda Catabolyst':
+    zh: '终幕·毁亡者'
+    en: 'Coda Catabolyst'
+  'Coda Dual Torxica':
+    zh: '终幕·托尔希卡双枪'
+    en: 'Dual Coda Torxica'
+  'Dual Coda Torxica':
+    zh: '终幕·托尔希卡双枪'
+    en: 'Dual Coda Torxica'
+  'Coda Pox':
+    zh: '终幕·脓毒'
+    en: 'Coda Pox'
+  'Coda Mire':
+    zh: '终幕·米雷'
+    en: 'Coda Mire'
+  'Coda Motovore':
+    zh: '终幕·摩托沃'
+    en: 'Coda Motovore'
+  'Coda Bubonico':
+    zh: '终幕·布博尼科'
+    en: 'Coda Bubonico'
+  'Coda Tysis':
+    zh: '终幕·提西斯'
+    en: 'Coda Tysis'
+  'Coda Hirudo':
+    zh: '终幕·希鲁多'
+    en: 'Coda Hirudo'
+  'Coda Pathocyst':
+    zh: '终幕·帕索赛斯特'
+    en: 'Coda Pathocyst'
+  'Coda Caustacyst':
+    zh: '终幕·腐蚀囊肿'
+    en: 'Coda Caustacyst'
+  'Coda Bassocyst':
+    zh: '终幕·低音囊肿'
+    en: 'Coda Bassocyst'

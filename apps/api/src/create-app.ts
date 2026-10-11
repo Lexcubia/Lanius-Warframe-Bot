@@ -6,10 +6,17 @@ import { ZodError } from 'zod';
 import type { AppContext, AppVariables } from './app-context.js';
 import { HttpError, internalError, validationError } from './lib/http-error.js';
 import { requestIdMiddleware } from './middleware/request-id.js';
+import { adminRoutes } from './routes/admin.js';
 import { healthRoutes } from './routes/health.js';
 import { helpRoutes } from './routes/help.js';
+import { marketRoutes } from './routes/market.js';
 import { metaRoutes } from './routes/meta.js';
+import { pushRoutes } from './routes/push.js';
+import { rotationRoutes } from './routes/rotations.js';
+import { rivenRoutes } from './routes/riven.js';
 import { siteRoutes } from './routes/site.js';
+import { subscriptionRoutes } from './routes/subscriptions.js';
+import { traderRoutes } from './routes/traders.js';
 import { worldstateRoutes } from './routes/worldstate.js';
 
 /**
@@ -33,6 +40,13 @@ export function createApp(appContext: AppContext) {
   v1.route('/', helpRoutes());
   v1.route('/', siteRoutes());
   v1.route('/', worldstateRoutes());
+  v1.route('/', marketRoutes());
+  v1.route('/', rivenRoutes());
+  v1.route('/', traderRoutes());
+  v1.route('/', rotationRoutes());
+  v1.route('/', subscriptionRoutes());
+  v1.route('/', pushRoutes());
+  v1.route('/', adminRoutes());
   app.route('/v1', v1);
 
   app.onError((error, c) => {

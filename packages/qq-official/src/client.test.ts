@@ -60,6 +60,60 @@ describe('QqOfficialClient.sendText', () => {
   });
 });
 
+describe('QqOfficialClient.sendMarkdown', () => {
+  it('posts msg_type=2 with markdown and keyboard', async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => JSON.stringify({ id: 'md-1' }),
+      });
+
+    const client = createQqOfficialClient({
+      appId: '42',
+      appSecret: 'secret',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    const result = await client.sendMarkdown(
+      { scene: 'group', targetId: 'g1', msgId: 'm1' },
+      '**裂隙**\n一行',
+      {
+        rows: [
+          {
+            buttons: [
+              {
+                id: 'f-all',
+                label: '全部',
+                actionType: 2,
+                data: '裂隙',
+                enter: false,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    expect(result).toEqual({ ok: true, messageId: 'md-1' });
+    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
+    const body = JSON.parse(String(sendInit.body)) as {
+      msg_type: number;
+      markdown: { content: string };
+      keyboard: { content: { bot_appid?: number; rows: unknown[] } };
+      msg_id: string;
+    };
+    expect(body.msg_type).toBe(2);
+    expect(body.markdown.content).toContain('裂隙');
+    expect(body.keyboard.content.bot_appid).toBe(42);
+    expect(body.keyboard.content.rows).toHaveLength(1);
+    expect(body.msg_id).toBe('m1');
+  });
+});
+
 describe('QqOfficialClient.sendImage', () => {
   it('uploads file_data then posts msg_type=7 media', async () => {
     const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);

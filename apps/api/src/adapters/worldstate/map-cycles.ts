@@ -240,7 +240,7 @@ function stateLabel(state: string): LocalizedName {
     warm: { zh: '温暖', en: 'Warm' },
     cold: { zh: '寒冷', en: 'Cold' },
     corpus: { zh: 'Corpus', en: 'Corpus' },
-    grineer: { zh: '格林尼尔', en: 'Grineer' },
+    grineer: { zh: 'Grineer', en: 'Grineer' },
     sorrow: { zh: '悲伤', en: 'Sorrow' },
     fear: { zh: '恐惧', en: 'Fear' },
     joy: { zh: '喜悦', en: 'Joy' },

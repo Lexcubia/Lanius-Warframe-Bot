@@ -1,7 +1,17 @@
-import type { InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
+import type {
+  CatalogItemDto,
+  InvasionDto,
+  NightwaveDto,
+  Realm,
+  WorldstateDto,
+} from '@lanius/core';
 
 import { mapOpenWorldCycles } from './map-cycles.js';
 import { mapFissures } from './map-fissures.js';
+import {
+  NIGHTWAVE_KIND_LABELS,
+  resolveNightwaveChallengeKind,
+} from './nightwave-kind.js';
 import {
   resolveChallengeLabels,
   resolveFactionLabel,
@@ -68,16 +78,16 @@ function mapInvasion(raw: UpstreamInvasion): InvasionDto | null {
   const attackingKey = raw.AttackerMissionInfo?.faction ?? 'Unknown';
   const defendingKey = raw.DefenderMissionInfo?.faction ?? 'Unknown';
   const completionPct = computeCompletionPct(raw.Count, raw.Goal);
-  const attackerRewardKey = firstRewardKey(raw.AttackerReward);
-  const defenderRewardKey = firstRewardKey(raw.DefenderReward);
+  const attackerReward = mapCountedReward(raw.AttackerReward);
+  const defenderReward = mapCountedReward(raw.DefenderReward);
 
   return {
     id,
     node: resolveNodeLabel(nodeKey),
     attackingFaction: resolveFactionLabel(attackingKey),
     defendingFaction: resolveFactionLabel(defendingKey),
-    attackerReward: attackerRewardKey ? resolvePathLabel(attackerRewardKey) : undefined,
-    defenderReward: defenderRewardKey ? resolvePathLabel(defenderRewardKey) : undefined,
+    attackerReward,
+    defenderReward,
     completionPct,
     expired: Boolean(raw.Completed),
   };
@@ -99,8 +109,11 @@ function mapNightwave(raw: UpstreamSeasonInfo | undefined): NightwaveDto | null 
     const id = challenge._id?.$oid ?? path ?? `challenge-${index}`;
     const expiryMs = Number(challenge.expiry?.$date?.$numberLong);
     const labels = path ? resolveChallengeLabels(path) : undefined;
+    const kind = resolveNightwaveChallengeKind(path, challenge.Daily);
     return {
       id,
+      kind,
+      kindLabel: NIGHTWAVE_KIND_LABELS[kind],
       title: labels?.title,
       description: labels?.description,
       expiry: Number.isFinite(expiryMs)
@@ -108,6 +121,12 @@ function mapNightwave(raw: UpstreamSeasonInfo | undefined): NightwaveDto | null 
         : undefined,
     };
   });
+
+  // 展示顺序：每日 → 每周 → 其他（同档保持上游顺序）
+  const kindRank = { daily: 0, weekly: 1, other: 2 } as const;
+  activeChallenges.sort(
+    (a, b) => kindRank[a.kind] - kindRank[b.kind],
+  );
 
   return {
     season: raw.Season,
@@ -138,16 +157,30 @@ function computeCompletionPct(
 }
 
 /**
- * Extracts the first reward ItemType path, if any.
+ * 将上游 `countedItems[0]` 映射为带数量的物品引用。
  *
- * @param reward - Upstream attacker/defender reward object.
- * @returns ItemType uniqueName，或 `undefined`
+ * @param reward - 进攻方 / 防守方奖励对象
+ * @returns CatalogItemDto；无条目时 `undefined`
  */
-function firstRewardKey(
+function mapCountedReward(
   reward:
     | { countedItems?: Array<{ ItemType?: string; ItemCount?: number }> }
     | undefined,
-): string | undefined {
-  const itemType = reward?.countedItems?.[0]?.ItemType;
-  return itemType && itemType.length > 0 ? itemType : undefined;
+): CatalogItemDto | undefined {
+  const row = reward?.countedItems?.[0];
+  const itemType = row?.ItemType;
+  if (!itemType || itemType.length === 0) {
+    return undefined;
+  }
+  const quantity =
+    typeof row?.ItemCount === 'number' &&
+    Number.isFinite(row.ItemCount) &&
+    row.ItemCount > 0
+      ? Math.floor(row.ItemCount)
+      : undefined;
+  return {
+    name: resolvePathLabel(itemType),
+    uniqueName: itemType,
+    ...(quantity !== undefined ? { quantity } : {}),
+  };
 }

@@ -58,3 +58,50 @@ export async function renderFissuresCard(
 ): Promise<Buffer> {
   return captureVueCard({ kind: 'fissures', ...input });
 }
+
+/**
+ * 渲染帮助卡片 PNG。
+ *
+ * @param input - 帮助 DTO 与 locale
+ * @returns PNG 字节
+ */
+export async function renderHelpCard(input: {
+  help: import('@lanius/core').HelpDto;
+  locale: import('@lanius/core').Locale;
+}): Promise<Buffer> {
+  return captureVueCard({ kind: 'help', locale: input.locale, help: input.help });
+}
+
+/**
+ * 渲染市场卡片 PNG。
+ *
+ * @param input - 市场 DTO 与 locale
+ * @returns PNG 字节
+ */
+export async function renderMarketCard(input: {
+  market: import('@lanius/core').MarketSearchDto;
+  locale: import('@lanius/core').Locale;
+}): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'market',
+    locale: input.locale,
+    market: input.market,
+  });
+}
+
+/**
+ * 渲染紫卡卡片 PNG。
+ *
+ * @param input - 紫卡 DTO 与 locale
+ * @returns PNG 字节
+ */
+export async function renderRivenCard(input: {
+  riven: import('@lanius/core').RivenSearchDto;
+  locale: import('@lanius/core').Locale;
+}): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'riven',
+    locale: input.locale,
+    riven: input.riven,
+  });
+}

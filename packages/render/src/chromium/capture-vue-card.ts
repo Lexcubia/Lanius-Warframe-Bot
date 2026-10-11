@@ -1,4 +1,10 @@
-import type { Locale, WorldstateDto } from '@lanius/core';
+import type {
+  HelpDto,
+  Locale,
+  MarketSearchDto,
+  RivenSearchDto,
+  WorldstateDto,
+} from '@lanius/core';
 import { laniusTokens } from '@lanius/ui/tokens';
 import type { Page } from 'playwright';
 
@@ -11,43 +17,41 @@ import { ensureCardHostOrigin, shutdownCardHost } from './ensure-card-host.js';
  */
 export type CaptureVueCardInput = {
   kind: CardKind;
-  worldstate: WorldstateDto;
   locale: Locale;
   stale?: boolean;
+  worldstate?: WorldstateDto;
+  help?: HelpDto;
+  market?: MarketSearchDto;
+  riven?: RivenSearchDto;
 };
 
 /**
- * 卡片宿主注入到 `globalThis` 的挂载 API（避免 Node 侧依赖 DOM lib）。
+ * 卡片宿主注入到 `globalThis` 的挂载 API。
  */
 type CardHostGlobals = {
-  __LANIUS_MOUNT_CARD__?: (payload: {
-    kind: CardKind;
-    worldstate: WorldstateDto;
-    locale: Locale;
-    stale?: boolean;
-  }) => void;
+  __LANIUS_MOUNT_CARD__?: (payload: CaptureVueCardInput) => void;
   __LANIUS_CARD_READY__?: boolean;
 };
 
 /**
- * 卡片根节点选择器（与 `QqCardShell` 的 `data-lanius-card-root` 对齐）。
+ * 卡片根节点选择器。
  */
 const CARD_ROOT_SELECTOR = '[data-lanius-card-root]';
 
 /**
- * 串行化截图，避免多页并发抢同一宿主挂载态。
+ * 串行化截图。
  */
 let captureChain: Promise<unknown> = Promise.resolve();
 
 /**
- * 复用的 Playwright Page（同一 Browser Context）。
+ * 复用的 Playwright Page。
  */
 let sharedPage: Page | null = null;
 
 /**
  * 将 Vue 模块卡片在 Chromium 中挂载并截取根节点 PNG。
  *
- * @param input - 种类、世界状态 DTO 与 locale
+ * @param input - 种类与载荷
  * @returns PNG 字节
  */
 export async function captureVueCard(input: CaptureVueCardInput): Promise<Buffer> {
@@ -60,7 +64,7 @@ export async function captureVueCard(input: CaptureVueCardInput): Promise<Buffer
 }
 
 /**
- * 关闭截图用 Browser / Vite 宿主与共享 Page。
+ * 关闭截图用 Browser / 宿主与共享 Page。
  *
  * @returns 无返回值
  */
@@ -74,7 +78,7 @@ export async function shutdownVueCardCapture(): Promise<void> {
 }
 
 /**
- * 单次挂载 + 节点截图（调用方已串行化）。
+ * 单次挂载 + 节点截图。
  *
  * @param input - 截图入参
  * @returns PNG 字节
@@ -95,12 +99,7 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
       }
       mount(payload);
     },
-    {
-      kind: input.kind,
-      worldstate: input.worldstate,
-      locale: input.locale,
-      stale: input.stale,
-    },
+    input,
   );
 
   await page.waitForFunction(() => {
@@ -109,7 +108,6 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   });
   const root = page.locator(CARD_ROOT_SELECTOR);
   await root.waitFor({ state: 'visible' });
-  // 浏览器内脚本用字符串形式，避免 bot typecheck 引入 DOM 类型
   await page.evaluate(`async () => {
     if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;

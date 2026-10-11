@@ -1,11 +1,14 @@
 /**
  * Chromium 截图宿主页：去掉浏览器默认边距，保证节点截图像素对齐。
+ * 外底与 token 暖奶油一致，避免透明底在部分环境下发灰。
+ * 字体以已打包的 Noto Sans SC 为准（见 main.ts 的 @fontsource 导入）。
  */
 html,
 body {
   margin: 0;
   padding: 0;
-  background: transparent;
+  background: #fff8f2;
+  font-family: 'Noto Sans SC', 'Liberation Sans', sans-serif;
 }
 
 #app {

@@ -1,26 +1,31 @@
-/* Lanius visual tokens — keep values aligned with tokens.ts */
+/**
+ * Lanius 设计 token（CSS 变量）。
+ * 须与 `tokens.ts` 中十六进制色值保持同步，供 Web 与 card-host 注入。
+ */
 :root {
-  --lanius-void: #eef6fb;
+  --lanius-void: #fff8f2;
   --lanius-panel: #ffffff;
-  --lanius-panel-raised: #f5fafd;
-  --lanius-border: #cfe3f0;
-  --lanius-border-bright: #9ec9e0;
-  --lanius-text: #1a3348;
-  --lanius-text-muted: #5a7388;
-  --lanius-accent: #3aa7d6;
-  --lanius-accent-dim: #2b8fc4;
-  --lanius-warn: #f0a030;
-  --lanius-danger: #e25555;
-  --lanius-success: #2fbf7a;
-  --lanius-brand: #2486bb;
-  --lanius-highlight: #f07a45;
-  --lanius-bar-attack: #3aa7d6;
-  --lanius-bar-defend: #f0a030;
-  --lanius-font-display: 'Sora', 'Noto Sans SC', sans-serif;
-  --lanius-font-body: 'Source Sans 3', 'Noto Sans SC', sans-serif;
+  --lanius-panel-raised: #fff4eb;
+  --lanius-border: #e4d5c8;
+  --lanius-border-bright: #c9b8a8;
+  --lanius-text: #2a3142;
+  --lanius-text-muted: #6b7385;
+  --lanius-accent: #4eb7e8;
+  --lanius-accent-dim: #2f8fc4;
+  --lanius-warn: #f0b429;
+  --lanius-danger: #ff7a6e;
+  --lanius-success: #5fd0b0;
+  --lanius-brand: #2a3142;
+  --lanius-highlight: #ff7a6e;
+  --lanius-bar-attack: #4eb7e8;
+  --lanius-bar-defend: #ffb38a;
+
+  --lanius-font-display: 'Zen Maru Gothic', 'Noto Sans SC', sans-serif;
+  --lanius-font-body: 'Noto Sans SC', 'Source Sans 3', sans-serif;
   --lanius-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
   --lanius-card-width: 640px;
-  --lanius-card-padding: 10px;
-  --lanius-card-radius: 12px;
+  --lanius-card-padding: 12px;
+  --lanius-card-radius: 16px;
   --lanius-card-gap: 8px;
 }

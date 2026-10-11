@@ -7,6 +7,7 @@ let overrides: LabelsConfig = {
   factions: {},
   nodes: {},
   paths: {},
+  weapons: {},
 };
 
 /**
@@ -20,6 +21,7 @@ export function setLabelOverrides(next: LabelsConfig): void {
     factions: { ...next.factions },
     nodes: { ...next.nodes },
     paths: { ...next.paths },
+    weapons: { ...(next.weapons ?? {}) },
   };
 }
 
@@ -33,6 +35,7 @@ export function getLabelOverrides(): LabelsConfig {
     factions: { ...overrides.factions },
     nodes: { ...overrides.nodes },
     paths: { ...overrides.paths },
+    weapons: { ...overrides.weapons },
   };
 }
 
@@ -59,12 +62,12 @@ export function applyLabelOverride(
 /**
  * 按表名取覆盖条目。
  *
- * @param table - `factions` | `nodes` | `paths`
- * @param key - 官方内部键
+ * @param table - `factions` | `nodes` | `paths` | `weapons`
+ * @param key - 官方内部键或武器英文名
  * @returns 覆盖条目或 undefined
  */
 export function lookupLabelOverride(
-  table: 'factions' | 'nodes' | 'paths',
+  table: 'factions' | 'nodes' | 'paths' | 'weapons',
   key: string,
 ): LabelOverride | undefined {
   return overrides[table][key];

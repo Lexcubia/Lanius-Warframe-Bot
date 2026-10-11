@@ -1,39 +1,40 @@
-# 运行时配置（default + local）
+# 配置体系（模块化 + 导入驱动）
 
-面向**重启即生效**、无需重发镜像的内容：页脚备案、派系显示名等。
+所有进程通过 **`@lanius/config`** 的 `getConfigDriver()` 读取配置，**禁止**业务代码拼 `default/` / `local/` 相对或绝对路径。
 
 ## 目录
 
-| 路径 | 是否入库 | 作用 |
-| ---- | -------- | ---- |
-| `config/default/*.yaml` | **是** | 回退默认值；仓库内可安全提交 |
-| `config/local/*.yaml` | **否**（gitignore） | 环境覆盖；生产备案号、定制映射写这里 |
-| `config/local/*.yaml.example` | 是 | 覆盖文件模板 |
+| 路径 | 入库 | 作用 |
+| --- | --- | --- |
+| `config/default/<module>.yaml` | 是 | 可提交回退默认值 |
+| `config/local/<module>.yaml` | 否（gitignore） | 环境覆盖；Admin 保存写入此处 |
+| `config/local/*.yaml.example` | 是 | 覆盖模板 |
+
+模块文件：`api` · `bot` · `qq` · `admin` · `redis` · `database` · `defaults` · `web` · `site` · `labels` · `github`。
+
+`labels` 默认派系中文对齐 [灰机 wiki](https://warframe.huijiwiki.com/)（如 `Grineer` / `合一众` / `炽蛇军` / `科腐者`）；星图节点会把 WFCD 繁体星球名转为简体（谷神星、欧罗巴、赛德娜、赤毒要塞等）。
 
 ## 加载规则
 
-1. 先读 `default/<name>.yaml`
-2. 再读 `local/<name>.yaml`（若存在）
-3. **深合并**（对象按键合并；`local` 覆盖 `default`）
-4. API 启动时加载；改文件后 **重启 api（及依赖方）容器** 即可
+1. 读 `default/<module>.yaml`
+2. 深合并 `local/<module>.yaml`（若存在）
+3. Zod 校验
+4. Admin 保存 → 写 local → **进程内热加载**（`host`/`port`/`sqlitePath`/`redis.url` 等需手动重启进程）
 
-环境变量：
+环境变量（非密钥）：
 
-- `LANIUS_RUNTIME_CONFIG_ROOT`：配置根目录（默认仓库根下的 `config/`；Docker 内一般为 `/runtime-config`）
-
-## 已支持文件
-
-| 文件 | 消费方 | 说明 |
-| ---- | ------ | ---- |
-| `site.yaml` | API `GET /v1/site` → Web Footer | 备案链接、版权等 |
-| `labels.yaml` | API worldstate 映射 | `factions` / `nodes` / `paths` 显示名覆盖 |
-
-后续同类内容：在 `default/` 增加同名 YAML + Zod schema + 启动加载，并在本表登记。
+- `LANIUS_CONFIG_ROOT`：配置根（默认 `<repo>/config`；容器内 `/config`）
+- `LANIUS_CONFIG`：可选单体 `config.local.yaml` 路径；首次启动会拆分进 `local/`（迁移兼容）
+- `HOST` / `PORT` / `LANIUS_API_BASE`：容器服务发现覆盖
 
 ## 本地快速开始
 
 ```bash
-cp config/local/site.yaml.example config/local/site.yaml
-cp config/local/labels.yaml.example config/local/labels.yaml
-# 编辑后重启 pnpm dev:api / docker compose
+cp config/local/admin.yaml.example config/local/admin.yaml
+cp config/local/api.yaml.example config/local/api.yaml
+cp config/local/qq.yaml.example config/local/qq.yaml
+cp config/local/redis.yaml.example config/local/redis.yaml
+# 编辑后：pnpm dev:api / pnpm dev:web → http://localhost:8790/admin
 ```
+
+根目录旧版单体 `config.local.yaml` 仍可放着：驱动会自动拆分到 `config/local/*`（目标文件已存在则跳过）。

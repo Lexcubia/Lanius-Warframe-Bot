@@ -1,7 +1,9 @@
 # 复制为 config/local/labels.yaml 后按需覆盖默认派系/节点名（gitignore）
+# 默认已对齐灰机 wiki；仅在需要本地临时改名时覆盖。
 factions:
   FC_GRINEER:
-    zh: '格林尼尔'
+    zh: 'Grineer'
     en: 'Grineer'
 nodes: {}
 paths: {}
+weapons: {}

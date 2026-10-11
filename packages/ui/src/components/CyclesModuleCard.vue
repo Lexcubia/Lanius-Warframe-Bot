@@ -3,6 +3,8 @@ import type { OpenWorldCycleDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { resolveOpenWorldCycleTheme } from '../lib/open-world-cycle-theme.js';
+import OpenWorldCycleIcon from './OpenWorldCycleIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
 /**
@@ -25,28 +27,7 @@ function label(name: { zh: string; en: string }): string {
 }
 
 /**
- * 周期环配色。
- *
- * @param state - 状态键
- * @returns 主动色与轨道色
- */
-function colors(state: string): { ring: string; track: string; badgeBg: string; badgeFg: string } {
-  if (state === 'day' || state === 'fass' || state === 'warm' || state === 'anger') {
-    return { ring: '#f0a030', track: '#2f5f8a', badgeBg: '#fff4e8', badgeFg: '#d97706' };
-  }
-  if (state === 'night' || state === 'vome' || state === 'cold' || state === 'corpus') {
-    return { ring: '#3aa7d6', track: '#e8a060', badgeBg: '#e8f5fc', badgeFg: '#2486bb' };
-  }
-  return {
-    ring: 'var(--lanius-accent)',
-    track: 'var(--lanius-border)',
-    badgeBg: '#e8f5fc',
-    badgeFg: 'var(--lanius-brand)',
-  };
-}
-
-/**
- * SVG 环几何。
+ * SVG 环几何与六地主题色。
  *
  * @param cycle - 周期 DTO
  * @returns 绘制参数
@@ -67,16 +48,16 @@ function ringGeom(cycle: OpenWorldCycleDto): {
   const circ = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, cycle.progress));
   const angle = -Math.PI / 2 + p * Math.PI * 2;
-  const c = colors(cycle.state);
+  const theme = resolveOpenWorldCycleTheme(cycle.id);
   return {
     dash: circ * p,
     circ,
     thumbX: cx + r * Math.cos(angle),
     thumbY: cy + r * Math.sin(angle),
-    color: c.ring,
-    track: c.track,
-    badgeBg: c.badgeBg,
-    badgeFg: c.badgeFg,
+    color: theme.accent,
+    track: theme.track,
+    badgeBg: theme.badgeBg,
+    badgeFg: theme.badgeFg,
   };
 }
 
@@ -103,36 +84,44 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
           class="cycles__tile"
         >
           <template v-for="g in [ringGeom(cycle)]" :key="`${cycle.id}-g`">
-            <h3>{{ label(cycle.name) }}</h3>
-            <svg class="cycles__ring" viewBox="0 0 88 88" width="86" height="86" aria-hidden="true">
-              <circle
-                cx="44"
-                cy="44"
-                r="34"
-                fill="none"
-                stroke-width="8"
-                :stroke="g.track"
+            <h3 :style="{ color: g.color }">{{ label(cycle.name) }}</h3>
+            <div class="cycles__ring-wrap">
+              <svg class="cycles__ring" viewBox="0 0 88 88" width="86" height="86" aria-hidden="true">
+                <circle
+                  cx="44"
+                  cy="44"
+                  r="34"
+                  fill="none"
+                  stroke-width="8"
+                  :stroke="g.track"
+                />
+                <circle
+                  cx="44"
+                  cy="44"
+                  r="34"
+                  fill="none"
+                  stroke-width="8"
+                  stroke-linecap="round"
+                  :stroke="g.color"
+                  :stroke-dasharray="`${g.dash} ${g.circ}`"
+                  transform="rotate(-90 44 44)"
+                />
+                <circle
+                  :cx="g.thumbX"
+                  :cy="g.thumbY"
+                  r="5.5"
+                  :fill="g.color"
+                  stroke="#fff"
+                  stroke-width="2"
+                />
+              </svg>
+              <OpenWorldCycleIcon
+                class="cycles__ring-icon"
+                :cycle-id="cycle.id"
+                :color="g.color"
+                :size="26"
               />
-              <circle
-                cx="44"
-                cy="44"
-                r="34"
-                fill="none"
-                stroke-width="8"
-                stroke-linecap="round"
-                :stroke="g.color"
-                :stroke-dasharray="`${g.dash} ${g.circ}`"
-                transform="rotate(-90 44 44)"
-              />
-              <circle
-                :cx="g.thumbX"
-                :cy="g.thumbY"
-                r="5.5"
-                :fill="g.color"
-                stroke="#fff"
-                stroke-width="2"
-              />
-            </svg>
+            </div>
             <span class="cycles__badge" :style="{ background: g.badgeBg, color: g.badgeFg }">
               {{ label(cycle.stateLabel) }}
             </span>
@@ -165,21 +154,48 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   flex-direction: column;
   align-items: center;
   padding: 10px 4px;
-  background: var(--lanius-panel);
+  background: var(--lanius-panel-raised);
   border: 1px solid var(--lanius-border);
-  border-radius: var(--lanius-card-radius, 12px);
+  border-radius: var(--lanius-card-radius, 16px);
   text-align: center;
+  box-shadow: 0 2px 8px rgba(62, 78, 110, 0.04);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    background 0.18s ease;
+}
+
+@media (hover: hover) {
+  .cycles__tile:hover {
+    border-color: rgba(78, 183, 232, 0.45);
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(62, 78, 110, 0.12);
+    transform: translateY(-2px);
+  }
 }
 
 .cycles__tile h3 {
   margin: 0 0 6px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--lanius-brand);
+  font-weight: 700;
+}
+
+.cycles__ring-wrap {
+  position: relative;
+  width: 86px;
+  height: 86px;
 }
 
 .cycles__ring {
   display: block;
+}
+
+.cycles__ring-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  pointer-events: none;
 }
 
 .cycles__badge {

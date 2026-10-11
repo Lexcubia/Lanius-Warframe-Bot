@@ -1,0 +1,63 @@
+# 长期分支 `release`：SSH 自动部署（仅 docker compose pull + up，禁止 build）。
+# 合入前请确保对应 tag 镜像已在 GHCR。
+
+name: Deploy release branch
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: '覆盖 IMAGE_TAG（如 v0.2.0）；默认读仓库 package.json version 加 v 前缀'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: deploy-release-pull
+    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve IMAGE_TAG
+        id: meta
+        run: |
+          TAG='${{ inputs.image_tag }}'
+          if [ -z "$TAG" ]; then
+            VER="$(node -p "require('./package.json').version")"
+            TAG="v${VER}"
+          fi
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy over SSH (pull only)
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 25m
+          script: |
+            set -euo pipefail
+            DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
+            REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
+            TAG='${{ steps.meta.outputs.tag }}'
+            cd "${REPO_ROOT}"
+            git fetch origin release --force
+            git checkout -B release "origin/release" || git checkout release
+            git reset --hard "origin/release" || true
+            cd "${DEPLOY_DIR}"
+            export IMAGE_TAG="${TAG}"
+            export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
+            export COMPOSE_FILE=docker-compose.app.yml
+            bash ./update-image.sh "${TAG}"
+            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
+              curl -fsS "http://127.0.0.1/api/lanius/v1/health"

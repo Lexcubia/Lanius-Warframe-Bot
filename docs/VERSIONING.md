@@ -20,18 +20,21 @@ MVP / 未首发前可用 `0.y.z`（`0.x` 允许较积极的 MINOR 演进，但�
 ```
 feature/*  fix/*  docs/*  …
         \  |  /
-         develop     ← 日常集成（未发布）
+         develop     ← 日常集成（未发布；不自动部署）
             |
-       release/x.y.z  （可选：冻结与修发布缺陷）
+       release/x.y.z  （可选：冻结某次发版）
             |
           main       ← 归档 / 已发布快照
             |
-       tag vX.Y.Z
+       tag vX.Y.Z    ← Actions：测试 + 推 GHCR（不 SSH）
+            |
+         release     ← 长期「上线指针」分支；push 触发 pull 换版部署
 ```
 
-- **日常功能**合入 `develop`，**不**因每个 PR 打 tag。
-- **发布**：从 `develop`（或 `release/x.y.z`）合并进 `main`；**由 Actions 自动**按 CHANGELOG 最新版本节打 **`vX.Y.Z`** annotated tag，并调用 `release.yml`（GHCR + 部署）。
-- Hotfix（已发布线上紧急修复）：从对应 tag / `main` 拉 `fix/...` → 合回 `main`（CHANGELOG / `package.json` 升 patch）**并**合回 `develop`，避免回归丢失。
+- **日常功能**合入 `develop`，**不**因每个 PR 打 tag，**不**自动部署。
+- **发布归档**：`develop` → `main`；Actions 按 CHANGELOG 打 **`vX.Y.Z`** 并 `release.yml` **仅推 GHCR**。
+- **上线 / 回退**：更新长期分支 **`release`**（或 Admin 选版 / `deploy/update-image.sh`）→ `docker compose pull && up -d`，**禁止**部署路径 `build`。
+- Hotfix：从 tag / `main` 拉 `fix/...` → 合回 `main` 与 `develop`；需要上线时再推进 `release`。
 
 ## CHANGELOG
 
@@ -46,9 +49,9 @@ feature/*  fix/*  docs/*  …
 1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
 2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
 3. PR：`develop` → `main`（或经 `release/x.y.z`）。
-4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（构建 GHCR + SSH 部署）。
-5. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过，不重复发版。
-6. 确认 `main` 无额外直推 commit；勿再手工重复打同一 tag（除非刻意补发，可用 `Release` 的 `workflow_dispatch`）。
+4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR）。
+5. 确认 GHCR 镜像就绪后，将 `release` 分支快进到目标提交（或 Admin / `update-image.sh`）完成上线。
+6. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
 
 ## 相关
 

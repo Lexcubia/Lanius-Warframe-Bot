@@ -2,22 +2,131 @@
   "brand": "Lanius",
   "nav": {
     "home": "Home",
+    "tools": "Tools",
+    "about": "About",
     "worldstate": "World State",
+    "fissures": "Fissures",
+    "market": "Market",
+    "riven": "Riven",
+    "traders": "Traders",
+    "rotations": "Rotations",
     "help": "Help",
+    "subscribe": "Subscribe",
+    "more": "More",
+    "menu": "Menu",
+    "collapse": "Collapse nav",
+    "expand": "Expand nav",
     "admin": "Admin"
   },
+  "common": {
+    "search": "Search",
+    "retry": "Refresh",
+    "stale": "Data may be slightly stale"
+  },
   "home": {
-    "tagline": "World state and commands, clean and handy",
-    "searchPlaceholder": "Search items, relics, aliases…",
-    "searchHint": "Search ships with market/relic endpoints next. Start with World State or Help.",
-    "ctaWorldstate": "Open World State",
+    "tagline": "World state, fissures, traders, and rotations — a handy Warframe board",
+    "searchPlaceholder": "Search market items…",
+    "searchHint": "Market / Riven / Help / Subscribe live on their own pages; jump chips scroll the board.",
     "searchButton": "Search",
-    "realmNote": "MVP · International live"
+    "realmNote": "MVP · International live",
+    "loading": "Syncing modules…",
+    "error": "Failed to load home data",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "emptyInvasions": "No active invasions.",
+    "emptyNightwave": "No Nightwave data.",
+    "season": "Season",
+    "phase": "Phase",
+    "modulesNav": "Modules",
+    "mod": {
+      "invasions": "Invasions",
+      "nightwave": "Nightwave"
+    }
+  },
+  "tools": {
+    "eyebrow": "Tools",
+    "title": "Tools",
+    "lead": "More standalone tools are on the roadmap.",
+    "body": "This Tools page is still planned (drop tables, todos, etc.). Use the Home modules for world state and market queries.",
+    "backHome": "← Back home"
+  },
+  "about": {
+    "eyebrow": "About",
+    "title": "About Lanius",
+    "lead": "Lanius-Warframe-Bot: official/community data through a custom API for QQ and the public site.",
+    "archTitle": "Architecture",
+    "archBody": "Clients only call the Lanius API — never Warframe upstream directly. QQ and Web stay decoupled at runtime.",
+    "scopeTitle": "Scope",
+    "scopeBody": "MVP is international only. No player accounts, trade matching, or full wiki mirrors.",
+    "qqTitle": "QQ bot",
+    "qqBody": "Tencent official QQ bot only. Push subscriptions are managed in QQ.",
+    "toSubscribe": "Subscription notes →"
   },
   "worldstate": {
     "loading": "Syncing world state…",
     "error": "Failed to load world state",
-    "retry": "Retry"
+    "retry": "Retry",
+    "toFissures": "Open Void Fissures →"
+  },
+  "fissures": {
+    "eyebrow": "Fissures",
+    "title": "Void Fissures",
+    "intro": "Current international fissure list from worldstate. Filter by relic era, mission type, and Normal / Steel Path / Empyrean.",
+    "loading": "Loading fissures…",
+    "error": "Failed to load fissures",
+    "toWorldstate": "← Back to world state"
+  },
+  "market": {
+    "eyebrow": "Market",
+    "title": "Market",
+    "intro": "Query Warframe Market items via the Lanius API.",
+    "placeholder": "Item name / alias…",
+    "emptyHint": "Enter a keyword to search.",
+    "loading": "Searching…",
+    "error": "Failed to load market results"
+  },
+  "riven": {
+    "eyebrow": "Riven",
+    "title": "Riven",
+    "intro": "Look up riven-related info by weapon name.",
+    "placeholder": "Weapon name…",
+    "emptyHint": "Enter a weapon name to search.",
+    "loading": "Searching…",
+    "error": "Failed to load riven results"
+  },
+  "traders": {
+    "eyebrow": "Traders",
+    "title": "Traders",
+    "intro": "Void Trader and Varzia inventories (international).",
+    "voidTrader": "Void Trader",
+    "varzia": "Varzia",
+    "loading": "Loading traders…",
+    "error": "Failed to load traders",
+    "noInventory": "No inventory entries right now.",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activeUntil": "Leaves in {remain}",
+    "arrivesIn": "Arrives in {remain}"
+  },
+  "rotations": {
+    "eyebrow": "Rotations",
+    "title": "Weapon rotations",
+    "intro": "Tenet (Ergo Glast) and Coda (Eleanor) current shelves: all weapons shown equally with icons, bilingual names, element glyphs, and a Valence bar (scaled to 60% max). Percentages are manually maintained.",
+    "tenet": "Tenet",
+    "coda": "Coda",
+    "loading": "Loading rotations…",
+    "error": "Failed to load rotations",
+    "remain": "Refreshes in {remain}",
+    "upcoming": "Upcoming"
+  },
+  "subscribe": {
+    "eyebrow": "Subscribe",
+    "title": "Subscriptions",
+    "intro": "Push subscriptions are managed in QQ. This page explains usage only — Web does not bind QQ openids.",
+    "qqTitle": "In QQ",
+    "qqBody": "Send root commands to the bot (leading / optional):",
+    "webNote": "Admins can view/toggle subscriptions at /admin; the public site is read-only.",
+    "toHelp": "Full command help →"
   },
   "help": {
     "title": "Command help",
@@ -29,10 +138,13 @@
     "params": "Parameters",
     "required": "required",
     "optional": "optional",
-    "examples": "Examples"
+    "examples": "Examples",
+    "viewDetail": "Module detail",
+    "backToList": "← All commands",
+    "moduleDetail": "Module: {module}"
   },
   "admin": {
     "title": "Admin",
-    "placeholder": "Auth and ops modules land in a later milestone. This is a shell only."
+    "placeholder": "After login: config, releases, modules, subscriptions, rotations, ACL, and help menu."
   }
 }

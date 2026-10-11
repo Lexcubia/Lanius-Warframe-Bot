@@ -1,15 +1,16 @@
 <script setup lang="ts">
+import { HelpModuleCard } from '@lanius/ui';
 import { pickLocalized } from '@lanius/core';
 
 const { t, locale } = useI18n();
+const route = useRoute();
+const router = useRouter();
+const localePath = useLocalePath();
 const api = useLaniusApi();
 
-const { data, pending, error } = await useAsyncData('help', async () => {
-  const envelope = await api.getHelp();
-  if (!envelope.ok) {
-    throw new Error(envelope.error.message);
-  }
-  return envelope.data;
+const moduleToken = computed(() => {
+  const raw = route.query.module;
+  return typeof raw === 'string' && raw.trim() ? raw.trim() : undefined;
 });
 
 /**
@@ -21,6 +22,40 @@ const { data, pending, error } = await useAsyncData('help', async () => {
 function label(name: { zh: string; en: string }): string {
   return pickLocalized(name, locale.value === 'en' ? 'en' : 'zh');
 }
+
+/**
+ * 打开某条指令的模块详解。
+ *
+ * @param id - 帮助行 / 模块 id
+ * @returns 无返回值
+ */
+function openModule(id: string): void {
+  void router.push({
+    path: localePath('/help'),
+    query: { module: id },
+  });
+}
+
+/**
+ * 返回完整帮助列表。
+ *
+ * @returns 无返回值
+ */
+function clearModule(): void {
+  void router.push({ path: localePath('/help') });
+}
+
+const { data, pending, error, refresh } = await useAsyncData(
+  () => `help-${moduleToken.value ?? 'all'}`,
+  async () => {
+    const envelope = await api.getHelp(moduleToken.value);
+    if (!envelope.ok) {
+      throw new Error(envelope.error.message);
+    }
+    return envelope.data;
+  },
+  { watch: [moduleToken, locale] },
+);
 </script>
 
 <template>
@@ -31,44 +66,70 @@ function label(name: { zh: string; en: string }): string {
       <p class="help__intro">
         {{ data ? label(data.intro) : t('help.qqHint') }}
       </p>
+      <p v-if="moduleToken" class="help__detail-bar">
+        <button type="button" class="linkish" @click="clearModule">
+          {{ t('help.backToList') }}
+        </button>
+        <span>{{ t('help.moduleDetail', { module: moduleToken }) }}</span>
+      </p>
     </header>
 
     <p v-if="pending" class="help__muted">{{ t('help.loading') }}</p>
-    <p v-else-if="error" class="help__error">{{ t('help.error') }}</p>
+    <div v-else-if="error" class="help__error">
+      <p>{{ t('help.error') }}</p>
+      <button type="button" class="retry" @click="() => refresh()">
+        {{ t('common.retry') }}
+      </button>
+    </div>
 
-    <ul v-else-if="data" class="help__list">
-      <li v-for="line in data.lines" :key="line.id" class="help__card">
-        <div class="help__card-top">
-          <code>{{ line.command }}</code>
-          <span class="help__usage">{{ label(line.usage) }}</span>
-        </div>
-        <p class="help__summary">{{ label(line.summary) }}</p>
-        <p v-if="line.aliases.length" class="help__meta">
-          {{ t('help.aliases') }}：{{ line.aliases.join(' · ') }}
-        </p>
+    <template v-else-if="data">
+      <HelpModuleCard
+        v-if="moduleToken"
+        class="help__card-view"
+        :help="data"
+        :locale="locale === 'en' ? 'en' : 'zh'"
+      />
 
-        <div v-if="line.params.length" class="help__params">
-          <p class="help__params-title">{{ t('help.params') }}</p>
-          <ul>
-            <li v-for="param in line.params" :key="param.name">
-              <strong>{{ param.name }}</strong>
-              <span class="help__badge">
-                {{ param.required ? t('help.required') : t('help.optional') }}
-              </span>
-              <span v-if="param.choices?.length" class="help__choices">
-                {{ param.choices.join(' | ') }}
-              </span>
-              <p>{{ label(param.description) }}</p>
-            </li>
-          </ul>
-        </div>
+      <ul v-else class="help__list">
+        <li v-for="line in data.lines" :key="line.id" class="help__card">
+          <div class="help__card-top">
+            <code>{{ line.command }}</code>
+            <span class="help__usage">{{ label(line.usage) }}</span>
+          </div>
+          <p class="help__summary">{{ label(line.summary) }}</p>
+          <p v-if="line.aliases.length" class="help__meta">
+            {{ t('help.aliases') }}：{{ line.aliases.join(' · ') }}
+          </p>
 
-        <p v-if="line.examples.length" class="help__examples">
-          {{ t('help.examples') }}：
-          <code v-for="example in line.examples" :key="example">{{ example }}</code>
-        </p>
-      </li>
-    </ul>
+          <div v-if="line.params.length" class="help__params">
+            <p class="help__params-title">{{ t('help.params') }}</p>
+            <ul>
+              <li v-for="param in line.params" :key="param.name">
+                <strong>{{ param.name }}</strong>
+                <span class="help__badge">
+                  {{ param.required ? t('help.required') : t('help.optional') }}
+                </span>
+                <span v-if="param.choices?.length" class="help__choices">
+                  {{ param.choices.join(' | ') }}
+                </span>
+                <p>{{ label(param.description) }}</p>
+              </li>
+            </ul>
+          </div>
+
+          <p v-if="line.examples.length" class="help__examples">
+            {{ t('help.examples') }}：
+            <code v-for="example in line.examples" :key="example">{{
+              example
+            }}</code>
+          </p>
+
+          <button type="button" class="detail" @click="openModule(line.id)">
+            {{ t('help.viewDetail') }}
+          </button>
+        </li>
+      </ul>
+    </template>
   </section>
 </template>
 
@@ -103,8 +164,50 @@ function label(name: { zh: string; en: string }): string {
   line-height: 1.55;
 }
 
+.help__detail-bar {
+  margin: 0.85rem 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  color: var(--lanius-text-muted);
+  font-size: 0.9rem;
+}
+
+.linkish {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--lanius-accent);
+  cursor: pointer;
+  font: inherit;
+  transition: color 0.18s ease;
+}
+
 .help__error {
   color: var(--lanius-danger);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.retry {
+  width: fit-content;
+  border: 1px solid var(--lanius-border-bright);
+  background: var(--lanius-panel);
+  color: var(--lanius-text);
+  padding: 0.5rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.help__card-view {
+  max-width: 480px;
 }
 
 .help__list {
@@ -121,6 +224,10 @@ function label(name: { zh: string; en: string }): string {
   border-radius: 14px;
   background: linear-gradient(165deg, var(--lanius-panel), var(--lanius-panel-raised));
   box-shadow: 0 10px 28px rgba(28, 47, 66, 0.06);
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
 }
 
 .help__card-top {
@@ -135,7 +242,7 @@ function label(name: { zh: string; en: string }): string {
 .help__examples code {
   font-family: var(--lanius-font-mono);
   color: var(--lanius-accent-dim);
-  background: rgba(20, 184, 166, 0.1);
+  background: rgba(78, 183, 232, 0.12);
   padding: 0.15rem 0.45rem;
   border-radius: 6px;
   font-size: 0.92rem;
@@ -201,5 +308,42 @@ function label(name: { zh: string; en: string }): string {
   align-items: center;
   color: var(--lanius-text-muted);
   font-size: 0.9rem;
+}
+
+.detail {
+  margin-top: 0.85rem;
+  border: 1px solid var(--lanius-border-bright);
+  background: #fff;
+  color: var(--lanius-brand);
+  border-radius: 8px;
+  padding: 0.4rem 0.75rem;
+  cursor: pointer;
+  font-weight: 600;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+@media (hover: hover) {
+  .linkish:hover {
+    color: var(--lanius-highlight);
+  }
+
+  .retry:hover,
+  .detail:hover {
+    border-color: rgba(78, 183, 232, 0.5);
+    color: var(--lanius-accent-dim);
+    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
+    transform: translateY(-1px);
+  }
+
+  .help__card:hover {
+    border-color: rgba(78, 183, 232, 0.4);
+    box-shadow: 0 14px 32px rgba(62, 78, 110, 0.12);
+    transform: translateY(-2px);
+  }
 }
 </style>

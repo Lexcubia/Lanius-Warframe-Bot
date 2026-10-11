@@ -88,7 +88,7 @@ const sampleWorldstate = {
     {
       id: '1',
       node: { zh: 'Galatea（海王星）', en: 'Galatea (Neptune)' },
-      attackingFaction: { zh: '格林尼尔', en: 'Grineer' },
+      attackingFaction: { zh: 'Grineer', en: 'Grineer' },
       defendingFaction: { zh: 'Corpus', en: 'Corpus' },
       completionPct: 42,
       expired: false,
@@ -97,7 +97,14 @@ const sampleWorldstate = {
   nightwave: {
     season: 3,
     phase: 1,
-    activeChallenges: [{ id: 'c1', title: { zh: '每日击杀', en: 'Daily Kill' } }],
+    activeChallenges: [
+      {
+        id: 'c1',
+        kind: 'daily',
+        kindLabel: { zh: '每日', en: 'Daily' },
+        title: { zh: '每日击杀', en: 'Daily Kill' },
+      },
+    ],
   },
 };
 
