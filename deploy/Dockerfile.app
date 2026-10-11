@@ -10,6 +10,10 @@ WORKDIR /app
 
 # --- API build ---
 FROM base AS build-api
+# better-sqlite3 原生编译工具链
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 make g++ \
+ && rm -rf /var/lib/apt/lists/*
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/core/package.json packages/core/
