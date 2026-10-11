@@ -27,4 +27,28 @@ echo "pulling IMAGE_TAG=${TAG} with ${COMPOSE_FILE}"
 docker compose -f "${COMPOSE_FILE}" pull
 docker compose -f "${COMPOSE_FILE}" up -d --no-deps --remove-orphans
 docker compose -f "${COMPOSE_FILE}" ps
+
+# 等待 lanius-app 健康（最多 5 分钟）
+echo "waiting for lanius-app to become healthy..."
+for i in $(seq 1 30); do
+  if docker inspect --format='{{.State.Health.Status}}' lanius-lanius-app-1 2>/dev/null | grep -q healthy; then
+    echo "lanius-app is healthy"
+    break
+  fi
+  if ! docker ps --format='{{.Names}}' | grep -q lanius-lanius-app-1; then
+    echo "lanius-app container is not running"
+    docker logs lanius-lanius-app-1 --tail 100
+    exit 1
+  fi
+  sleep 10
+done
+
+if ! docker inspect --format='{{.State.Health.Status}}' lanius-lanius-app-1 2>/dev/null | grep -q healthy; then
+  echo "lanius-app did not become healthy within 5 minutes"
+  docker logs lanius-lanius-app-1 --tail 100
+  exit 1
+fi
+
+docker compose -f "${COMPOSE_FILE}" up -d --no-deps caddy
+docker compose -f "${COMPOSE_FILE}" ps
 echo "done"
