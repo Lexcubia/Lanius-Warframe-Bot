@@ -1,24 +1,28 @@
 #!/usr/bin/env bash
 # 在生产机预装 Playwright Chromium 到宿主机目录，供 bot 容器只读挂载。
-# Actions `docker compose build` 不再下载浏览器；目录已存在且版本匹配时本脚本也会跳过。
+# 默认走 npmmirror，避免卡在官方 CDN / mcr.microsoft.com。
 #
-# 用法（在服务器上，建议 root 或具备 docker 权限的用户）：
+# 用法：
 #   bash /opt/lanius/repo/deploy/prepare-playwright.sh
 #   LANIUS_PLAYWRIGHT_DIR=/opt/lanius/ms-playwright PLAYWRIGHT_VERSION=1.51.0 bash deploy/prepare-playwright.sh
 
 set -euo pipefail
 
 DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
-# 与 packages/render、prepare-runtime-package 中的 playwright 主版本对齐
 PW_VERSION="${PLAYWRIGHT_VERSION:-1.51.0}"
+# 国内镜像：浏览器二进制（可覆盖）
+PW_DOWNLOAD_HOST="${PLAYWRIGHT_DOWNLOAD_HOST:-https://npmmirror.com/mirrors/playwright}"
+# Node 基础镜像（可换成国内 registry 上的 node:22-bookworm）
+NODE_IMAGE="${LANIUS_PLAYWRIGHT_NODE_IMAGE:-node:22-bookworm}"
 MARKER="${DIR}/.lanius-playwright-version"
 
 echo "[lanius] Playwright prep → ${DIR} (playwright@${PW_VERSION})"
+echo "[lanius] PLAYWRIGHT_DOWNLOAD_HOST=${PW_DOWNLOAD_HOST}"
+echo "[lanius] NODE_IMAGE=${NODE_IMAGE}"
 
 mkdir -p "${DIR}"
 
 if [[ -f "${MARKER}" ]] && [[ "$(cat "${MARKER}")" == "${PW_VERSION}" ]]; then
-  # 已有 chromium-* 目录则跳过下载
   if compgen -G "${DIR}/chromium-*" > /dev/null; then
     echo "[lanius] already installed (version ${PW_VERSION}), skip download"
     ls -la "${DIR}"
@@ -26,16 +30,21 @@ if [[ -f "${MARKER}" ]] && [[ "$(cat "${MARKER}")" == "${PW_VERSION}" ]]; then
   fi
 fi
 
-echo "[lanius] downloading Chromium via docker (one-time / version bump)…"
-# 使用官方 Playwright 镜像拉浏览器；写入宿主机目录后供 bot 挂载复用
+echo "[lanius] downloading Chromium via docker + npmmirror…"
 docker run --rm \
   -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+  -e PLAYWRIGHT_DOWNLOAD_HOST="${PW_DOWNLOAD_HOST}" \
+  -e npm_config_registry="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}" \
   -v "${DIR}:/ms-playwright" \
-  "mcr.microsoft.com/playwright:v${PW_VERSION}-jammy" \
-  /bin/bash -lc "npx --yes playwright@${PW_VERSION} install chromium"
+  "${NODE_IMAGE}" \
+  /bin/bash -lc "
+    set -euo pipefail
+    npm install -g \"playwright@${PW_VERSION}\"
+    # 系统依赖装在 bot 运行镜像里；此处只拉浏览器二进制
+    playwright install chromium
+  "
 
 echo "${PW_VERSION}" > "${MARKER}"
-# 容器内常以 root 写入；挂载给 uid 10001（镜像内 lanius）只读即可
 chmod -R a+rX "${DIR}" || true
 
 echo "[lanius] done"

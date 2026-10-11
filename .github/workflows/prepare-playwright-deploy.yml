@@ -1,0 +1,80 @@
+# 服务器：镜像预装 Playwright Chromium → compose build/up（供 QQ 出图联调）
+
+name: Prepare Playwright and deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: '仅重建的 compose 服务（空=全部）'
+        required: false
+        default: ''
+        type: string
+      git_ref:
+        description: '检出的 git ref（分支/tag）'
+        required: false
+        default: 'develop'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-and-deploy:
+    name: prepare-playwright-and-deploy
+    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: production
+    steps:
+      - name: Prepare Playwright (mirror) and deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          command_timeout: 80m
+          script: |
+            set -euo pipefail
+            DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
+            REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
+            SECRETS_FILE="${LANIUS_SECRETS_FILE:-/opt/lanius/secrets/config.local.yaml}"
+            REF='${{ inputs.git_ref }}'
+            SERVICE='${{ inputs.service }}'
+            test -f "${SECRETS_FILE}" || { echo "missing ${SECRETS_FILE}"; exit 1; }
+            cd "${REPO_ROOT}"
+            git fetch --tags --force origin
+            git fetch origin "${REF}"
+            git checkout -f "FETCH_HEAD"
+            git log -1 --oneline
+            # 国内镜像预装 Chromium（已装同版本则跳过）
+            export PLAYWRIGHT_DOWNLOAD_HOST="${PLAYWRIGHT_DOWNLOAD_HOST:-https://npmmirror.com/mirrors/playwright}"
+            export NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}"
+            bash "${REPO_ROOT}/deploy/prepare-playwright.sh"
+            PLAYWRIGHT_DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
+            test -n "$(compgen -G "${PLAYWRIGHT_DIR}/chromium-*" || true)" || {
+              echo "prepare-playwright.sh finished but no chromium-* under ${PLAYWRIGHT_DIR}"
+              exit 1
+            }
+            cd "${DEPLOY_DIR}"
+            if [ -f .env ]; then
+              grep -q '^LANIUS_CONFIG_FILE=' .env || echo "LANIUS_CONFIG_FILE=${SECRETS_FILE}" >> .env
+              sed -i "s|^LANIUS_CONFIG_FILE=.*|LANIUS_CONFIG_FILE=${SECRETS_FILE}|" .env
+              grep -q '^LANIUS_PLAYWRIGHT_DIR=' .env || echo "LANIUS_PLAYWRIGHT_DIR=${PLAYWRIGHT_DIR}" >> .env
+              sed -i "s|^LANIUS_PLAYWRIGHT_DIR=.*|LANIUS_PLAYWRIGHT_DIR=${PLAYWRIGHT_DIR}|" .env
+            fi
+            export LANIUS_PLAYWRIGHT_DIR="${PLAYWRIGHT_DIR}"
+            export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
+            if [ -n "${SERVICE}" ]; then
+              docker compose build "${SERVICE}"
+              docker compose up -d "${SERVICE}"
+            else
+              docker compose build
+              docker compose up -d
+            fi
+            docker compose ps
+            sleep 20
+            docker compose logs bot --tail 80 || true
+            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
+              curl -fsS "http://127.0.0.1/api/lanius/v1/health"
