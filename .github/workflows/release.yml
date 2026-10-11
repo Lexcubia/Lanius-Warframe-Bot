@@ -129,10 +129,18 @@ jobs:
             DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
             REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
             TAG='${{ steps.meta.outputs.tag }}'
+            # 密钥在仓库外；禁止写回 repo/deploy/config.local.yaml
+            SECRETS_FILE="${LANIUS_SECRETS_FILE:-/opt/lanius/secrets/config.local.yaml}"
+            test -f "${SECRETS_FILE}" || { echo "missing ${SECRETS_FILE}"; exit 1; }
             cd "${REPO_ROOT}"
             git fetch --tags --force origin
             git checkout -f "tags/${TAG}"
             cd "${DEPLOY_DIR}"
+            # 确保 .env 指向仓库外密钥（不被 checkout 清掉；.env 本身也在 deploy/.gitignore）
+            if [ -f .env ]; then
+              grep -q '^LANIUS_CONFIG_FILE=' .env || echo "LANIUS_CONFIG_FILE=${SECRETS_FILE}" >> .env
+              sed -i "s|^LANIUS_CONFIG_FILE=.*|LANIUS_CONFIG_FILE=${SECRETS_FILE}|" .env
+            fi
             export IMAGE_TAG="${TAG}"
             export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
             # 国内链路优先源码 build；GHCR 镜像仍由上游 job 推送作备份

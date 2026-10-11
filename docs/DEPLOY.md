@@ -83,21 +83,23 @@ GHCR 推送使用 `GITHUB_TOKEN`（workflow 内 `packages: write`），无需额
 2. Clone 仓库并准备运行时文件：
 
    ```bash
-   mkdir -p /opt/lanius
+   mkdir -p /opt/lanius/secrets
    git clone https://github.com/Lexcubia/Lanius-Warframe-Bot.git /opt/lanius/repo
    ln -sfn /opt/lanius/repo/deploy /opt/lanius/deploy
    cd /opt/lanius/repo
    git checkout v0.1.0   # 或目标 tag
-   cp config.example.yaml deploy/config.local.yaml
+   cp config.example.yaml /opt/lanius/secrets/config.local.yaml
    cp deploy/.env.example deploy/.env
    ```
 
-3. 编辑 `deploy/config.local.yaml`：填入 QQ / admin 密钥；生产建议：
+   **密钥必须放在 git 工作树之外**（`/opt/lanius/secrets/`）。放在 `repo/deploy/config.local.yaml` 会在 `git checkout` / 目录切换时被冲掉。
+
+3. 编辑 **`/opt/lanius/secrets/config.local.yaml`**：填入 QQ / admin 密钥；生产建议：
 
    - `bot.dryRun: false`（确认回调与发信就绪后）
    - `bot.publicSiteBaseUrl: https://warframe.xxxx.com`（亦可由 compose 的 `PUBLIC_SITE_BASE_URL` 覆盖）
    - `api.host` / `bot.host` 可保持 `127.0.0.1`；容器内由 `HOST=0.0.0.0` 覆盖
-   - 配置文件需容器用户可读（例如 `chmod 644 deploy/config.local.yaml`）
+   - 配置文件需容器用户可读（例如 `chmod 644 /opt/lanius/secrets/config.local.yaml`）
 
 4. 编辑 `deploy/.env`：
 
@@ -106,7 +108,7 @@ GHCR 推送使用 `GITHUB_TOKEN`（workflow 内 `packages: write`），无需额
    PUBLIC_SITE_BASE_URL=https://warframe.xxxx.com
    IMAGE_TAG=v0.1.0
    GHCR_IMAGE_PREFIX=ghcr.io/lexcubia/lanius-warframe-bot
-   LANIUS_CONFIG_FILE=./config.local.yaml
+   LANIUS_CONFIG_FILE=/opt/lanius/secrets/config.local.yaml
    LANIUS_RUNTIME_DEFAULT=../config/default
    LANIUS_RUNTIME_LOCAL=../config/local
    ```
