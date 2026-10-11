@@ -28,6 +28,7 @@ export {
 } from './open-api.js';
 export {
   ensureQqGroupCommandPanel,
+  reclaimOrphanPanels,
   syncQqCommandPanels,
   type QqPanelCommandItem,
   type QqPanelScope,
