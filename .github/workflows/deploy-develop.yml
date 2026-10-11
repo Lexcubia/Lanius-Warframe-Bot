@@ -39,9 +39,10 @@ jobs:
             SERVICE='${{ inputs.service }}'
             test -f "${SECRETS_FILE}" || { echo "missing ${SECRETS_FILE}"; exit 1; }
             cd "${REPO_ROOT}"
-            # 生产 clone 常为浅克隆/无 remote-tracking；fetch 进本地 develop 再硬对齐
-            git fetch --force origin "refs/heads/develop:refs/heads/develop"
-            git checkout -f develop
+            # 已处于 develop 时不能 fetch 进同名本地分支；用 FETCH_HEAD 硬对齐
+            git fetch origin develop
+            git checkout -B develop FETCH_HEAD
+            git reset --hard FETCH_HEAD
             git log -1 --oneline
             cd "${DEPLOY_DIR}"
             if [ -f .env ]; then
