@@ -134,15 +134,14 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   list-style: none;
   margin: 0;
   padding: 0;
-  /* 单列纵向：给足行宽，保证纪元/任务/节点/时间完整显示不省略 */
-  display: flex;
-  flex-direction: column;
+  /* 两列网格：最后一行单个只占一列宽，不撑满整行 */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .fissures__row {
   box-sizing: border-box;
-  width: 100%;
   min-width: 0;
   max-width: 100%;
   display: flex;
@@ -176,7 +175,6 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 .fissures__main {
   flex: 1 1 auto;
   min-width: 0;
-  white-space: nowrap;
 }
 
 .fissures__top {
@@ -225,8 +223,9 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   margin: 2px 0 0;
   font-size: 12px;
   color: var(--lanius-text);
-  /* 节点名完整显示：单行优先，不截断 */
-  white-space: nowrap;
+  /* 两列窄格内容完整优先：长节点名自然换行，不截断不溢出 */
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .fissures__remain {
