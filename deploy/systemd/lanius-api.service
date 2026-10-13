@@ -17,7 +17,8 @@ WorkingDirectory=__LANIUS_REPO__
 Environment=NODE_ENV=production
 # 非密钥：配置根默认即仓库 config/；生产数据目录建议绝对路径写在 config/local/database.yaml
 Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
-ExecStart=/usr/bin/env node apps/api/dist/index.js
+# 热启动：tsx 直跑 TS 源码（无 dist 构建，git pull 后重启即生效）
+ExecStart=/usr/bin/env npx tsx apps/api/src/index.ts
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30
