@@ -35,6 +35,64 @@ function mockFetch(
   return fetchImpl as unknown as typeof fetch;
 }
 
+describe('toPanelItems via sync payload', () => {
+  it('weighted-truncates long desc before POST body', async () => {
+    let postedDesc: string | undefined;
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (url.includes('getAppAccessToken')) {
+        const tokenBody = { access_token: 'tok', expires_in: 7200 };
+        return {
+          ok: true,
+          json: async () => tokenBody,
+          text: async () => JSON.stringify(tokenBody),
+        };
+      }
+      if (method === 'GET' && url.includes('scope=c2c')) {
+        return {
+          ok: true,
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
+        };
+      }
+      if (method === 'POST' && url.includes('/v2/panels')) {
+        const body = JSON.parse(String(init?.body ?? '{}')) as {
+          panel?: { items?: Array<{ desc?: string }> };
+        };
+        postedDesc = body.panel?.items?.[0]?.desc;
+        return {
+          ok: true,
+          text: async () => JSON.stringify({ code: 0, panel_id: 'p_new' }),
+        };
+      }
+      throw new Error(`unexpected ${method} ${url}`);
+    });
+
+    await syncQqCommandPanels({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      items: [
+        {
+          name: '世界状态',
+          desc: '查看开放世界周期（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）',
+        },
+      ],
+    });
+
+    // 中文加权 2：30 上限约 15 汉字，不得整句原样上传
+    expect(postedDesc).toBeDefined();
+    expect(postedDesc!.length).toBeLessThan(
+      '查看开放世界周期（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）'.length,
+    );
+    let weight = 0;
+    for (const ch of postedDesc!) {
+      weight += /[\u4e00-\u9fff]/.test(ch) ? 2 : 1;
+    }
+    expect(weight).toBeLessThanOrEqual(30);
+  });
+});
+
 describe('syncQqCommandPanels', () => {
   it('updates existing c2c panel instead of creating', async () => {
     const fetchImpl = mockFetch([

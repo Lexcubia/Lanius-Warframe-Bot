@@ -1,16 +1,17 @@
 import type { AccessTokenCache } from './access-token.js';
-import { qqOpenApiJson, truncateChars, type QqOpenApiOptions } from './open-api.js';
+import { qqOpenApiJson, truncateWeightedChars, type QqOpenApiOptions } from './open-api.js';
 
 /** 指令面板生效场景。 */
 export type QqPanelScope = 'c2c' | 'group' | 'channel' | 'dm';
 
 /**
  * 同步到开放平台的一条面板指令项。
+ * name / desc 长度按开放平台加权规则（中文约 2、其余 1）。
  */
 export type QqPanelCommandItem = {
-  /** 点击后填入输入框的文本（≤14 字符）。 */
+  /** 点击后填入输入框的文本（加权 ≤14）。 */
   name: string;
-  /** 面板展示说明（≤30 字符）。 */
+  /** 面板展示说明（加权 ≤30，约 15 汉字）。 */
   desc: string;
 };
 
@@ -383,10 +384,12 @@ export async function reclaimOrphanPanels(
 }
 
 /**
- * 判断错误是否为面板数量超限（30013）。
+ * 判断错误是否为面板配额类失败（官方文案「超出数量限制」、code 30013）。
+ * 实践中同一 code 也可能出现在字段超长等校验失败；调用方仍应先保证 desc 合规，
+ * 再依赖本判断触发孤儿面板回收。
  *
  * @param error - 捕获的异常
- * @returns 是否配额错误
+ * @returns 是否匹配 30013 / 数量限制文案
  */
 function isQuotaExceeded(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
@@ -395,6 +398,7 @@ function isQuotaExceeded(error: unknown): boolean {
 
 /**
  * 将业务指令项转为官方 panel.items。
+ * 官方单面板最多 12 条；name/desc 用加权截断，避免码位截断后仍超限。
  *
  * @param items - 业务侧指令项
  * @returns 截断后的官方元素列表
@@ -404,8 +408,8 @@ function toPanelItems(
 ): Array<{ type: 'command'; name: string; desc: string }> {
   return items.slice(0, 12).map((item) => ({
     type: 'command' as const,
-    name: truncateChars(item.name, 14),
-    desc: truncateChars(item.desc, 30),
+    name: truncateWeightedChars(item.name, 14),
+    desc: truncateWeightedChars(item.desc, 30),
   }));
 }
 
