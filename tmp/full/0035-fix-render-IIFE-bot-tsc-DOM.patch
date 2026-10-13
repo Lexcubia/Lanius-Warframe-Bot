@@ -1,0 +1,112 @@
+From db9ee971f16152f1da2fea427e7f6a5844703039 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 13 Oct 2026 10:04:14 +0000
+Subject: [PATCH 35/45] =?UTF-8?q?fix(render):=20=E5=9B=BE=E6=A0=87?=
+ =?UTF-8?q?=E7=AD=89=E5=BE=85=E7=94=A8=E5=8F=AF=E6=89=A7=E8=A1=8C=20IIFE?=
+ =?UTF-8?q?=EF=BC=8C=E9=81=BF=E5=85=8D=20bot=20tsc=20DOM=20=E6=B3=84?=
+ =?UTF-8?q?=E6=BC=8F?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .../render/src/chromium/capture-vue-card.ts   | 46 ++++++++-----------
+ 1 file changed, 19 insertions(+), 27 deletions(-)
+
+diff --git a/packages/render/src/chromium/capture-vue-card.ts b/packages/render/src/chromium/capture-vue-card.ts
+index 123452c..8e44af8 100644
+--- a/packages/render/src/chromium/capture-vue-card.ts
++++ b/packages/render/src/chromium/capture-vue-card.ts
+@@ -96,17 +96,14 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
+   const width = laniusTokens.card.width;
+ 
+   await page.setViewportSize({ width: width + 24, height: 1200 });
+-  await page.evaluate(
+-    (payload) => {
+-      const host = globalThis as unknown as CardHostGlobals;
+-      const mount = host.__LANIUS_MOUNT_CARD__;
+-      if (typeof mount !== 'function') {
+-        throw new Error('card-host mount API missing');
+-      }
+-      mount(payload);
+-    },
+-    input,
+-  );
++  await page.evaluate((payload) => {
++    const host = globalThis as unknown as CardHostGlobals;
++    const mount = host.__LANIUS_MOUNT_CARD__;
++    if (typeof mount !== 'function') {
++      throw new Error('card-host mount API missing');
++    }
++    mount(payload);
++  }, input);
+ 
+   await page.waitForFunction(() => {
+     const host = globalThis as unknown as CardHostGlobals;
+@@ -127,52 +124,47 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
+ /**
+  * 等待卡片内字体与 `<img>` 加载完成（失败亦放行，避免永久卡住）。
+  *
+- * 说明：旧实现用 `page.evaluate('async () => …')` 字符串表达式，只返回函数对象
+- * 而未执行，导致图标等待从未生效。
++ * 说明：旧实现为 `page.evaluate('async () => …')`，字符串只求值出函数对象而未调用，
++ * 图标等待从未生效。此处用立即执行的 async IIFE 字符串，且避免把 DOM 类型泄漏进
++ * 消费方（bot）的 Node `tsc`。
+  *
+  * @param page - Playwright Page
+  * @returns 无返回值
+  */
+ async function waitForCardAssets(page: Page): Promise<void> {
+-  await page.evaluate(async () => {
+-    if (document.fonts?.ready) {
++  // Playwright 串形式：表达式须自行调用；async 函数体在浏览器内执行。
++  await page.evaluate(`(async () => {
++    if (document.fonts && document.fonts.ready) {
+       await document.fonts.ready;
+     }
+-
+     const images = Array.from(document.images);
+     for (const img of images) {
+-      // 截图路径强制即时加载，避免 lazy 未触发请求
+       if (img.loading === 'lazy') {
+         img.loading = 'eager';
+       }
+     }
+-
+     await Promise.all(
+       images.map(async (img) => {
+         if (!img.complete) {
+-          await new Promise<void>((resolve) => {
+-            const done = (): void => {
+-              resolve();
+-            };
++          await new Promise((resolve) => {
++            const done = () => resolve();
+             img.addEventListener('load', done, { once: true });
+             img.addEventListener('error', done, { once: true });
+-            // 竞态：监听注册前已完成
+             if (img.complete) {
+               resolve();
+             }
+           });
+         }
+-        // decode 失败（坏图 / 占位）仍放行，由组件 error 占位兜底
+         if (typeof img.decode === 'function' && img.naturalWidth > 0) {
+           try {
+             await img.decode();
+-          } catch {
+-            /* ignore decode errors */
++          } catch (_) {
++            /* 坏图仍放行，由组件占位兜底 */
+           }
+         }
+       }),
+     );
+-  });
++  })()`);
+ }
+ 
+ /**
+-- 
+2.51.2.windows.1
+

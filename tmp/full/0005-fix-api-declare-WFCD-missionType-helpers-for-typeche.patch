@@ -1,0 +1,40 @@
+From 0827a7bc3d3101f1d29ac48489dcdace293e4a09 Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Sun, 11 Oct 2026 18:13:49 +0800
+Subject: [PATCH 05/45] fix(api): declare WFCD missionType helpers for
+ typecheck
+
+---
+ .../src/types/warframe-worldstate-data.d.ts    | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/apps/api/src/types/warframe-worldstate-data.d.ts b/apps/api/src/types/warframe-worldstate-data.d.ts
+index 1c9dfde..eca807a 100644
+--- a/apps/api/src/types/warframe-worldstate-data.d.ts
++++ b/apps/api/src/types/warframe-worldstate-data.d.ts
+@@ -37,4 +37,22 @@ declare module 'warframe-worldstate-data/utilities' {
+    * @returns 描述文案
+    */
+   export function languageDesc(uniqueName: string, locale?: string): string;
++
++  /**
++   * 将任务类型键（`MT_*` 或英文名）解析为显示名。
++   *
++   * @param missionTypeKey - 如 `MT_SURVIVAL` / `Survival`
++   * @param locale - 字典 locale
++   * @returns 可读任务类型名
++   */
++  export function missionType(missionTypeKey: string, locale?: string): string;
++
++  /**
++   * 由节点键反查任务类型显示名。
++   *
++   * @param nodeKey - 如 `SolNode189`
++   * @param locale - 字典 locale
++   * @returns 可读任务类型名
++   */
++  export function nodeMissionType(nodeKey: string, locale?: string): string;
+ }
+-- 
+2.51.2.windows.1
+

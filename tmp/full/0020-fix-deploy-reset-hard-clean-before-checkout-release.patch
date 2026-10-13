@@ -1,0 +1,29 @@
+From 92b5b921fe729ecb3362a5d6776cd36ac6bf97e7 Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Mon, 12 Oct 2026 02:09:31 +0800
+Subject: [PATCH 20/45] fix(deploy): reset --hard + clean before checkout
+ release
+
+---
+ .github/workflows/deploy-release.yml | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/.github/workflows/deploy-release.yml b/.github/workflows/deploy-release.yml
+index 6739bba..9021605 100644
+--- a/.github/workflows/deploy-release.yml
++++ b/.github/workflows/deploy-release.yml
+@@ -52,9 +52,10 @@ jobs:
+             TAG='${{ steps.meta.outputs.tag }}'
+             cd "${REPO_ROOT}"
+             git fetch origin release --force
++            git reset --hard
++            git clean -fd
+             git checkout -B release FETCH_HEAD
+             git reset --hard FETCH_HEAD
+-            git clean -fd
+             cd "${DEPLOY_DIR}"
+             export IMAGE_TAG="${TAG}"
+             export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
+-- 
+2.51.2.windows.1
+

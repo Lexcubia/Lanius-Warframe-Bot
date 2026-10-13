@@ -1,0 +1,237 @@
+From 9fa5f92bfd4c60015a478c41e2d651713647db9b Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Mon, 12 Oct 2026 01:42:40 +0800
+Subject: [PATCH 14/45] chore(repo): husky lint-staged, remove release
+ pre-check, fix api docker build
+
+Release workflow no longer runs test/typecheck (moved to CI on develop/main push); husky+lint-staged for local commits; add python3/make/g++ to API build stages for better-sqlite3.
+---
+ .github/workflows/release.yml | 23 +----------------------
+ .husky/pre-commit             |  1 +
+ apps/api/Dockerfile           |  4 ++++
+ deploy/Dockerfile.app         |  4 ++++
+ docs/VERSIONING.md            |  8 +++++++-
+ package.json                  | 14 +++++++++++++-
+ pnpm-lock.yaml                | 32 ++++++++++++++++++++++++++++++++
+ 7 files changed, 62 insertions(+), 24 deletions(-)
+ create mode 100644 .husky/pre-commit
+
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index 8f9d67a..e14a3aa 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -1,4 +1,4 @@
+-# 构建推送 GHCR（不 SSH 部署）。
++﻿# 构建推送 GHCR（不 SSH 部署）。
+ # 部署见 deploy-release.yml（长期分支 release → pull + up）。
+ # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
+ 
+@@ -30,29 +30,8 @@ env:
+   IMAGE_PREFIX: ghcr.io/lexcubia/lanius-warframe-bot
+ 
+ jobs:
+-  test:
+-    name: pre-release-test
+-    if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+-    runs-on: ubuntu-latest
+-    timeout-minutes: 20
+-    steps:
+-      - uses: actions/checkout@v4
+-      - uses: pnpm/action-setup@v4
+-        with:
+-          version: 9.15.0
+-      - uses: actions/setup-node@v4
+-        with:
+-          node-version: 22
+-          cache: pnpm
+-      - run: pnpm install --frozen-lockfile
+-      - name: Install Playwright Chromium
+-        run: pnpm --filter @lanius/render exec playwright install --with-deps chromium
+-      - run: pnpm test
+-      - run: pnpm typecheck
+-
+   build-push:
+     name: build-and-push-images
+-    needs: test
+     if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+     runs-on: ubuntu-latest
+     timeout-minutes: 45
+diff --git a/.husky/pre-commit b/.husky/pre-commit
+new file mode 100644
+index 0000000..27fe073
+--- /dev/null
++++ b/.husky/pre-commit
+@@ -0,0 +1 @@
++﻿pnpm exec lint-staged
+diff --git a/apps/api/Dockerfile b/apps/api/Dockerfile
+index 20ad2aa..db36eee 100644
+--- a/apps/api/Dockerfile
++++ b/apps/api/Dockerfile
+@@ -8,6 +8,10 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+ WORKDIR /app
+ 
+ FROM base AS build
++# better-sqlite3 原生编译工具链（python3 + make + g++）
++RUN apt-get update \
++ && apt-get install -y --no-install-recommends python3 make g++ \
++ && rm -rf /var/lib/apt/lists/*
+ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+ COPY apps/api/package.json apps/api/
+ COPY packages/core/package.json packages/core/
+diff --git a/deploy/Dockerfile.app b/deploy/Dockerfile.app
+index b3b638a..c7bcb9c 100644
+--- a/deploy/Dockerfile.app
++++ b/deploy/Dockerfile.app
+@@ -10,6 +10,10 @@ WORKDIR /app
+ 
+ # --- API build ---
+ FROM base AS build-api
++# better-sqlite3 原生编译工具链
++RUN apt-get update \
++ && apt-get install -y --no-install-recommends python3 make g++ \
++ && rm -rf /var/lib/apt/lists/*
+ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+ COPY apps/api/package.json apps/api/
+ COPY packages/core/package.json packages/core/
+diff --git a/docs/VERSIONING.md b/docs/VERSIONING.md
+index c525a85..6e7ca83 100644
+--- a/docs/VERSIONING.md
++++ b/docs/VERSIONING.md
+@@ -49,10 +49,16 @@ feature/*  fix/*  docs/*  …
+ 1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
+ 2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
+ 3. PR：`develop` → `main`（或经 `release/x.y.z`）。
+-4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR）。
++4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR，无预检）。
+ 5. 确认 GHCR 镜像就绪后，将 `release` 分支快进到目标提交（或 Admin / `update-image.sh`）完成上线。
+ 6. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
+ 
++## 质量关卡
++
++- **本地**：husky + lint-staged 在 commit 前自动格式化与 lint 已暂存文件。
++- **CI**：`push` 到 `develop` / `main` 及所有 PR 触发 `ci.yml`（install → test → typecheck）。
++- **Release**：`release.yml` 仅负责构建推 GHCR，不再重复跑 test/typecheck（避免发布前卡预检）。
++
+ ## 相关
+ 
+ - 分支策略：[CONTRIBUTING.md](./CONTRIBUTING.md)
+diff --git a/package.json b/package.json
+index edb5e2d..af80f76 100644
+--- a/package.json
++++ b/package.json
+@@ -18,14 +18,26 @@
+     "lint": "eslint .",
+     "lint:fix": "eslint . --fix",
+     "format": "prettier --write .",
+-    "format:check": "prettier --check ."
++    "format:check": "prettier --check .",
++    "prepare": "husky",
++    "check:staged": "lint-staged"
+   },
+   "devDependencies": {
+     "@eslint/js": "^9.17.0",
+     "eslint": "^9.17.0",
+     "eslint-config-prettier": "^9.1.0",
++    "husky": "^9.1.7",
++    "lint-staged": "^17.6.0",
+     "prettier": "^3.4.2",
+     "typescript": "^5.7.2",
+     "typescript-eslint": "^8.18.0"
++  },
++  "lint-staged": {
++    "*.{ts,tsx,vue,js,mjs,cjs,json,yaml,yml,md}": [
++      "prettier --write"
++    ],
++    "*.{ts,tsx,vue,js,mjs,cjs}": [
++      "eslint --fix"
++    ]
+   }
+ }
+diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
+index b4d1403..64aa5d8 100644
+--- a/pnpm-lock.yaml
++++ b/pnpm-lock.yaml
+@@ -17,6 +17,12 @@ importers:
+       eslint-config-prettier:
+         specifier: ^9.1.0
+         version: 9.1.2(eslint@9.39.5(jiti@2.7.0))
++      husky:
++        specifier: ^9.1.7
++        version: 9.1.7
++      lint-staged:
++        specifier: ^17.6.0
++        version: 17.6.0
+       prettier:
+         specifier: ^3.4.2
+         version: 3.9.10
+@@ -3970,6 +3976,11 @@ packages:
+     resolution: {integrity: sha512-AXcZb6vzzrFAUE61HnN4mpLqd/cSIwNQjtNWR0euPm6y0iqx3G4gOXaIDdtdDwZmhwe82LA6+zinmW4UBWVePQ==}
+     engines: {node: '>=16.17.0'}
+ 
++  husky@9.1.7:
++    resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
++    engines: {node: '>=18'}
++    hasBin: true
++
+   ieee754@1.2.1:
+     resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
+ 
+@@ -4327,6 +4338,11 @@ packages:
+   linkifyjs@4.3.3:
+     resolution: {integrity: sha512-P8aEP5U/D1/IlTY2OeYsErdwh9bGuLE30NcXtKEjgdHcahveQoQwM2yZNsioQHsWFz0P7KKudisbrzCgR0sDHg==}
+ 
++  lint-staged@17.6.0:
++    resolution: {integrity: sha512-nOhBfYkZEwkFtNzD5pK9s9LkcWoxJ+whLzEnhqi9nl7zTB5n7tg8+9iYgMGx2Wm3VlLu8cbNj0RACzY+nWi5iQ==}
++    engines: {node: '>=22.22.1'}
++    hasBin: true
++
+   listhen@1.10.1:
+     resolution: {integrity: sha512-6nt/86SkqUQSLW1ofz8MxC6RhRMqOl3ONISe6qqvJ3xj09aJWQx6DhgSZpugs3PX4PXdOas/WD6A9jx6J2N19A==}
+     hasBin: true
+@@ -5298,6 +5314,10 @@ packages:
+   streamx@2.28.1:
+     resolution: {integrity: sha512-zEzXb0s5Cds7tqMH6rhZ05lcJydCWiQPEwiNngVqzsxCc962vLY4Uw+mW7od8kDH258k2Uz/JrOkdIAAhSh9VA==}
+ 
++  string-argv@0.3.2:
++    resolution: {integrity: sha512-aqD2Q0144Z+/RqG52NeHEkZauTAUWJO8c6yTftGJKO3Tja5tUgIfmIl6kExvhtxSDP7fXB6DvzkfMpCd/F3G+Q==}
++    engines: {node: '>=0.6.19'}
++
+   string-width@4.2.3:
+     resolution: {integrity: sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g==}
+     engines: {node: '>=8'}
+@@ -9975,6 +9995,8 @@ snapshots:
+ 
+   human-signals@5.0.0: {}
+ 
++  husky@9.1.7: {}
++
+   ieee754@1.2.1: {}
+ 
+   ignore@5.3.2: {}
+@@ -10267,6 +10289,14 @@ snapshots:
+ 
+   linkifyjs@4.3.3: {}
+ 
++  lint-staged@17.6.0:
++    dependencies:
++      picomatch: 4.0.7
++      string-argv: 0.3.2
++      tinyexec: 1.3.1
++    optionalDependencies:
++      yaml: 2.9.1
++
+   listhen@1.10.1(srvx@1.0.5):
+     dependencies:
+       '@parcel/watcher-wasm': 2.6.0
+@@ -11538,6 +11568,8 @@ snapshots:
+       - bare-abort-controller
+       - react-native-b4a
+ 
++  string-argv@0.3.2: {}
++
+   string-width@4.2.3:
+     dependencies:
+       emoji-regex: 8.0.0
+-- 
+2.51.2.windows.1
+

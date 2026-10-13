@@ -1,0 +1,1154 @@
+From da43a541e68f5c00e750bffef9e61804380db434 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 13 Oct 2026 10:01:24 +0000
+Subject: [PATCH 34/45] =?UTF-8?q?fix(bot):=20=E5=95=86=E4=BA=BA=E8=BD=AE?=
+ =?UTF-8?q?=E6=8D=A2=E5=87=BA=E5=9B=BE=E4=B8=8E=E5=85=A5=E4=BE=B5=E5=9B=BE?=
+ =?UTF-8?q?=E6=A0=87=E6=88=AA=E5=9B=BE=E7=AD=89=E5=BE=85?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+为信条/终幕/瓦奇娅/虚空商人补 Vue 图卡路径；修复 Playwright 图标等待未真正执行导致截白图。
+
+Co-authored-by: 742681100 <742681100@qq.com>
+---
+ apps/bot/src/pipeline/handle-command.ts       |  47 ++++-
+ packages/render/card-host/main.ts             |  26 ++-
+ .../render/src/chromium/capture-vue-card.ts   |  75 +++++--
+ packages/render/src/chromium/card-kind.ts     |   5 +-
+ .../render/src/chromium/host-globals.d.ts     |  20 +-
+ packages/render/src/index.ts                  |   3 +
+ packages/render/src/render-worldstate.test.ts | 129 ++++++++++++
+ packages/render/src/render-worldstate.ts      |  57 +++++
+ packages/ui/src/components/DamageTypeIcon.vue |   8 +-
+ .../ui/src/components/OfficialItemIcon.vue    |   8 +-
+ .../ui/src/components/VarziaModuleCard.vue    | 153 ++++++++++++++
+ .../src/components/VoidTraderModuleCard.vue   | 152 ++++++++++++++
+ .../components/WeaponRotationModuleCard.vue   | 194 ++++++++++++++++++
+ packages/ui/src/index.ts                      |   3 +
+ 14 files changed, 850 insertions(+), 30 deletions(-)
+ create mode 100644 packages/ui/src/components/VarziaModuleCard.vue
+ create mode 100644 packages/ui/src/components/VoidTraderModuleCard.vue
+ create mode 100644 packages/ui/src/components/WeaponRotationModuleCard.vue
+
+diff --git a/apps/bot/src/pipeline/handle-command.ts b/apps/bot/src/pipeline/handle-command.ts
+index 3abf28d..c493039 100644
+--- a/apps/bot/src/pipeline/handle-command.ts
++++ b/apps/bot/src/pipeline/handle-command.ts
+@@ -6,6 +6,9 @@ import {
+   renderMarketCard,
+   renderNightwaveCard,
+   renderRivenCard,
++  renderVarziaCard,
++  renderVoidTraderCard,
++  renderWeaponRotationCard,
+   renderWorldstateCard,
+ } from '@lanius/render';
+ import {
+@@ -171,8 +174,19 @@ export async function handleCommand(
+     const text = formatVoidTraderText(envelope.data, locale, {
+       stale: envelope.meta.stale,
+     });
+-    const sent = await deps.qq.sendText(target, text);
+-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
++    return replyTextOrImage({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () =>
++        renderVoidTraderCard({
++          voidTrader: envelope.data,
++          locale,
++          stale: envelope.meta.stale,
++        }),
++      label: 'voidTrader',
++    });
+   }
+ 
+   if (intent.type === 'varzia') {
+@@ -183,8 +197,19 @@ export async function handleCommand(
+     const text = formatVarziaText(envelope.data, locale, {
+       stale: envelope.meta.stale,
+     });
+-    const sent = await deps.qq.sendText(target, text);
+-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
++    return replyTextOrImage({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () =>
++        renderVarziaCard({
++          varzia: envelope.data,
++          locale,
++          stale: envelope.meta.stale,
++        }),
++      label: 'varzia',
++    });
+   }
+ 
+   if (intent.type === 'tenetRotation' || intent.type === 'codaRotation') {
+@@ -194,8 +219,18 @@ export async function handleCommand(
+       return sendFail(deps, target, locale, envelope.error.message);
+     }
+     const text = formatRotationText(envelope.data, locale);
+-    const sent = await deps.qq.sendText(target, text);
+-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
++    return replyTextOrImage({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () =>
++        renderWeaponRotationCard({
++          rotation: envelope.data,
++          locale,
++        }),
++      label: kind === 'tenet' ? 'tenetRotation' : 'codaRotation',
++    });
+   }
+ 
+   const envelope = await api.getWorldstate(publicQuery);
+diff --git a/packages/render/card-host/main.ts b/packages/render/card-host/main.ts
+index 6de75cc..d2c7e45 100644
+--- a/packages/render/card-host/main.ts
++++ b/packages/render/card-host/main.ts
+@@ -3,6 +3,9 @@ import type {
+   Locale,
+   MarketSearchDto,
+   RivenSearchDto,
++  VarziaDto,
++  VoidTraderDto,
++  WeaponRotationDto,
+   WorldstateDto,
+ } from '@lanius/core';
+ import {
+@@ -13,6 +16,9 @@ import {
+   MarketModuleCard,
+   NightwaveModuleCard,
+   RivenModuleCard,
++  VarziaModuleCard,
++  VoidTraderModuleCard,
++  WeaponRotationModuleCard,
+ } from '@lanius/ui';
+ import '@lanius/ui/tokens.css';
+ import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
+@@ -33,7 +39,10 @@ export type CardHostKind =
+   | 'nightwave'
+   | 'help'
+   | 'market'
+-  | 'riven';
++  | 'riven'
++  | 'voidTrader'
++  | 'varzia'
++  | 'weaponRotation';
+ 
+ /**
+  * Playwright `page.evaluate` 注入的挂载载荷。
+@@ -46,6 +55,9 @@ export type CardHostPayload = {
+   help?: HelpDto;
+   market?: MarketSearchDto;
+   riven?: RivenSearchDto;
++  voidTrader?: VoidTraderDto;
++  varzia?: VarziaDto;
++  weaponRotation?: WeaponRotationDto;
+ };
+ 
+ /**
+@@ -85,6 +97,12 @@ function resolveCardComponent(kind: CardHostKind): Component {
+       return MarketModuleCard;
+     case 'riven':
+       return RivenModuleCard;
++    case 'voidTrader':
++      return VoidTraderModuleCard;
++    case 'varzia':
++      return VarziaModuleCard;
++    case 'weaponRotation':
++      return WeaponRotationModuleCard;
+     default: {
+       const _exhaustive: never = kind;
+       throw new Error(`Unknown card kind: ${_exhaustive}`);
+@@ -119,6 +137,12 @@ function mountCard(payload: CardHostPayload): void {
+     props.market = payload.market;
+   } else if (payload.kind === 'riven') {
+     props.riven = payload.riven;
++  } else if (payload.kind === 'voidTrader') {
++    props.voidTrader = payload.voidTrader;
++  } else if (payload.kind === 'varzia') {
++    props.varzia = payload.varzia;
++  } else if (payload.kind === 'weaponRotation') {
++    props.rotation = payload.weaponRotation;
+   } else {
+     props.worldstate = payload.worldstate;
+   }
+diff --git a/packages/render/src/chromium/capture-vue-card.ts b/packages/render/src/chromium/capture-vue-card.ts
+index 175ed35..123452c 100644
+--- a/packages/render/src/chromium/capture-vue-card.ts
++++ b/packages/render/src/chromium/capture-vue-card.ts
+@@ -3,6 +3,9 @@ import type {
+   Locale,
+   MarketSearchDto,
+   RivenSearchDto,
++  VarziaDto,
++  VoidTraderDto,
++  WeaponRotationDto,
+   WorldstateDto,
+ } from '@lanius/core';
+ import { laniusTokens } from '@lanius/ui/tokens';
+@@ -23,6 +26,9 @@ export type CaptureVueCardInput = {
+   help?: HelpDto;
+   market?: MarketSearchDto;
+   riven?: RivenSearchDto;
++  voidTrader?: VoidTraderDto;
++  varzia?: VarziaDto;
++  weaponRotation?: WeaponRotationDto;
+ };
+ 
+ /**
+@@ -108,22 +114,8 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
+   });
+   const root = page.locator(CARD_ROOT_SELECTOR);
+   await root.waitFor({ state: 'visible' });
+-  await page.evaluate(`async () => {
+-    if (document.fonts && document.fonts.ready) {
+-      await document.fonts.ready;
+-    }
+-    const images = Array.from(document.images);
+-    await Promise.all(
+-      images.map((img) =>
+-        img.complete
+-          ? Promise.resolve()
+-          : new Promise((resolve) => {
+-              img.addEventListener('load', () => resolve(), { once: true });
+-              img.addEventListener('error', () => resolve(), { once: true });
+-            }),
+-      ),
+-    );
+-  }`);
++  // 必须等字体与 CDN 图标 settle：否则入侵/商人等会出现白槽截图。
++  await waitForCardAssets(page);
+ 
+   const png = await root.screenshot({
+     type: 'png',
+@@ -132,6 +124,57 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
+   return Buffer.from(png);
+ }
+ 
++/**
++ * 等待卡片内字体与 `<img>` 加载完成（失败亦放行，避免永久卡住）。
++ *
++ * 说明：旧实现用 `page.evaluate('async () => …')` 字符串表达式，只返回函数对象
++ * 而未执行，导致图标等待从未生效。
++ *
++ * @param page - Playwright Page
++ * @returns 无返回值
++ */
++async function waitForCardAssets(page: Page): Promise<void> {
++  await page.evaluate(async () => {
++    if (document.fonts?.ready) {
++      await document.fonts.ready;
++    }
++
++    const images = Array.from(document.images);
++    for (const img of images) {
++      // 截图路径强制即时加载，避免 lazy 未触发请求
++      if (img.loading === 'lazy') {
++        img.loading = 'eager';
++      }
++    }
++
++    await Promise.all(
++      images.map(async (img) => {
++        if (!img.complete) {
++          await new Promise<void>((resolve) => {
++            const done = (): void => {
++              resolve();
++            };
++            img.addEventListener('load', done, { once: true });
++            img.addEventListener('error', done, { once: true });
++            // 竞态：监听注册前已完成
++            if (img.complete) {
++              resolve();
++            }
++          });
++        }
++        // decode 失败（坏图 / 占位）仍放行，由组件 error 占位兜底
++        if (typeof img.decode === 'function' && img.naturalWidth > 0) {
++          try {
++            await img.decode();
++          } catch {
++            /* ignore decode errors */
++          }
++        }
++      }),
++    );
++  });
++}
++
+ /**
+  * 取得已导航到宿主页的共享 Page。
+  *
+diff --git a/packages/render/src/chromium/card-kind.ts b/packages/render/src/chromium/card-kind.ts
+index f4abbed..3644114 100644
+--- a/packages/render/src/chromium/card-kind.ts
++++ b/packages/render/src/chromium/card-kind.ts
+@@ -8,4 +8,7 @@ export type CardKind =
+   | 'nightwave'
+   | 'help'
+   | 'market'
+-  | 'riven';
++  | 'riven'
++  | 'voidTrader'
++  | 'varzia'
++  | 'weaponRotation';
+diff --git a/packages/render/src/chromium/host-globals.d.ts b/packages/render/src/chromium/host-globals.d.ts
+index 02f720a..da70a86 100644
+--- a/packages/render/src/chromium/host-globals.d.ts
++++ b/packages/render/src/chromium/host-globals.d.ts
+@@ -3,10 +3,26 @@
+  */
+ interface Window {
+   __LANIUS_MOUNT_CARD__?: (payload: {
+-    kind: 'cycles' | 'fissures' | 'invasions' | 'nightwave';
+-    worldstate: unknown;
++    kind:
++      | 'cycles'
++      | 'fissures'
++      | 'invasions'
++      | 'nightwave'
++      | 'help'
++      | 'market'
++      | 'riven'
++      | 'voidTrader'
++      | 'varzia'
++      | 'weaponRotation';
+     locale: 'zh' | 'en';
+     stale?: boolean;
++    worldstate?: unknown;
++    help?: unknown;
++    market?: unknown;
++    riven?: unknown;
++    voidTrader?: unknown;
++    varzia?: unknown;
++    weaponRotation?: unknown;
+   }) => void;
+   __LANIUS_CARD_READY__?: boolean;
+ }
+diff --git a/packages/render/src/index.ts b/packages/render/src/index.ts
+index fe4a5a4..8e687c5 100644
+--- a/packages/render/src/index.ts
++++ b/packages/render/src/index.ts
+@@ -20,6 +20,9 @@ export {
+   renderMarketCard,
+   renderNightwaveCard,
+   renderRivenCard,
++  renderVarziaCard,
++  renderVoidTraderCard,
++  renderWeaponRotationCard,
+   renderWorldstateCard,
+   type RenderWorldstateCardInput,
+ } from './render-worldstate.js';
+diff --git a/packages/render/src/render-worldstate.test.ts b/packages/render/src/render-worldstate.test.ts
+index 2044d7d..c6dc2c3 100644
+--- a/packages/render/src/render-worldstate.test.ts
++++ b/packages/render/src/render-worldstate.test.ts
+@@ -5,9 +5,16 @@ import {
+   renderFissuresCard,
+   renderInvasionsCard,
+   renderNightwaveCard,
++  renderVarziaCard,
++  renderVoidTraderCard,
++  renderWeaponRotationCard,
+   renderWorldstateCard,
+ } from './render-worldstate.js';
+ 
++/** 1×1 透明 PNG data URL：测图标等待路径，不依赖外网 CDN */
++const TINY_ICON =
++  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
++
+ const sampleWorldstate = {
+   realm: 'international' as const,
+   fetchedAt: '2026-10-10T12:00:00.000Z',
+@@ -92,6 +99,18 @@ const sampleWorldstate = {
+       defendingFaction: { zh: 'Corpus', en: 'Corpus' },
+       completionPct: 42,
+       expired: false,
++      attackerReward: {
++        uniqueName: '/Lotus/Types/Items/MiscItems/ResourceNickname',
++        name: { zh: '纳米孢子', en: 'Nano Spores' },
++        iconUrl: TINY_ICON,
++        quantity: 1500,
++      },
++      defenderReward: {
++        uniqueName: '/Lotus/Types/Items/MiscItems/ResourceNickname2',
++        name: { zh: '合金板', en: 'Alloy Plate' },
++        iconUrl: TINY_ICON,
++        quantity: 1,
++      },
+     },
+   ],
+   nightwave: {
+@@ -161,4 +180,114 @@ describe('module card renders', () => {
+     },
+     60_000,
+   );
++
++  it(
++    'renders void trader PNG',
++    async () => {
++      const png = await renderVoidTraderCard({
++        locale: 'zh',
++        voidTrader: {
++          character: { zh: '虚空商人', en: 'Void Trader' },
++          node: { zh: 'Larunda（水星）', en: 'Larunda (Mercury)' },
++          active: true,
++          activation: '2026-10-10T10:00:00.000Z',
++          expiry: '2026-10-12T10:00:00.000Z',
++          remainingMs: 86_400_000,
++          inventory: [
++            {
++              uniqueName: '/Lotus/StoreItems/Types/Items/MiscItems/Foo',
++              name: { zh: '测试商品', en: 'Test Wares' },
++              iconUrl: TINY_ICON,
++              ducats: 375,
++              credits: 150_000,
++            },
++          ],
++          fetchedAt: '2026-10-10T12:00:00.000Z',
++        },
++      });
++      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
++      expect(png.length).toBeGreaterThan(1000);
++    },
++    60_000,
++  );
++
++  it(
++    'renders varzia PNG',
++    async () => {
++      const png = await renderVarziaCard({
++        locale: 'zh',
++        varzia: {
++          character: { zh: '瓦奇娅', en: 'Varzia' },
++          active: true,
++          remainingMs: 3_600_000,
++          inventory: [
++            {
++              uniqueName: '/Lotus/StoreItems/Types/Recipes/Warframe/Foo',
++              name: { zh: '测试Prime', en: 'Test Prime' },
++              iconUrl: TINY_ICON,
++            },
++          ],
++          fetchedAt: '2026-10-10T12:00:00.000Z',
++        },
++      });
++      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
++    },
++    60_000,
++  );
++
++  it(
++    'renders tenet rotation PNG',
++    async () => {
++      const png = await renderWeaponRotationCard({
++        locale: 'zh',
++        rotation: {
++          kind: 'tenet',
++          offerings: [
++            {
++              uniqueName: '/Lotus/Weapons/Corpus/LongGuns/TenetFluxRifle',
++              name: { zh: '信条通量步枪', en: 'Tenet Flux Rifle' },
++              iconUrl: TINY_ICON,
++              element: 'magnetic',
++              elementLabel: { zh: '磁力', en: 'Magnetic' },
++              bonusPct: 42.5,
++            },
++          ],
++          periodStart: '2026-10-01T00:00:00.000Z',
++          periodEnd: '2026-10-08T00:00:00.000Z',
++          remainingMs: 172_800_000,
++          fetchedAt: '2026-10-10T12:00:00.000Z',
++        },
++      });
++      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
++    },
++    60_000,
++  );
++
++  it(
++    'renders coda rotation PNG',
++    async () => {
++      const png = await renderWeaponRotationCard({
++        locale: 'zh',
++        rotation: {
++          kind: 'coda',
++          offerings: [
++            {
++              uniqueName: '/Lotus/Weapons/Infested/Kitgun/CodaCatabolyst',
++              name: { zh: '终幕催化者', en: 'Coda Catabolyst' },
++              iconUrl: TINY_ICON,
++              element: 'toxin',
++              elementLabel: { zh: '毒素', en: 'Toxin' },
++              bonusPct: 55,
++            },
++          ],
++          periodStart: '2026-10-01T00:00:00.000Z',
++          periodEnd: '2026-10-08T00:00:00.000Z',
++          remainingMs: 172_800_000,
++          fetchedAt: '2026-10-10T12:00:00.000Z',
++        },
++      });
++      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
++    },
++    60_000,
++  );
+ });
+diff --git a/packages/render/src/render-worldstate.ts b/packages/render/src/render-worldstate.ts
+index 2a6f2ce..95be14f 100644
+--- a/packages/render/src/render-worldstate.ts
++++ b/packages/render/src/render-worldstate.ts
+@@ -105,3 +105,60 @@ export async function renderRivenCard(input: {
+     riven: input.riven,
+   });
+ }
++
++/**
++ * 渲染虚空商人卡片 PNG。
++ *
++ * @param input - 虚空商人 DTO 与 locale
++ * @returns PNG 字节
++ */
++export async function renderVoidTraderCard(input: {
++  voidTrader: import('@lanius/core').VoidTraderDto;
++  locale: import('@lanius/core').Locale;
++  stale?: boolean;
++}): Promise<Buffer> {
++  return captureVueCard({
++    kind: 'voidTrader',
++    locale: input.locale,
++    stale: input.stale,
++    voidTrader: input.voidTrader,
++  });
++}
++
++/**
++ * 渲染瓦奇娅卡片 PNG。
++ *
++ * @param input - 瓦奇娅 DTO 与 locale
++ * @returns PNG 字节
++ */
++export async function renderVarziaCard(input: {
++  varzia: import('@lanius/core').VarziaDto;
++  locale: import('@lanius/core').Locale;
++  stale?: boolean;
++}): Promise<Buffer> {
++  return captureVueCard({
++    kind: 'varzia',
++    locale: input.locale,
++    stale: input.stale,
++    varzia: input.varzia,
++  });
++}
++
++/**
++ * 渲染信条 / 终幕轮换卡片 PNG。
++ *
++ * @param input - 武器轮换 DTO 与 locale
++ * @returns PNG 字节
++ */
++export async function renderWeaponRotationCard(input: {
++  rotation: import('@lanius/core').WeaponRotationDto;
++  locale: import('@lanius/core').Locale;
++  stale?: boolean;
++}): Promise<Buffer> {
++  return captureVueCard({
++    kind: 'weaponRotation',
++    locale: input.locale,
++    stale: input.stale,
++    weaponRotation: input.rotation,
++  });
++}
+diff --git a/packages/ui/src/components/DamageTypeIcon.vue b/packages/ui/src/components/DamageTypeIcon.vue
+index 77aa422..9d3d3db 100644
+--- a/packages/ui/src/components/DamageTypeIcon.vue
++++ b/packages/ui/src/components/DamageTypeIcon.vue
+@@ -76,15 +76,19 @@ function onError(_event: Event): void {
+     :role="alt && src && !failed ? 'img' : undefined"
+     :aria-label="alt && src && !failed ? alt : undefined"
+   >
++    <!--
++      与 OfficialItemIcon 相同：截图前须完成加载，故强制 eager。
++    -->
+     <img
+       v-if="src && !failed"
+       class="dmg-icon__img"
++      data-lanius-icon="damage"
+       :src="src"
+       :alt="alt"
+       :width="size"
+       :height="size"
+-      loading="lazy"
+-      decoding="async"
++      loading="eager"
++      decoding="sync"
+       @error="onError"
+     />
+   </span>
+diff --git a/packages/ui/src/components/OfficialItemIcon.vue b/packages/ui/src/components/OfficialItemIcon.vue
+index 176de53..c33866f 100644
+--- a/packages/ui/src/components/OfficialItemIcon.vue
++++ b/packages/ui/src/components/OfficialItemIcon.vue
+@@ -50,15 +50,19 @@ function onError(_event: Event): void {
+     :role="alt && iconUrl && !failed ? 'img' : undefined"
+     :aria-label="alt && iconUrl && !failed ? alt : undefined"
+   >
++    <!--
++      QQ/Chromium 截图路径必须 eager：lazy 可能尚未发起请求就被截图，导致白槽。
++    -->
+     <img
+       v-if="iconUrl && !failed"
+       class="item-icon__img"
++      data-lanius-icon="item"
+       :src="iconUrl"
+       :alt="alt"
+       :width="size"
+       :height="size"
+-      loading="lazy"
+-      decoding="async"
++      loading="eager"
++      decoding="sync"
+       @error="onError"
+     />
+   </span>
+diff --git a/packages/ui/src/components/VarziaModuleCard.vue b/packages/ui/src/components/VarziaModuleCard.vue
+new file mode 100644
+index 0000000..4f534de
+--- /dev/null
++++ b/packages/ui/src/components/VarziaModuleCard.vue
+@@ -0,0 +1,153 @@
++<script setup lang="ts">
++import type { Locale, VarziaDto } from '@lanius/core';
++import { pickLocalized } from '@lanius/core';
++import { computed } from 'vue';
++
++import { formatRemain } from '../lib/format-remain.js';
++import OfficialItemIcon from './OfficialItemIcon.vue';
++import QqCardShell from './QqCardShell.vue';
++
++/**
++ * 瓦奇娅（Prime Vault）QQ/截图模块卡片。
++ */
++const props = defineProps<{
++  /** 瓦奇娅快照 */
++  varzia: VarziaDto;
++  /** 文案语言 */
++  locale: Locale;
++  /** 是否陈旧数据 */
++  stale?: boolean;
++  /** 最多展示货架条数 */
++  maxItems?: number;
++}>();
++
++/**
++ * 取双语字段。
++ *
++ * @param name - LocalizedName
++ * @returns 当前 locale 文案
++ */
++function label(name: { zh: string; en: string }): string {
++  return pickLocalized(name, props.locale);
++}
++
++/**
++ * 截断后的货架列表。
++ *
++ * @returns 瓦奇娅货架行
++ */
++const items = computed(() => {
++  const limit = props.maxItems ?? 20;
++  return props.varzia.inventory.slice(0, limit);
++});
++
++/**
++ * 活跃状态与剩余时间。
++ *
++ * @returns 状态行文案
++ */
++const statusLine = computed(() => {
++  const remain =
++    props.varzia.remainingMs != null
++      ? formatRemain(props.varzia.remainingMs, props.locale)
++      : null;
++  if (props.locale === 'en') {
++    if (props.varzia.active) {
++      return remain ? `Active · ${remain}` : 'Active';
++    }
++    return remain ? `Inactive · ${remain}` : 'Inactive';
++  }
++  if (props.varzia.active) {
++    return remain ? `在场 · ${remain}` : '在场';
++  }
++  return remain ? `未在场 · ${remain}` : '未在场';
++});
++
++/**
++ * 抓取时间戳短文案。
++ *
++ * @returns 卡片副标题用时间
++ */
++const stamp = computed(() =>
++  props.varzia.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
++);
++</script>
++
++<template>
++  <QqCardShell
++    :title="locale === 'en' ? 'VARZIA' : '瓦奇娅'"
++    :subtitle="stamp || 'LANIUS'"
++    :stale="stale"
++    :locale="locale"
++  >
++    <p class="trader__meta">
++      <strong>{{ label(varzia.character) }}</strong>
++      · {{ statusLine }}
++    </p>
++    <ul v-if="items.length" class="trader__list">
++      <li v-for="(item, idx) in items" :key="idx" class="trader__row">
++        <OfficialItemIcon
++          :icon-url="item.iconUrl"
++          :alt="label(item.name)"
++          :size="32"
++        />
++        <span class="trader__name">{{ label(item.name) }}</span>
++      </li>
++    </ul>
++    <p v-else class="trader__empty">
++      {{ locale === 'en' ? 'Inventory empty' : '货架暂无条目' }}
++    </p>
++  </QqCardShell>
++</template>
++
++<style scoped>
++.trader__meta {
++  margin: 0 0 8px;
++  font-size: 12px;
++  color: var(--lanius-text-muted);
++}
++
++.trader__meta strong {
++  color: var(--lanius-brand);
++  font-weight: 700;
++}
++
++.trader__list {
++  list-style: none;
++  margin: 0;
++  padding: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++}
++
++.trader__row {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 6px 8px;
++  background: var(--lanius-panel-raised);
++  border: 1px solid var(--lanius-border);
++  border-radius: 10px;
++  min-width: 0;
++}
++
++.trader__name {
++  flex: 1;
++  min-width: 0;
++  font-size: 12px;
++  font-weight: 600;
++  color: var(--lanius-text);
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.trader__empty {
++  margin: 0;
++  font-size: 13px;
++  color: var(--lanius-text-muted);
++  text-align: center;
++  padding: 16px 0;
++}
++</style>
+diff --git a/packages/ui/src/components/VoidTraderModuleCard.vue b/packages/ui/src/components/VoidTraderModuleCard.vue
+new file mode 100644
+index 0000000..8bc690b
+--- /dev/null
++++ b/packages/ui/src/components/VoidTraderModuleCard.vue
+@@ -0,0 +1,152 @@
++<script setup lang="ts">
++import type { Locale, VoidTraderDto } from '@lanius/core';
++import { pickLocalized } from '@lanius/core';
++import { computed } from 'vue';
++
++import { formatRemain } from '../lib/format-remain.js';
++import OfficialItemIcon from './OfficialItemIcon.vue';
++import QqCardShell from './QqCardShell.vue';
++
++/**
++ * 虚空商人（Baro）QQ/截图模块卡片。
++ */
++const props = defineProps<{
++  /** 虚空商人快照 */
++  voidTrader: VoidTraderDto;
++  /** 文案语言 */
++  locale: Locale;
++  /** 是否陈旧数据 */
++  stale?: boolean;
++  /** 最多展示货架条数 */
++  maxItems?: number;
++}>();
++
++/**
++ * 取双语字段。
++ *
++ * @param name - LocalizedName
++ * @returns 当前 locale 文案
++ */
++function label(name: { zh: string; en: string }): string {
++  return pickLocalized(name, props.locale);
++}
++
++/**
++ * 截断后的货架列表。
++ *
++ * @returns 商人货架行
++ */
++const items = computed(() => {
++  const limit = props.maxItems ?? 20;
++  return props.voidTrader.inventory.slice(0, limit);
++});
++
++/**
++ * 状态与剩余时间副文案。
++ *
++ * @returns 副标题旁说明
++ */
++const statusLine = computed(() => {
++  const remain = formatRemain(props.voidTrader.remainingMs, props.locale);
++  const node = label(props.voidTrader.node);
++  if (props.locale === 'en') {
++    return props.voidTrader.active
++      ? `${node} · leaves in ${remain}`
++      : `Arrives ${node} in ${remain}`;
++  }
++  return props.voidTrader.active
++    ? `${node} · ${remain}后离开`
++    : `${remain}后抵达 ${node}`;
++});
++
++/**
++ * 抓取时间戳短文案。
++ *
++ * @returns 卡片副标题用时间
++ */
++const stamp = computed(() =>
++  props.voidTrader.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
++);
++</script>
++
++<template>
++  <QqCardShell
++    :title="locale === 'en' ? 'VOID TRADER' : '虚空商人'"
++    :subtitle="stamp || 'LANIUS'"
++    :stale="stale"
++    :locale="locale"
++  >
++    <p class="trader__meta">{{ statusLine }}</p>
++    <ul v-if="items.length" class="trader__list">
++      <li v-for="(item, idx) in items" :key="idx" class="trader__row">
++        <OfficialItemIcon
++          :icon-url="item.iconUrl"
++          :alt="label(item.name)"
++          :size="32"
++        />
++        <span class="trader__name">{{ label(item.name) }}</span>
++        <span v-if="item.ducats != null" class="trader__price">{{ item.ducats }}d</span>
++        <span v-if="item.credits != null" class="trader__price">
++          {{ Math.round(item.credits / 1000) }}k
++        </span>
++      </li>
++    </ul>
++    <p v-else class="trader__empty">
++      {{ locale === 'en' ? 'Inventory empty' : '货架暂无条目' }}
++    </p>
++  </QqCardShell>
++</template>
++
++<style scoped>
++.trader__meta {
++  margin: 0 0 8px;
++  font-size: 12px;
++  color: var(--lanius-text-muted);
++}
++
++.trader__list {
++  list-style: none;
++  margin: 0;
++  padding: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 6px;
++}
++
++.trader__row {
++  display: flex;
++  align-items: center;
++  gap: 8px;
++  padding: 6px 8px;
++  background: var(--lanius-panel-raised);
++  border: 1px solid var(--lanius-border);
++  border-radius: 10px;
++  min-width: 0;
++}
++
++.trader__name {
++  flex: 1;
++  min-width: 0;
++  font-size: 12px;
++  font-weight: 600;
++  color: var(--lanius-text);
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.trader__price {
++  flex-shrink: 0;
++  font-size: 11px;
++  color: var(--lanius-text-muted);
++  font-variant-numeric: tabular-nums;
++}
++
++.trader__empty {
++  margin: 0;
++  font-size: 13px;
++  color: var(--lanius-text-muted);
++  text-align: center;
++  padding: 16px 0;
++}
++</style>
+diff --git a/packages/ui/src/components/WeaponRotationModuleCard.vue b/packages/ui/src/components/WeaponRotationModuleCard.vue
+new file mode 100644
+index 0000000..0cc49d2
+--- /dev/null
++++ b/packages/ui/src/components/WeaponRotationModuleCard.vue
+@@ -0,0 +1,194 @@
++<script setup lang="ts">
++import type { Locale, RotationWeaponDto, WeaponRotationDto } from '@lanius/core';
++import { pickLocalized } from '@lanius/core';
++import { computed } from 'vue';
++
++import { formatRemain } from '../lib/format-remain.js';
++import DamageTypeIcon from './DamageTypeIcon.vue';
++import OfficialItemIcon from './OfficialItemIcon.vue';
++import QqCardShell from './QqCardShell.vue';
++import ValenceBonusBar from './ValenceBonusBar.vue';
++
++/**
++ * 信条 / 终幕武器轮换 QQ/截图模块卡片。
++ */
++const props = defineProps<{
++  /** 轮换货架快照（`kind` 区分信条/终幕） */
++  rotation: WeaponRotationDto;
++  /** 文案语言 */
++  locale: Locale;
++  /** 是否陈旧数据 */
++  stale?: boolean;
++  /** 最多展示武器条数 */
++  maxItems?: number;
++}>();
++
++/**
++ * 取双语字段。
++ *
++ * @param name - LocalizedName
++ * @returns 当前 locale 文案
++ */
++function label(name: { zh: string; en: string }): string {
++  return pickLocalized(name, props.locale);
++}
++
++/**
++ * 元素译名（无配置时返回 null）。
++ *
++ * @param weapon - 轮换武器行
++ * @returns 元素名或 null
++ */
++function elementName(weapon: RotationWeaponDto): string | null {
++  if (!weapon.elementLabel) {
++    return null;
++  }
++  return label(weapon.elementLabel);
++}
++
++/**
++ * 截断后的货架。
++ *
++ * @returns 武器行
++ */
++const offerings = computed(() => {
++  const limit = props.maxItems ?? 12;
++  return props.rotation.offerings.slice(0, limit);
++});
++
++/**
++ * 卡片主标题。
++ *
++ * @returns 信条或终幕标题
++ */
++const title = computed(() => {
++  if (props.rotation.kind === 'tenet') {
++    return props.locale === 'en' ? 'TENET' : '信条轮换';
++  }
++  return props.locale === 'en' ? 'CODA' : '终幕轮换';
++});
++
++/**
++ * 剩余时间副文案。
++ *
++ * @returns 剩余时间说明
++ */
++const remainLine = computed(() => {
++  const remain = formatRemain(props.rotation.remainingMs, props.locale);
++  return props.locale === 'en' ? `Ends in ${remain}` : `${remain}后换档`;
++});
++
++/**
++ * 抓取时间戳短文案。
++ *
++ * @returns 卡片副标题用时间
++ */
++const stamp = computed(() =>
++  props.rotation.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
++);
++</script>
++
++<template>
++  <QqCardShell
++    :title="title"
++    :subtitle="stamp || 'LANIUS'"
++    :stale="stale"
++    :locale="locale"
++  >
++    <p class="rot__meta">{{ remainLine }}</p>
++    <ul class="rot__list">
++      <li
++        v-for="(item, idx) in offerings"
++        :key="`${idx}-${item.name.en}`"
++        class="rot__row"
++      >
++        <OfficialItemIcon
++          :icon-url="item.iconUrl"
++          :alt="label(item.name)"
++          :size="36"
++        />
++        <div class="rot__body">
++          <p class="rot__name">{{ label(item.name) }}</p>
++          <div class="rot__valence">
++            <DamageTypeIcon
++              :element="item.element"
++              :alt="elementName(item) ?? ''"
++              :size="16"
++            />
++            <span class="rot__el">{{ elementName(item) || '—' }}</span>
++            <ValenceBonusBar
++              v-if="item.bonusPct != null"
++              :bonus-pct="item.bonusPct"
++            />
++            <span v-else class="rot__pct">—</span>
++          </div>
++        </div>
++      </li>
++    </ul>
++  </QqCardShell>
++</template>
++
++<style scoped>
++.rot__meta {
++  margin: 0 0 8px;
++  font-size: 12px;
++  color: var(--lanius-text-muted);
++}
++
++.rot__list {
++  list-style: none;
++  margin: 0;
++  padding: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 8px;
++}
++
++.rot__row {
++  display: flex;
++  align-items: center;
++  gap: 10px;
++  padding: 8px 10px;
++  background: var(--lanius-panel-raised);
++  border: 1px solid var(--lanius-border);
++  border-radius: 10px;
++  min-width: 0;
++}
++
++.rot__body {
++  flex: 1;
++  min-width: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 4px;
++}
++
++.rot__name {
++  margin: 0;
++  font-size: 13px;
++  font-weight: 700;
++  color: var(--lanius-text);
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.rot__valence {
++  display: flex;
++  align-items: center;
++  gap: 6px;
++  min-width: 0;
++}
++
++.rot__el {
++  flex-shrink: 0;
++  font-size: 11px;
++  color: var(--lanius-text-muted);
++  min-width: 2.5em;
++}
++
++.rot__pct {
++  font-size: 11px;
++  color: var(--lanius-text-muted);
++}
++</style>
+diff --git a/packages/ui/src/index.ts b/packages/ui/src/index.ts
+index d8ef03f..6299233 100644
+--- a/packages/ui/src/index.ts
++++ b/packages/ui/src/index.ts
+@@ -37,3 +37,6 @@ export { default as NightwaveModuleCard } from './components/NightwaveModuleCard
+ export { default as HelpModuleCard } from './components/HelpModuleCard.vue';
+ export { default as MarketModuleCard } from './components/MarketModuleCard.vue';
+ export { default as RivenModuleCard } from './components/RivenModuleCard.vue';
++export { default as VoidTraderModuleCard } from './components/VoidTraderModuleCard.vue';
++export { default as VarziaModuleCard } from './components/VarziaModuleCard.vue';
++export { default as WeaponRotationModuleCard } from './components/WeaponRotationModuleCard.vue';
+-- 
+2.51.2.windows.1
+
