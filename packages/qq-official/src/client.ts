@@ -366,13 +366,13 @@ function filesPath(target: QqSendTarget): string {
  */
 function stripHttpUrls(content: string): string {
   // 保留 markdown 图片语法 `![alt](url)` 内的 URL（嵌图需要公网链接），
-  // 其余裸链剥除（群场景限制外链）。
+  // 其余裸链剥除（群场景限制外链）。占位时必须保留原始 alt（含 `#Wpx #Hpx` 尺寸标注）。
   const imageUrls: string[] = [];
   const placeholdered = content.replace(
-    /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/gi,
-    (_m, url: string) => {
+    /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/gi,
+    (_m, alt: string, url: string) => {
       imageUrls.push(url);
-      return `![img](__LANIUS_IMG_${imageUrls.length - 1}__)`;
+      return `![${alt}](__LANIUS_IMG_${imageUrls.length - 1}__)`;
     },
   );
   const stripped = placeholdered.replace(/https?:\/\/\S+/gi, '').replace(/[ \t]+\n/g, '\n');

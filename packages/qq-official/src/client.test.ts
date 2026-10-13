@@ -136,8 +136,11 @@ describe('QqOfficialClient.sendMarkdown', () => {
     const body = JSON.parse(String(sendInit.body)) as {
       markdown: { content: string };
     };
-    // 图片语法内 URL 保留；裸链被剥除
-    expect(body.markdown.content).toContain('](https://cos.lexcubia.com/lanius/cards/a.png)');
+    // 图片语法内 URL 与尺寸标注保留；裸链被剥除
+    expect(body.markdown.content).toContain(
+      '![虚空裂隙 #640px #534px](https://cos.lexcubia.com/lanius/cards/a.png)',
+    );
+    expect(body.markdown.content).not.toContain('![img](');
     expect(body.markdown.content).not.toContain('https://example.com/x');
   });
 });
