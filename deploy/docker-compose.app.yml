@@ -1,0 +1,66 @@
+# Lanius 一体化应用容器（热启动模式）。
+#
+# 与镜像内置 dist 不同：本 compose 将宿主机 monorepo 源码挂载进容器，
+# api/bot 用 tsx 直跑 TypeScript 源码；web 仍跑 Nuxt 构建产物 .output。
+# 更新 = 宿主机 git pull +（依赖变化时 pnpm install）+ docker compose restart。
+#
+# 前提：宿主机 /opt/lanius/repo 已是 git 仓库且 pnpm install 完成
+#       （node_modules 与容器同为 linux x64，可直接复用）。
+#
+# 用法（在 deploy/ 目录）：
+#   DOMAIN=warframe.example.com docker compose -f docker-compose.app.yml up -d
+
+name: lanius
+
+services:
+  lanius-app:
+    image: ghcr.io/lexcubia/lanius-warframe-bot/lanius-app:pr36-git
+    container_name: lanius-lanius-app-1
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      # tsx 直跑源码，无需 dist
+      LANIUS_REPO_ROOT: /repo
+    volumes:
+      # monorepo 源码（含 node_modules，同架构复用）
+      - /opt/lanius/repo:/repo
+      # 配置与数据（保持镜像内 /config /data 约定）
+      - /opt/lanius/repo/config/default:/config/default:ro
+      - /opt/lanius/repo/config/local:/config/local
+      - /opt/lanius/secrets/config.local.yaml:/config/config.local.yaml:ro
+      - /opt/lanius/data:/data
+      - /opt/lanius/ms-playwright:/ms-playwright
+      # 热启动 supervisord（tsx 直跑，覆盖镜像内旧配置）
+      - /opt/lanius/repo/deploy/supervisord.app.conf:/etc/supervisor/conf.d/lanius.conf:ro
+    expose:
+      - '8787'
+      - '8788'
+      - '8790'
+    networks:
+      - default
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: lanius-caddy-1
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /opt/lanius/repo/deploy/Caddyfile.app:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - lanius-app
+    networks:
+      - default
+
+volumes:
+  caddy_data:
+  caddy_config:
+
+networks:
+  default:
+    name: lanius_default
