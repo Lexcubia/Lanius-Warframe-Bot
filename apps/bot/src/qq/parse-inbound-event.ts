@@ -37,9 +37,7 @@ export type ParsedQqInboundMessage = {
  * @param payload - 已 JSON 解析的 Webhook 体
  * @returns 可处理消息；非消息事件或不完整时为 `null`
  */
-export function parseInboundQqMessage(
-  payload: QqInboundPayload,
-): ParsedQqInboundMessage | null {
+export function parseInboundQqMessage(payload: QqInboundPayload): ParsedQqInboundMessage | null {
   const eventType = payload.t ?? '';
   const data = payload.d;
   if (!data) {
@@ -50,10 +48,7 @@ export function parseInboundQqMessage(
   const msgId = data.id;
   const eventId = payload.id;
 
-  if (
-    eventType === 'GROUP_AT_MESSAGE_CREATE' ||
-    eventType === 'GROUP_MESSAGE_CREATE'
-  ) {
+  if (eventType === 'GROUP_AT_MESSAGE_CREATE' || eventType === 'GROUP_MESSAGE_CREATE') {
     if (!data.group_openid) {
       return null;
     }
@@ -122,7 +117,18 @@ export function parseInboundQqMessage(
 }
 
 /**
- * 从入站事件取出群 openid（消息或入群事件）。
+ * 与群 openid 相关的生命周期 / 消息事件类型。
+ */
+export type QqGroupLifecycleEvent =
+  | 'GROUP_AT_MESSAGE_CREATE'
+  | 'GROUP_MESSAGE_CREATE'
+  | 'GROUP_ADD_ROBOT'
+  | 'GROUP_DEL_ROBOT'
+  | 'GROUP_MSG_RECEIVE'
+  | 'GROUP_MSG_REJECT';
+
+/**
+ * 从入站事件取出群 openid（消息、入群/踢群、主动通知开关）。
  *
  * @param payload - Webhook JSON
  * @returns group_openid；非群事件时为 `undefined`
@@ -137,9 +143,26 @@ export function extractGroupOpenid(payload: QqInboundPayload): string | undefine
     eventType === 'GROUP_AT_MESSAGE_CREATE' ||
     eventType === 'GROUP_MESSAGE_CREATE' ||
     eventType === 'GROUP_ADD_ROBOT' ||
-    eventType === 'GROUP_MSG_RECEIVE'
+    eventType === 'GROUP_DEL_ROBOT' ||
+    eventType === 'GROUP_MSG_RECEIVE' ||
+    eventType === 'GROUP_MSG_REJECT'
   ) {
     return groupOpenid;
   }
   return undefined;
+}
+
+/**
+ * 判断事件是否为群生命周期（非命令消息），需单独打日志 / 清缓存。
+ *
+ * @param eventType - payload.t
+ * @returns 是否为 ADD/DEL/MSG_RECEIVE/MSG_REJECT
+ */
+export function isQqGroupLifecycleEvent(eventType: string): boolean {
+  return (
+    eventType === 'GROUP_ADD_ROBOT' ||
+    eventType === 'GROUP_DEL_ROBOT' ||
+    eventType === 'GROUP_MSG_RECEIVE' ||
+    eventType === 'GROUP_MSG_REJECT'
+  );
 }

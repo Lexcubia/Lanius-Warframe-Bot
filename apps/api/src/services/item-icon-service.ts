@@ -1,10 +1,5 @@
-import type {
-  CatalogItemDto,
-  RotationWeaponDto,
-  TraderItemDto,
-  WorldstateDto,
-} from '@lanius/core';
-import type { Logger } from 'pino';
+import type { CatalogItemDto, RotationWeaponDto, TraderItemDto, WorldstateDto } from '@lanius/core';
+import type { Logger } from '@lanius/logger';
 
 import {
   fetchItemIconCatalog,
@@ -76,9 +71,7 @@ export class ItemIconService {
    * @param items - 已含 uniqueName 的轮换武器
    * @returns 带 iconPath/iconUrl 的新数组
    */
-  async enrichRotationWeapons(
-    items: RotationWeaponDto[],
-  ): Promise<RotationWeaponDto[]> {
+  async enrichRotationWeapons(items: RotationWeaponDto[]): Promise<RotationWeaponDto[]> {
     const catalog = await this.getCatalog();
     return items.map((item) => this.enrichOne(item, catalog));
   }
@@ -112,10 +105,7 @@ export class ItemIconService {
    */
   async getCatalog(): Promise<ItemIconCatalog> {
     const now = Date.now();
-    if (
-      this.memoryCatalog &&
-      now - this.memoryLoadedAtMs < ITEM_ICON_CATALOG_TTL_MS
-    ) {
+    if (this.memoryCatalog && now - this.memoryLoadedAtMs < ITEM_ICON_CATALOG_TTL_MS) {
       return this.memoryCatalog;
     }
 
@@ -135,8 +125,7 @@ export class ItemIconService {
    * @returns 目录 Map
    */
   private async loadCatalog(): Promise<ItemIconCatalog> {
-    const fresh =
-      await this.cache.getFresh<CachedCatalogPayload>(CATALOG_CACHE_KEY);
+    const fresh = await this.cache.getFresh<CachedCatalogPayload>(CATALOG_CACHE_KEY);
     if (fresh) {
       const map = new Map(fresh.value.entries);
       this.memoryCatalog = map;
@@ -155,16 +144,10 @@ export class ItemIconService {
       await this.cache.set(CATALOG_CACHE_KEY, payload, ITEM_ICON_CATALOG_TTL_MS);
       this.memoryCatalog = catalog;
       this.memoryLoadedAtMs = Date.now();
-      this.logger.info(
-        { size: catalog.size },
-        'item icon catalog loaded from public-export-plus',
-      );
+      this.logger.info({ size: catalog.size }, 'item icon catalog loaded from public-export-plus');
       return catalog;
     } catch (error) {
-      const stale =
-        await this.cache.getIncludingStale<CachedCatalogPayload>(
-          CATALOG_CACHE_KEY,
-        );
+      const stale = await this.cache.getIncludingStale<CachedCatalogPayload>(CATALOG_CACHE_KEY);
       if (stale) {
         this.logger.warn(
           {
@@ -205,10 +188,7 @@ export class ItemIconService {
    * @param catalog - 目录
    * @returns 可能带 icon 的新对象
    */
-  private enrichOne<T extends CatalogItemDto>(
-    item: T,
-    catalog: ItemIconCatalog,
-  ): T {
+  private enrichOne<T extends CatalogItemDto>(item: T, catalog: ItemIconCatalog): T {
     if (!item.uniqueName) {
       return item;
     }
