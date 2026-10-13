@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server';
-import { checkForUpdate } from '@lanius/core';
+import { checkForUpdate } from '@lanius/config';
 import { syncQqCommandPanels, syncQqCustomMenu, type AccessTokenCache } from '@lanius/qq-official';
 import { createLaniusLogger, type Logger } from '@lanius/logger';
 

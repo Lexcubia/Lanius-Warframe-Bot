@@ -1,6 +1,10 @@
 import { serve } from '@hono/node-server';
-import { checkForUpdate } from '@lanius/core';
-import { assembleApiConfig, getConfigDriver, type AssembledApiConfig } from '@lanius/config';
+import {
+  assembleApiConfig,
+  checkForUpdate,
+  getConfigDriver,
+  type AssembledApiConfig,
+} from '@lanius/config';
 import { isAbsolute, resolve } from 'node:path';
 
 import { setLabelOverrides } from './adapters/worldstate/label-overrides.js';

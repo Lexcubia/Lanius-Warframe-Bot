@@ -84,8 +84,6 @@ export {
 
 export { GATED_MODULE_IDS, ModuleIdSchema, type ModuleId } from './modules.js';
 
-export { checkForUpdate, type UpdateCheckResult } from './update-check.js';
-
 export {
   MarketItemDtoSchema,
   MarketSearchDtoSchema,
