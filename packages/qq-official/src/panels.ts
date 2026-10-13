@@ -92,19 +92,37 @@ export async function syncQqCommandPanels(
 }
 
 /**
+ * 清除进程内「群已绑定面板」缓存（踢群 / 重新拉入时用）。
+ * 不调用 OpenAPI；下次 `ensureQqGroupCommandPanel` 会重新关联。
+ *
+ * @param groupOpenid - 群 openid
+ * @returns 是否原先存在缓存项
+ */
+export function forgetQqGroupPanelBinding(groupOpenid: string): boolean {
+  const key = groupOpenid.trim();
+  if (!key) {
+    return false;
+  }
+  return boundGroupPanels.delete(key);
+}
+
+/**
  * 确保指定群已绑定 Lanius 指令面板（specific）。
  * 首次创建面板并带上该群；后续群通过关联对象接口追加。
  *
- * @param options - 凭据与指令项
- * @param groupOpenid - 群 openid（来自事件 d.group_openid）
+ * @param options - 凭据与指令项；`force` 为 true 时忽略进程内已绑定缓存并重新关联
  * @returns 绑定结果
  */
 export async function ensureQqGroupCommandPanel(
-  options: SyncQqCommandPanelsOptions & { groupOpenid: string },
+  options: SyncQqCommandPanelsOptions & { groupOpenid: string; force?: boolean },
 ): Promise<SyncQqCommandPanelResult> {
   const groupOpenid = options.groupOpenid.trim();
   if (!groupOpenid) {
     return { scope: 'group', panelId: '', action: 'skipped', detail: 'empty groupOpenid' };
+  }
+  // 重新入群后平台侧关联可能已失效；force 时必须打 OpenAPI，不能吃进程内 skipped。
+  if (options.force) {
+    boundGroupPanels.delete(groupOpenid);
   }
   if (boundGroupPanels.has(groupOpenid)) {
     return {

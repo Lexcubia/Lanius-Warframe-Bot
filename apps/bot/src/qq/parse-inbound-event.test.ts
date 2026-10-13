@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  extractGroupOpenid,
-  parseInboundQqMessage,
-} from './parse-inbound-event.js';
+import { extractGroupOpenid, parseInboundQqMessage } from './parse-inbound-event.js';
 
 describe('parseInboundQqMessage', () => {
   it('parses GROUP_AT_MESSAGE_CREATE', () => {
@@ -50,6 +47,18 @@ describe('parseInboundQqMessage', () => {
         d: { group_openid: 'g-2', content: '帮助' },
       }),
     ).toBe('g-2');
+    expect(
+      extractGroupOpenid({
+        t: 'GROUP_DEL_ROBOT',
+        d: { group_openid: 'g-del' },
+      }),
+    ).toBe('g-del');
+    expect(
+      extractGroupOpenid({
+        t: 'GROUP_MSG_REJECT',
+        d: { group_openid: 'g-reject' },
+      }),
+    ).toBe('g-reject');
     expect(
       extractGroupOpenid({
         t: 'C2C_MESSAGE_CREATE',

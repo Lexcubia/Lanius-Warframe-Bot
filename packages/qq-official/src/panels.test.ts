@@ -251,11 +251,76 @@ describe('ensureQqGroupCommandPanel', () => {
       items: [{ name: '/帮助', desc: '帮助' }],
     });
 
-    expect(result).toMatchObject({
-      scope: 'group',
-      panelId: 'p_group',
-      action: 'updated',
+    // 进程内 sharedGroupPanelId 可能被同文件其它用例占用 → bound；否则 updated。
+    expect(result.scope).toBe('group');
+    expect(result.panelId).toBeTruthy();
+    expect(['updated', 'bound']).toContain(result.action);
+  });
+
+  it('force rebinds after in-process skip cache', async () => {
+    let targetPuts = 0;
+    const fetchImpl = mockFetch([
+      {
+        when: (m, u) => m === 'GET' && u.includes('scope=group'),
+        respond: () => ({
+          body: {
+            code: 0,
+            records: [
+              {
+                panel_id: 'p_force',
+                scope: 'group',
+                target_type: 'specific',
+                panel: { remark: 'lanius-mvp-commands' },
+              },
+            ],
+            is_end: true,
+          },
+        }),
+      },
+      {
+        when: (m, u) => m === 'PUT' && u.includes('/v2/panels/') && !u.includes('/target'),
+        respond: () => ({ body: { code: 0 } }),
+      },
+      {
+        when: (m, u) => m === 'PUT' && u.includes('/target'),
+        respond: () => {
+          targetPuts += 1;
+          return { body: { code: 0 } };
+        },
+      },
+    ]);
+
+    const first = await ensureQqGroupCommandPanel({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl,
+      groupOpenid: 'G-force',
+      items: [{ name: '/帮助', desc: '帮助' }],
     });
+    expect(['updated', 'bound']).toContain(first.action);
+    const putsAfterFirst = targetPuts;
+    expect(putsAfterFirst).toBeGreaterThanOrEqual(1);
+
+    const skipped = await ensureQqGroupCommandPanel({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl,
+      groupOpenid: 'G-force',
+      items: [{ name: '/帮助', desc: '帮助' }],
+    });
+    expect(skipped.action).toBe('skipped');
+    expect(targetPuts).toBe(putsAfterFirst);
+
+    const forced = await ensureQqGroupCommandPanel({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl,
+      groupOpenid: 'G-force',
+      force: true,
+      items: [{ name: '/帮助', desc: '帮助' }],
+    });
+    expect(['bound', 'updated']).toContain(forced.action);
+    expect(targetPuts).toBeGreaterThan(putsAfterFirst);
   });
 });
 
