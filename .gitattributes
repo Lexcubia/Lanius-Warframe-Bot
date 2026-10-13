@@ -1,0 +1,5 @@
+# Shell 脚本在 Linux 容器/服务器执行：强制 LF，避免 CRLF 导致 bash 解析失败。
+*.sh text eol=lf
+# Windows 批处理保留 CRLF。
+*.bat text eol=crlf
+*.cmd text eol=crlf
