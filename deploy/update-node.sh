@@ -7,6 +7,7 @@
 #
 # 环境变量（均可选）：
 #   LANIUS_REPO          仓库根（默认本脚本上一级）
+#   LANIUS_SKIP_GIT=1    跳过 git fetch/checkout（树已由 tarball/scp 对齐）
 #   LANIUS_SKIP_PLAYWRIGHT=1  跳过 Playwright 检查/安装
 #   LANIUS_SYSTEMCTL=0   不调用 systemctl（仅构建，便于排障）
 #   LANIUS_HEALTH_URL    健康检查 URL（默认 http://127.0.0.1:8787/v1/health）
@@ -29,18 +30,34 @@ cd "${REPO_ROOT}"
 echo "[lanius] repo=${REPO_ROOT} tag=${TAG}"
 
 # 仅切换到目标 tag/ref；不清理 config/local（gitignore）与 data/
-if git rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null \
-  || git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-  git fetch --tags --force origin "${TAG}" 2>/dev/null \
-    || git fetch --tags --force origin
-  git checkout -f "tags/${TAG}" 2>/dev/null || git checkout -f "${TAG}"
+if [[ "${LANIUS_SKIP_GIT:-0}" == "1" ]]; then
+  echo "[lanius] LANIUS_SKIP_GIT=1 — 使用当前工作树"
 else
-  # 允许传入分支名（如 release）以便 Actions 推进长期指针后构建当前 HEAD
-  git fetch origin "${TAG}" --force
-  git checkout -B "${TAG}" "FETCH_HEAD" 2>/dev/null || git checkout -f "${TAG}"
+  fetch_ok=0
+  for remote in \
+    "origin" \
+    "https://github.com/Lexcubia/Lanius-Warframe-Bot.git" \
+    "https://gitclone.com/github.com/Lexcubia/Lanius-Warframe-Bot.git" \
+    "https://ghfast.top/https://github.com/Lexcubia/Lanius-Warframe-Bot.git"
+  do
+    echo "[lanius] git fetch via ${remote}"
+    if git fetch --tags --force "${remote}" "${TAG}" 2>/tmp/lanius-git-fetch.err \
+      || git fetch --tags --force "${remote}" 2>/tmp/lanius-git-fetch.err; then
+      if git checkout -f "tags/${TAG}" 2>/dev/null || git checkout -f "${TAG}" 2>/dev/null \
+        || git checkout -B "${TAG}" FETCH_HEAD 2>/dev/null; then
+        fetch_ok=1
+        break
+      fi
+    fi
+    cat /tmp/lanius-git-fetch.err 2>/dev/null || true
+  done
+  if [[ "${fetch_ok}" != "1" ]]; then
+    echo "[lanius] git checkout ${TAG} failed（可改用 Actions tarball + apply-node-release.sh）" >&2
+    exit 1
+  fi
 fi
 
-echo "[lanius] HEAD=$(git rev-parse --short HEAD) $(git describe --tags --always 2>/dev/null || true)"
+echo "[lanius] HEAD=$(git rev-parse --short HEAD 2>/dev/null || echo nogit) $(git describe --tags --always 2>/dev/null || true)"
 
 corepack enable >/dev/null 2>&1 || true
 pnpm install --frozen-lockfile
@@ -89,22 +106,24 @@ else
   echo "[lanius] skip systemctl (LANIUS_SYSTEMCTL=${SYSTEMCTL_ON})"
 fi
 
-echo "[lanius] waiting for health ${HEALTH_URL}…"
-ok=0
-for _ in $(seq 1 60); do
-  if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
-    ok=1
-    break
-  fi
-  sleep 2
-done
+if [[ "${SYSTEMCTL_ON}" == "1" ]]; then
+  echo "[lanius] waiting for health ${HEALTH_URL}…"
+  ok=0
+  for _ in $(seq 1 60); do
+    if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
+      ok=1
+      break
+    fi
+    sleep 2
+  done
 
-if [[ "${ok}" != "1" ]]; then
-  echo "[lanius] health check failed" >&2
-  if command -v journalctl >/dev/null 2>&1; then
-    journalctl -u lanius-api -n 80 --no-pager || true
+  if [[ "${ok}" != "1" ]]; then
+    echo "[lanius] health check failed" >&2
+    if command -v journalctl >/dev/null 2>&1; then
+      journalctl -u lanius-api -n 80 --no-pager || true
+    fi
+    exit 1
   fi
-  exit 1
 fi
 
 echo "[lanius] done ${TAG}"
