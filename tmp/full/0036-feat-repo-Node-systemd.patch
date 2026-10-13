@@ -1,0 +1,1460 @@
+From d0fc66eab06cc06d99c6e45969b0e722d704b022 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 13 Oct 2026 10:41:30 +0000
+Subject: [PATCH 36/45] =?UTF-8?q?feat(repo):=20=E7=94=9F=E4=BA=A7=E9=BB=98?=
+ =?UTF-8?q?=E8=AE=A4=E6=94=B9=E4=B8=BA=20Node=20+=20systemd=20=E8=BF=90?=
+ =?UTF-8?q?=E8=A1=8C=E6=97=B6?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+取消 Docker 单容器作为生产主路径；新增 systemd 单元、update-node.sh
+与 Caddyfile.node。release 部署与 Admin 选版默认走 git+build+重启；
+GHCR/update-image 降级为可选。不落地 dual-env。
+---
+ .github/workflows/deploy-develop.yml     |  38 ++---
+ .github/workflows/deploy-release.yml     |  72 ++++++---
+ .github/workflows/release.yml            |   4 +-
+ CHANGELOG.md                             |   7 +
+ README.md                                |  44 +++---
+ apps/api/src/services/release-service.ts | 144 ++++++++++++++---
+ config/default/github.yaml               |   3 +
+ deploy/Caddyfile.node                    |  23 +++
+ deploy/docker-compose.app.yml            |   5 +-
+ deploy/install-node-services.sh          |  60 +++++++
+ deploy/node.env.example                  |  11 ++
+ deploy/prepare-playwright.sh             |  60 ++++---
+ deploy/systemd/lanius-api.service        |  32 ++++
+ deploy/systemd/lanius-bot.service        |  34 ++++
+ deploy/systemd/lanius-web.service        |  35 +++++
+ deploy/systemd/lanius.target             |   7 +
+ deploy/update-image.sh                   |   4 +-
+ deploy/update-node.sh                    | 110 +++++++++++++
+ docs/ARCHITECTURE.md                     |  68 ++++----
+ docs/CONTRIBUTING.md                     |   2 +-
+ docs/DEPLOY.md                           | 189 +++++++++++++----------
+ docs/VERSIONING.md                       |  13 +-
+ packages/config/src/modules.ts           |  14 +-
+ 23 files changed, 742 insertions(+), 237 deletions(-)
+ create mode 100644 deploy/Caddyfile.node
+ create mode 100755 deploy/install-node-services.sh
+ create mode 100644 deploy/node.env.example
+ mode change 100644 => 100755 deploy/prepare-playwright.sh
+ create mode 100644 deploy/systemd/lanius-api.service
+ create mode 100644 deploy/systemd/lanius-bot.service
+ create mode 100644 deploy/systemd/lanius-web.service
+ create mode 100644 deploy/systemd/lanius.target
+ mode change 100644 => 100755 deploy/update-image.sh
+ create mode 100755 deploy/update-node.sh
+
+diff --git a/.github/workflows/deploy-develop.yml b/.github/workflows/deploy-develop.yml
+index dc57987..48fde9e 100644
+--- a/.github/workflows/deploy-develop.yml
++++ b/.github/workflows/deploy-develop.yml
+@@ -1,19 +1,19 @@
+-# 已停用：develop 不再远程 build/部署。
+-# 请将稳定版本推到长期分支 `release`，由 deploy-release.yml 执行 pull 换版；
+-# 或使用 Admin「版本」页 / 宿主机 update-image.sh。
+-
+-name: Deploy develop (disabled)
+-
+-on:
+-  workflow_dispatch:
+-
+-permissions:
+-  contents: read
+-
+-jobs:
+-  disabled:
+-    name: skipped
+-    if: false
+-    runs-on: ubuntu-latest
+-    steps:
+-      - run: echo "use release branch deploy instead"
++# 已停用：develop 不再远程 build/部署。
++# 请将稳定版本推到长期分支 `release`，由 deploy-release.yml 执行 Node 换版；
++# 或使用 Admin「版本」页 / 宿主机 update-node.sh（Docker 可选 update-image.sh）。
++
++name: Deploy develop (disabled)
++
++on:
++  workflow_dispatch:
++
++permissions:
++  contents: read
++
++jobs:
++  disabled:
++    name: skipped
++    if: false
++    runs-on: ubuntu-latest
++    steps:
++      - run: echo "use release branch deploy instead"
+diff --git a/.github/workflows/deploy-release.yml b/.github/workflows/deploy-release.yml
+index 446cd5e..d3fddf0 100644
+--- a/.github/workflows/deploy-release.yml
++++ b/.github/workflows/deploy-release.yml
+@@ -1,5 +1,6 @@
+-# 长期分支 `release`：SSH 自动部署（仅 docker compose pull + up，禁止 build）。
+-# 合入前请确保对应 tag 镜像已在 GHCR。
++# 长期分支 `release`：SSH 自动部署（默认 Node：git + pnpm build + systemd）。
++# 可选：仓库 secrets `DEPLOY_RUNTIME=docker` 时回退到 update-image.sh（GHCR pull）。
++# 合入前请确保目标 tag 已存在（Node 路径在机上 checkout 该 tag 并构建）。
+ 
+ name: Deploy release branch
+ 
+@@ -9,58 +10,83 @@ on:
+       - release
+   workflow_dispatch:
+     inputs:
+-      image_tag:
+-        description: '覆盖 IMAGE_TAG（如 v0.2.0）；默认读仓库 package.json version 加 v 前缀'
++      release_ref:
++        description: 'checkout 的 tag/分支（如 v0.3.1）；默认读仓库 package.json version 加 v 前缀'
+         required: false
+         type: string
++      runtime:
++        description: 'node（默认）或 docker（可选镜像路径）'
++        required: false
++        type: choice
++        options:
++          - node
++          - docker
++        default: node
+ 
+ permissions:
+   contents: read
+ 
+ jobs:
+   deploy:
+-    name: deploy-release-pull
++    name: deploy-release
+     if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
+     runs-on: ubuntu-latest
+-    timeout-minutes: 30
++    timeout-minutes: 45
+     environment: production
+     steps:
+       - uses: actions/checkout@v4
+ 
+-      - name: Resolve IMAGE_TAG
++      - name: Resolve release ref
+         id: meta
+         run: |
+-          TAG='${{ inputs.image_tag }}'
+-          if [ -z "$TAG" ]; then
++          REF='${{ inputs.release_ref }}'
++          if [ -z "$REF" ]; then
+             VER="$(node -p "require('./package.json').version")"
+-            TAG="v${VER}"
++            REF="v${VER}"
++          fi
++          RUNTIME='${{ inputs.runtime }}'
++          if [ -z "$RUNTIME" ]; then
++            RUNTIME='node'
+           fi
+-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
++          # secrets 可覆盖默认 runtime（workflow_dispatch 优先）
++          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
++          echo "runtime=${RUNTIME}" >> "$GITHUB_OUTPUT"
+ 
+-      - name: Deploy over SSH (pull only)
++      - name: Deploy over SSH
+         uses: appleboy/ssh-action@v1.2.0
++        env:
++          DEPLOY_RUNTIME: ${{ steps.meta.outputs.runtime }}
+         with:
+           host: ${{ secrets.DEPLOY_HOST }}
+           username: ${{ secrets.DEPLOY_USER }}
+           key: ${{ secrets.DEPLOY_SSH_KEY }}
+           port: ${{ secrets.DEPLOY_PORT }}
+-          command_timeout: 25m
++          command_timeout: 40m
++          envs: DEPLOY_RUNTIME
+           script: |
+             set -euo pipefail
+             DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
+             REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
+-            TAG='${{ steps.meta.outputs.tag }}'
++            REF='${{ steps.meta.outputs.ref }}'
++            RUNTIME="${DEPLOY_RUNTIME:-node}"
+             cd "${REPO_ROOT}"
++            # 同步长期 release 指针（便于对照）；实际构建以 REF/tag 为准
+             git fetch origin release --force || true
+-            git reset --hard || true
+-            git clean -fd || true
+-            git checkout -B release FETCH_HEAD 2>/dev/null || git checkout release 2>/dev/null || true
+-            git reset --hard FETCH_HEAD 2>/dev/null || true
++            git fetch --tags --force origin || true
+             cd "${DEPLOY_DIR}"
+-            export IMAGE_TAG="${TAG}"
+-            export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
+-            export COMPOSE_FILE=docker-compose.app.yml
+-            bash ./update-image.sh "${TAG}"
+-            docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
++            if [ "${RUNTIME}" = "docker" ]; then
++              echo "[lanius] optional docker path: update-image.sh ${REF}"
++              export IMAGE_TAG="${REF}"
++              export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
++              export COMPOSE_FILE=docker-compose.app.yml
++              bash ./update-image.sh "${REF}"
++              docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
++            else
++              echo "[lanius] node path: update-node.sh ${REF}"
++              export LANIUS_REPO="${REPO_ROOT}"
++              bash ./update-node.sh "${REF}"
++              journalctl -u lanius-api -u lanius-bot -u lanius-web -n 80 --no-pager 2>&1 || true
++            fi
+             curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
++              curl -fsS "http://127.0.0.1:8787/v1/health" || \
+               curl -fsS "http://127.0.0.1/api/lanius/v1/health"
+diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+index e14a3aa..cb9e5c5 100644
+--- a/.github/workflows/release.yml
++++ b/.github/workflows/release.yml
+@@ -1,5 +1,5 @@
+-﻿# 构建推送 GHCR（不 SSH 部署）。
+-# 部署见 deploy-release.yml（长期分支 release → pull + up）。
++﻿# 可选：构建推送 GHCR（不 SSH 部署）。生产默认走 Node，不依赖本产物。
++# 部署见 deploy-release.yml（长期分支 release → update-node.sh）。
+ # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
+ 
+ name: Release
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 7a46fe9..7f1a701 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -6,6 +6,13 @@
+ 
+ ## [Unreleased]
+ 
++### Changed
++
++- **生产默认运行时改为 Node + systemd**（API `dist` / Bot `dist` / Web Nitro `.output`）；新增 `deploy/systemd/*`、`deploy/update-node.sh`、`deploy/Caddyfile.node`、`deploy/install-node-services.sh`。
++- 长期分支 `release` 部署改为 SSH 执行 `update-node.sh`（git checkout + pnpm build + systemd）；旧 GHCR `update-image.sh` / 单容器 `lanius-app` 降级为可选。
++- Admin「版本」默认 `github.deployMode: node`；可选 `docker` 仍调用 `update-image.sh`。
++- 部署文档与版本策略改为 Node 优先；取消「远端开发/生产双环境 / 子域名切换」方案（不落地）。
++
+ ## [0.3.0] - 2026-10-12
+ 
+ ### Added
+diff --git a/README.md b/README.md
+index df37658..4f47864 100644
+--- a/README.md
++++ b/README.md
+@@ -9,17 +9,17 @@
+ 
+ 已落地 API + Bot + Web 骨架：共享视觉 token（`packages/ui`）同时驱动公开站与 QQ 卡片图。
+ 
+-| 表面              | 路径                                          | MVP / 状态                                         |
+-| ----------------- | --------------------------------------------- | -------------------------------------------------- |
+-| Lanius API        | `apps/api`（Hono）                            | health / meta / help / worldstate（国际服）        |
+-| 共享契约          | `packages/core`                               | DTO / Zod / 错误码 / realm·locale                  |
+-| HTTP 客户端       | `packages/api`（`fetch`）              | health / meta / help / worldstate                  |
+-| 视觉 / UI         | `packages/ui`                                 | token + WorldstateBoard（Web）                     |
+-| QQ 卡片           | `packages/render`                        | worldstate PNG（与 Web 同色板）                    |
+-| QQ 官方封装       | `packages/qq-official`                        | 验签 + dry-run 发送                                |
+-| QQ 官方适配       | `apps/bot`                                    | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/模式` `/帮助`；文本+图片降级 |
+-| 公开站 + 管理壳   | `apps/web`（Nuxt）                            | 首页 / 世界状态 / 帮助 /admin；zh/en               |
+-| 桌面 / 移动       | Tauri 2（后期）                               | **现不脚手架**；见 `docs/TODO-TAURI.md`            |
++| 表面            | 路径                      | MVP / 状态                                                                |
++| --------------- | ------------------------- | ------------------------------------------------------------------------- |
++| Lanius API      | `apps/api`（Hono）        | health / meta / help / worldstate（国际服）                               |
++| 共享契约        | `packages/core`           | DTO / Zod / 错误码 / realm·locale                                         |
++| HTTP 客户端     | `packages/api`（`fetch`） | health / meta / help / worldstate                                         |
++| 视觉 / UI       | `packages/ui`             | token + WorldstateBoard（Web）                                            |
++| QQ 卡片         | `packages/render`         | worldstate PNG（与 Web 同色板）                                           |
++| QQ 官方封装     | `packages/qq-official`    | 验签 + dry-run 发送                                                       |
++| QQ 官方适配     | `apps/bot`                | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/模式` `/帮助`；文本+图片降级 |
++| 公开站 + 管理壳 | `apps/web`（Nuxt）        | 首页 / 世界状态 / 帮助 /admin；zh/en                                      |
++| 桌面 / 移动     | Tauri 2（后期）           | **现不脚手架**；见 `docs/TODO-TAURI.md`                                   |
+ 
+ ## 本地运行
+ 
+@@ -67,17 +67,17 @@ pnpm typecheck
+ 
+ ## 规范与 Agent 入口
+ 
+-| 文档 / 配置                                              | 说明                         |
+-| -------------------------------------------------------- | ---------------------------- |
+-| [AGENTS.md](./AGENTS.md)                                 | 给人类与 Agent 的总约束      |
+-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)           | 架构边界与模块               |
+-| [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码、命名、注释率与 TSDoc   |
+-| [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope |
+-| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程           |
+-| [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程        |
+-| [docs/DEPLOY.md](./docs/DEPLOY.md)                       | Docker / GHCR / 同域部署与 Fork 安全 CI |
+-| [docs/TODO-TAURI.md](./docs/TODO-TAURI.md)               | 后期 Tauri 2；现期 Web TODO  |
+-| [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                 |
++| 文档 / 配置                                              | 说明                                                |
++| -------------------------------------------------------- | --------------------------------------------------- |
++| [AGENTS.md](./AGENTS.md)                                 | 给人类与 Agent 的总约束                             |
++| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)           | 架构边界与模块                                      |
++| [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码、命名、注释率与 TSDoc                          |
++| [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope                        |
++| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程                                  |
++| [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程                               |
++| [docs/DEPLOY.md](./docs/DEPLOY.md)                       | Node/systemd 生产部署（Docker 可选）与 Fork 安全 CI |
++| [docs/TODO-TAURI.md](./docs/TODO-TAURI.md)               | 后期 Tauri 2；现期 Web TODO                         |
++| [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                                        |
+ 
+ ### Git 模型（摘要）
+ 
+diff --git a/apps/api/src/services/release-service.ts b/apps/api/src/services/release-service.ts
+index 5a8974c..88d2bfa 100644
+--- a/apps/api/src/services/release-service.ts
++++ b/apps/api/src/services/release-service.ts
+@@ -76,9 +76,7 @@ export async function listGithubReleases(
+  * @param github - 配置
+  * @returns 摘要列表
+  */
+-async function listGithubTags(
+-  github: ModuleConfigMap['github'],
+-): Promise<GithubReleaseSummary[]> {
++async function listGithubTags(github: ModuleConfigMap['github']): Promise<GithubReleaseSummary[]> {
+   const url = `https://api.github.com/repos/${github.owner}/${github.repo}/tags?per_page=30`;
+   const headers: Record<string, string> = {
+     Accept: 'application/vnd.github+json',
+@@ -112,15 +110,17 @@ export function getCurrentReleaseInfo(): CurrentReleaseInfo {
+   return {
+     imageTag: process.env.IMAGE_TAG?.trim() || null,
+     packageVersion: readRootPackageVersion(),
+-    gitSha: process.env.GIT_SHA?.trim() || null,
++    gitSha: process.env.GIT_SHA?.trim() || readGitHeadSha(),
+   };
+ }
+ 
+ /**
+- * 尝试应用镜像 tag：调用 update-image.sh（需 docker / sock）。
++ * 尝试应用发布 tag。
++ * 默认 `deployMode=node`：执行 `update-node.sh`（git + build + systemd）。
++ * 可选 `docker`：执行 `update-image.sh`（GHCR pull，不 rebuild）。
+  *
+- * @param github - github 模块（含 deployDir）
+- * @param tag - 如 v0.2.0
++ * @param github - github 模块（含 deployDir / deployMode）
++ * @param tag - 如 v0.3.1
+  * @returns 执行结果
+  */
+ export async function applyReleaseTag(
+@@ -130,31 +130,101 @@ export async function applyReleaseTag(
+   ok: boolean;
+   mode: 'executed' | 'manual';
+   detail: string;
++}> {
++  const deployMode = github.deployMode ?? 'node';
++  if (deployMode === 'docker') {
++    return applyDockerReleaseTag(github, tag);
++  }
++  return applyNodeReleaseTag(github, tag);
++}
++
++/**
++ * Node 生产换版：调用 update-node.sh。
++ *
++ * @param github - github 模块配置
++ * @param tag - SemVer tag（如 v0.3.1）
++ * @returns 执行或手动指引
++ */
++async function applyNodeReleaseTag(
++  github: ModuleConfigMap['github'],
++  tag: string,
++): Promise<{
++  ok: boolean;
++  mode: 'executed' | 'manual';
++  detail: string;
++}> {
++  const script = resolve(github.deployDir, 'update-node.sh');
++  const manual =
++    `手动：cd ${github.deployDir} && bash update-node.sh ${tag}` +
++    `（或 LANIUS_REPO=${github.repoRoot} bash update-node.sh ${tag}）`;
++  if (!existsSync(script)) {
++    return {
++      ok: false,
++      mode: 'manual',
++      detail: `缺少 ${script}。${manual}`,
++    };
++  }
++
++  try {
++    const { stdout, stderr } = await execFileAsync('bash', [script, tag], {
++      cwd: github.deployDir,
++      env: {
++        ...process.env,
++        LANIUS_REPO: github.repoRoot,
++      },
++      // pnpm build + Nuxt 可能较久
++      timeout: 25 * 60 * 1000,
++    });
++    return {
++      ok: true,
++      mode: 'executed',
++      detail: `${stdout}\n${stderr}`.trim().slice(0, 4000),
++    };
++  } catch (error) {
++    const message = error instanceof Error ? error.message : String(error);
++    return {
++      ok: false,
++      mode: 'manual',
++      detail: `${message}\n${manual}`,
++    };
++  }
++}
++
++/**
++ * Docker 可选路径：调用 update-image.sh（需 docker / sock）。
++ *
++ * @param github - github 模块配置
++ * @param tag - 镜像 tag
++ * @returns 执行或手动指引
++ */
++async function applyDockerReleaseTag(
++  github: ModuleConfigMap['github'],
++  tag: string,
++): Promise<{
++  ok: boolean;
++  mode: 'executed' | 'manual';
++  detail: string;
+ }> {
+   const script = resolve(github.deployDir, 'update-image.sh');
++  const manual = `手动：cd ${github.deployDir} && IMAGE_TAG=${tag} bash update-image.sh ${tag}`;
+   if (!existsSync(script)) {
+     return {
+       ok: false,
+       mode: 'manual',
+-      detail: `缺少 ${script}。请在宿主机执行：IMAGE_TAG=${tag} docker compose -f ${github.composeFile} pull && up -d`,
++      detail: `缺少 ${script}。${manual}`,
+     };
+   }
+ 
+-  // 无 docker.sock 时脚本会失败，返回手动指令
+   try {
+-    const { stdout, stderr } = await execFileAsync(
+-      'bash',
+-      [script, tag],
+-      {
+-        cwd: github.deployDir,
+-        env: {
+-          ...process.env,
+-          IMAGE_TAG: tag,
+-          COMPOSE_FILE: github.composeFile,
+-        },
+-        timeout: 10 * 60 * 1000,
++    const { stdout, stderr } = await execFileAsync('bash', [script, tag], {
++      cwd: github.deployDir,
++      env: {
++        ...process.env,
++        IMAGE_TAG: tag,
++        COMPOSE_FILE: github.composeFile,
+       },
+-    );
++      timeout: 10 * 60 * 1000,
++    });
+     return {
+       ok: true,
+       mode: 'executed',
+@@ -165,7 +235,7 @@ export async function applyReleaseTag(
+     return {
+       ok: false,
+       mode: 'manual',
+-      detail: `${message}\n手动：cd ${github.deployDir} && IMAGE_TAG=${tag} bash update-image.sh ${tag}`,
++      detail: `${message}\n${manual}`,
+     };
+   }
+ }
+@@ -191,3 +261,33 @@ function readRootPackageVersion(): string | null {
+   }
+   return null;
+ }
++
++/**
++ * 尝试读取当前 git HEAD（Node 生产有 checkout 时可用）。
++ *
++ * @returns 短 SHA 或 null
++ */
++function readGitHeadSha(): string | null {
++  const candidates = [
++    resolve(process.cwd(), '.git/HEAD'),
++    resolve(process.cwd(), '../../.git/HEAD'),
++  ];
++  for (const headPath of candidates) {
++    try {
++      if (!existsSync(headPath)) continue;
++      const head = readFileSync(headPath, 'utf8').trim();
++      if (head.startsWith('ref:')) {
++        const ref = head.slice(4).trim();
++        const refPath = resolve(headPath, '..', ref);
++        if (existsSync(refPath)) {
++          return readFileSync(refPath, 'utf8').trim().slice(0, 12);
++        }
++      } else if (/^[0-9a-f]{7,40}$/i.test(head)) {
++        return head.slice(0, 12);
++      }
++    } catch {
++      // next
++    }
++  }
++  return null;
++}
+diff --git a/config/default/github.yaml b/config/default/github.yaml
+index 0834359..82c0927 100644
+--- a/config/default/github.yaml
++++ b/config/default/github.yaml
+@@ -3,4 +3,7 @@ owner: 'Lexcubia'
+ repo: 'Lanius-Warframe-Bot'
+ # token: 可选 PAT，写在 local
+ deployDir: '/opt/lanius/repo/deploy'
++repoRoot: '/opt/lanius/repo'
++# 生产默认 Node（update-node.sh）；可选 docker（update-image.sh）
++deployMode: 'node'
+ composeFile: 'docker-compose.app.yml'
+diff --git a/deploy/Caddyfile.node b/deploy/Caddyfile.node
+new file mode 100644
+index 0000000..c85dd4a
+--- /dev/null
++++ b/deploy/Caddyfile.node
+@@ -0,0 +1,23 @@
++# 宿主机 Node 生产：Caddy 反代本机三进程（非 Docker 服务名）。
++# 用法（系统 Caddy）：
++#   caddy run --config /opt/lanius/repo/deploy/Caddyfile.node
++# 或复制到 /etc/caddy/Caddyfile 并 export DOMAIN=warframe.example.com
++#
++# Docker 可选路径仍用 Caddyfile.app（反代 lanius-app 容器）。
++
++{$DOMAIN:localhost} {
++	encode gzip
++
++	handle /qq/* {
++		reverse_proxy 127.0.0.1:8788
++	}
++
++	handle /api/lanius/* {
++		uri strip_prefix /api/lanius
++		reverse_proxy 127.0.0.1:8787
++	}
++
++	handle {
++		reverse_proxy 127.0.0.1:8790
++	}
++}
+diff --git a/deploy/docker-compose.app.yml b/deploy/docker-compose.app.yml
+index 4debf08..ec74d36 100644
+--- a/deploy/docker-compose.app.yml
++++ b/deploy/docker-compose.app.yml
+@@ -1,8 +1,9 @@
+-# 生产推荐：主体单容器 lanius-app + 旁路 Caddy（HTTPS）。
++# 【可选】Docker 路径：主体单容器 lanius-app + 旁路 Caddy。
++# 生产默认请用 Node + systemd（见 docs/DEPLOY.md、update-node.sh）。
+ # 在 deploy/ 目录：
+ #   IMAGE_TAG=vX.Y.Z docker compose -f docker-compose.app.yml pull && up -d
+ #
+-# 日常升级：release 分支 Actions 或 Admin 选版 → update-image.sh（仅 pull，不 build）
++# 日常升级（仅 docker 模式）：update-image.sh（仅 pull，不 build）
+ 
+ name: lanius
+ 
+diff --git a/deploy/install-node-services.sh b/deploy/install-node-services.sh
+new file mode 100755
+index 0000000..924b0ad
+--- /dev/null
++++ b/deploy/install-node-services.sh
+@@ -0,0 +1,60 @@
++#!/usr/bin/env bash
++# 将 deploy/systemd/*.service 安装到 /etc/systemd/system（需 root）。
++#
++# 用法：
++#   sudo bash /opt/lanius/repo/deploy/install-node-services.sh
++#   sudo LANIUS_REPO=/opt/lanius/repo LANIUS_USER=lanius bash deploy/install-node-services.sh
++#
++# 不创建系统用户时设 LANIUS_SKIP_USER=1（单元内仍写 User=lanius，需自行保证）。
++
++set -euo pipefail
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="${LANIUS_REPO:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
++UNIT_SRC="${SCRIPT_DIR}/systemd"
++UNIT_DST="${LANIUS_SYSTEMD_DIR:-/etc/systemd/system}"
++RUN_USER="${LANIUS_USER:-lanius}"
++RUN_GROUP="${LANIUS_GROUP:-${RUN_USER}}"
++PLAYWRIGHT_DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
++DATA_DIR="${LANIUS_DATA_DIR:-/opt/lanius/data}"
++
++if [[ "$(id -u)" -ne 0 ]]; then
++  echo "请用 root 运行（需要写入 ${UNIT_DST}）" >&2
++  exit 1
++fi
++
++if [[ "${LANIUS_SKIP_USER:-0}" != "1" ]]; then
++  if ! id -u "${RUN_USER}" >/dev/null 2>&1; then
++    useradd --system --home "${REPO_ROOT}" --shell /usr/sbin/nologin "${RUN_USER}"
++    echo "[lanius] created user ${RUN_USER}"
++  fi
++fi
++
++mkdir -p "${DATA_DIR}" "${PLAYWRIGHT_DIR}"
++chown -R "${RUN_USER}:${RUN_GROUP}" "${DATA_DIR}" || true
++# 仓库树：至少保证 config/local 与 data 可写；源码可由部署用户拥有
++chown -R "${RUN_USER}:${RUN_GROUP}" "${REPO_ROOT}/config/local" 2>/dev/null || true
++mkdir -p "${REPO_ROOT}/data"
++chown -R "${RUN_USER}:${RUN_GROUP}" "${REPO_ROOT}/data" || true
++
++for unit in lanius-api.service lanius-bot.service lanius-web.service lanius.target; do
++  src="${UNIT_SRC}/${unit}"
++  dst="${UNIT_DST}/${unit}"
++  if [[ ! -f "${src}" ]]; then
++    echo "missing ${src}" >&2
++    exit 1
++  fi
++  # 替换占位符与运行用户
++  sed \
++    -e "s|__LANIUS_REPO__|${REPO_ROOT}|g" \
++    -e "s|__LANIUS_PLAYWRIGHT__|${PLAYWRIGHT_DIR}|g" \
++    -e "s|^User=lanius$|User=${RUN_USER}|" \
++    -e "s|^Group=lanius$|Group=${RUN_GROUP}|" \
++    "${src}" > "${dst}"
++  echo "[lanius] installed ${dst}"
++done
++
++systemctl daemon-reload
++systemctl enable lanius-api.service lanius-bot.service lanius-web.service
++echo "[lanius] enabled. 启动：systemctl start lanius.target"
++echo "[lanius] 日志：journalctl -u lanius-api -u lanius-bot -u lanius-web -f"
+diff --git a/deploy/node.env.example b/deploy/node.env.example
+new file mode 100644
+index 0000000..40ba99b
+--- /dev/null
++++ b/deploy/node.env.example
+@@ -0,0 +1,11 @@
++# 复制为宿主机环境片段（可选），由 systemd EnvironmentFile= 引用。
++# 密钥仍写在 config/local/*.yaml，不要把口令放进本文件。
++
++# DOMAIN 给系统 Caddy 用（export 或 caddy 环境）
++# DOMAIN=warframe.example.com
++
++# Playwright 浏览器目录（与 lanius-bot.service 一致）
++# PLAYWRIGHT_BROWSERS_PATH=/opt/lanius/ms-playwright
++
++# 配置根（一般等于仓库 config/）
++# LANIUS_CONFIG_ROOT=/opt/lanius/repo/config
+diff --git a/deploy/prepare-playwright.sh b/deploy/prepare-playwright.sh
+old mode 100644
+new mode 100755
+index c1cbf57..d98f6d0
+--- a/deploy/prepare-playwright.sh
++++ b/deploy/prepare-playwright.sh
+@@ -1,23 +1,26 @@
+ #!/usr/bin/env bash
+-# 在生产机预装 Playwright Chromium 到宿主机目录，供 bot 容器只读挂载。
+-# 默认走 npmmirror + DaoCloud Node 镜像，避免卡在官方 CDN / Docker Hub。
++# 预装 Playwright Chromium，供 Bot 出图使用。
++#
++# 默认：本机 Node/pnpm（Node 生产路径，无需 Docker）。
++# 可选：LANIUS_PLAYWRIGHT_METHOD=docker 走临时容器下载（旧 Docker 部署）。
+ #
+ # 用法：
+ #   bash /opt/lanius/repo/deploy/prepare-playwright.sh
++#   LANIUS_PLAYWRIGHT_METHOD=docker bash deploy/prepare-playwright.sh
+ 
+ set -euo pipefail
+ 
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
+-# 须与 packages/render 依赖的 playwright 版本一致（bot 镜像 npm 会装同版）
++METHOD="${LANIUS_PLAYWRIGHT_METHOD:-native}"
+ PW_VERSION="${PLAYWRIGHT_VERSION:-1.64.0}"
+ PW_DOWNLOAD_HOST="${PLAYWRIGHT_DOWNLOAD_HOST:-https://npmmirror.com/mirrors/playwright}"
+-# DaoCloud 代理 Docker Hub 上的官方 node 镜像
+ NODE_IMAGE="${LANIUS_PLAYWRIGHT_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"
+ MARKER="${DIR}/.lanius-playwright-version"
+ 
+-echo "[lanius] Playwright prep → ${DIR} (playwright@${PW_VERSION})"
++echo "[lanius] Playwright prep → ${DIR} (playwright@${PW_VERSION}, method=${METHOD})"
+ echo "[lanius] PLAYWRIGHT_DOWNLOAD_HOST=${PW_DOWNLOAD_HOST}"
+-echo "[lanius] NODE_IMAGE=${NODE_IMAGE}"
+ 
+ mkdir -p "${DIR}"
+ 
+@@ -29,21 +32,36 @@ if [[ -f "${MARKER}" ]] && [[ "$(cat "${MARKER}")" == "${PW_VERSION}" ]]; then
+   fi
+ fi
+ 
+-echo "[lanius] pulling node image (may use mirror)…"
+-docker pull "${NODE_IMAGE}"
+-
+-echo "[lanius] downloading Chromium via docker + npmmirror…"
+-docker run --rm \
+-  -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+-  -e PLAYWRIGHT_DOWNLOAD_HOST="${PW_DOWNLOAD_HOST}" \
+-  -e npm_config_registry="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}" \
+-  -v "${DIR}:/ms-playwright" \
+-  "${NODE_IMAGE}" \
+-  /bin/bash -lc "
+-    set -euo pipefail
+-    npm install -g \"playwright@${PW_VERSION}\"
+-    playwright install chromium
+-  "
++export PLAYWRIGHT_BROWSERS_PATH="${DIR}"
++export PLAYWRIGHT_DOWNLOAD_HOST="${PW_DOWNLOAD_HOST}"
++
++if [[ "${METHOD}" == "docker" ]]; then
++  echo "[lanius] pulling node image (may use mirror)…"
++  docker pull "${NODE_IMAGE}"
++  echo "[lanius] downloading Chromium via docker + npmmirror…"
++  docker run --rm \
++    -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
++    -e PLAYWRIGHT_DOWNLOAD_HOST="${PW_DOWNLOAD_HOST}" \
++    -e npm_config_registry="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}" \
++    -v "${DIR}:/ms-playwright" \
++    "${NODE_IMAGE}" \
++    /bin/bash -lc "
++      set -euo pipefail
++      npm install -g \"playwright@${PW_VERSION}\"
++      playwright install chromium
++    "
++else
++  echo "[lanius] downloading Chromium via local Node/pnpm…"
++  cd "${REPO_ROOT}"
++  if [[ -f pnpm-lock.yaml ]]; then
++    corepack enable >/dev/null 2>&1 || true
++    pnpm install --frozen-lockfile --filter @lanius/render...
++    pnpm --filter @lanius/render exec playwright install chromium
++  else
++    npm_config_registry="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}" \
++      npx --yes "playwright@${PW_VERSION}" install chromium
++  fi
++fi
+ 
+ echo "${PW_VERSION}" > "${MARKER}"
+ chmod -R a+rX "${DIR}" || true
+diff --git a/deploy/systemd/lanius-api.service b/deploy/systemd/lanius-api.service
+new file mode 100644
+index 0000000..65cb1c6
+--- /dev/null
++++ b/deploy/systemd/lanius-api.service
+@@ -0,0 +1,32 @@
++# Lanius API（@lanius/server）systemd 单元。
++# 安装：见 deploy/install-node-services.sh 或 docs/DEPLOY.md
++# 占位符 __LANIUS_REPO__ 由安装脚本替换为仓库根绝对路径。
++
++[Unit]
++Description=Lanius API (@lanius/server)
++Documentation=https://github.com/Lexcubia/Lanius-Warframe-Bot
++After=network-online.target redis-server.service
++Wants=network-online.target
++PartOf=lanius.target
++
++[Service]
++Type=simple
++User=lanius
++Group=lanius
++WorkingDirectory=__LANIUS_REPO__
++Environment=NODE_ENV=production
++# 非密钥：配置根默认即仓库 config/；生产数据目录建议绝对路径写在 config/local/database.yaml
++Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
++ExecStart=/usr/bin/env node apps/api/dist/index.js
++Restart=on-failure
++RestartSec=5
++TimeoutStopSec=30
++# 日志进 journald：journalctl -u lanius-api -f
++StandardOutput=journal
++StandardError=journal
++SyslogIdentifier=lanius-api
++NoNewPrivileges=true
++PrivateTmp=true
++
++[Install]
++WantedBy=multi-user.target lanius.target
+diff --git a/deploy/systemd/lanius-bot.service b/deploy/systemd/lanius-bot.service
+new file mode 100644
+index 0000000..d46886d
+--- /dev/null
++++ b/deploy/systemd/lanius-bot.service
+@@ -0,0 +1,34 @@
++# Lanius QQ Bot（官方开放平台适配）systemd 单元。
++# 占位符 __LANIUS_REPO__ / __LANIUS_PLAYWRIGHT__ 由安装脚本替换。
++
++[Unit]
++Description=Lanius QQ Bot (@lanius/bot)
++Documentation=https://github.com/Lexcubia/Lanius-Warframe-Bot
++After=network-online.target lanius-api.service
++Wants=network-online.target
++Requires=lanius-api.service
++PartOf=lanius.target
++
++[Service]
++Type=simple
++User=lanius
++Group=lanius
++WorkingDirectory=__LANIUS_REPO__
++Environment=NODE_ENV=production
++Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
++# Playwright Chromium 目录（prepare-playwright.sh / browsers:install）
++Environment=PLAYWRIGHT_BROWSERS_PATH=__LANIUS_PLAYWRIGHT__
++# 无图形、受限用户时如启动失败可设为 1（见 packages/render ensure-browser）
++# Environment=LANIUS_PLAYWRIGHT_NO_SANDBOX=1
++ExecStart=/usr/bin/env node apps/bot/dist/index.js
++Restart=on-failure
++RestartSec=5
++TimeoutStopSec=30
++StandardOutput=journal
++StandardError=journal
++SyslogIdentifier=lanius-bot
++NoNewPrivileges=true
++PrivateTmp=true
++
++[Install]
++WantedBy=multi-user.target lanius.target
+diff --git a/deploy/systemd/lanius-web.service b/deploy/systemd/lanius-web.service
+new file mode 100644
+index 0000000..6f7cc28
+--- /dev/null
++++ b/deploy/systemd/lanius-web.service
+@@ -0,0 +1,35 @@
++# Lanius Web（Nuxt/Nitro 生产产物）systemd 单元。
++# 启动的是 apps/web/.output/server/index.mjs，不是 nuxt dev。
++
++[Unit]
++Description=Lanius Web (Nuxt Nitro .output)
++Documentation=https://github.com/Lexcubia/Lanius-Warframe-Bot
++After=network-online.target lanius-api.service
++Wants=network-online.target
++PartOf=lanius.target
++
++[Service]
++Type=simple
++User=lanius
++Group=lanius
++WorkingDirectory=__LANIUS_REPO__
++Environment=NODE_ENV=production
++Environment=HOST=127.0.0.1
++Environment=PORT=8790
++Environment=NITRO_HOST=127.0.0.1
++Environment=NITRO_PORT=8790
++# 运行时覆盖 Nitro 代理目标（与 config/default/web.yaml 一致）
++Environment=NUXT_LANIUS_API_BASE=http://127.0.0.1:8787
++Environment=LANIUS_API_BASE=http://127.0.0.1:8787
++ExecStart=/usr/bin/env node apps/web/.output/server/index.mjs
++Restart=on-failure
++RestartSec=5
++TimeoutStopSec=30
++StandardOutput=journal
++StandardError=journal
++SyslogIdentifier=lanius-web
++NoNewPrivileges=true
++PrivateTmp=true
++
++[Install]
++WantedBy=multi-user.target lanius.target
+diff --git a/deploy/systemd/lanius.target b/deploy/systemd/lanius.target
+new file mode 100644
+index 0000000..f69a854
+--- /dev/null
++++ b/deploy/systemd/lanius.target
+@@ -0,0 +1,7 @@
++# 一次性启停三个 Lanius 应用进程（不含 Redis / Caddy）。
++# systemctl start lanius.target
++# systemctl stop lanius.target
++
++[Unit]
++Description=Lanius Warframe Bot (API + Bot + Web)
++Wants=lanius-api.service lanius-bot.service lanius-web.service
+diff --git a/deploy/update-image.sh b/deploy/update-image.sh
+old mode 100644
+new mode 100755
+index c1d77c3..40b5822
+--- a/deploy/update-image.sh
++++ b/deploy/update-image.sh
+@@ -1,5 +1,7 @@
+ #!/usr/bin/env bash
+-# 按 tag pull 换版并 up（禁止 build）。Admin / release 分支部署共用。
++# 【可选 Docker 路径】按 tag pull 换版并 up（禁止 build）。
++# 生产默认请用 update-node.sh。仅当 github.deployMode=docker 或
++# deploy-release runtime=docker 时使用本脚本。
+ set -euo pipefail
+ 
+ TAG="${1:-${IMAGE_TAG:-}}"
+diff --git a/deploy/update-node.sh b/deploy/update-node.sh
+new file mode 100755
+index 0000000..b431da7
+--- /dev/null
++++ b/deploy/update-node.sh
+@@ -0,0 +1,110 @@
++#!/usr/bin/env bash
++# Node 生产换版（默认路径）：git checkout tag → pnpm install/build → systemd 重启。
++# Admin「版本」与 deploy-release.yml 共用本脚本。
++#
++# 用法：
++#   bash /opt/lanius/repo/deploy/update-node.sh v0.3.1
++#
++# 环境变量（均可选）：
++#   LANIUS_REPO          仓库根（默认本脚本上一级）
++#   LANIUS_SKIP_PLAYWRIGHT=1  跳过 Playwright 检查/安装
++#   LANIUS_SYSTEMCTL=0   不调用 systemctl（仅构建，便于排障）
++#   LANIUS_HEALTH_URL    健康检查 URL（默认 http://127.0.0.1:8787/v1/health）
++
++set -euo pipefail
++
++TAG="${1:-}"
++if [[ -z "${TAG}" ]]; then
++  echo "usage: $0 <vX.Y.Z>" >&2
++  exit 1
++fi
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++REPO_ROOT="${LANIUS_REPO:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
++HEALTH_URL="${LANIUS_HEALTH_URL:-http://127.0.0.1:8787/v1/health}"
++SYSTEMCTL_ON="${LANIUS_SYSTEMCTL:-1}"
++
++cd "${REPO_ROOT}"
++
++echo "[lanius] repo=${REPO_ROOT} tag=${TAG}"
++
++# 仅切换到目标 tag/ref；不清理 config/local（gitignore）与 data/
++if git rev-parse --verify --quiet "refs/tags/${TAG}" >/dev/null \
++  || git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
++  git fetch --tags --force origin "${TAG}" 2>/dev/null \
++    || git fetch --tags --force origin
++  git checkout -f "tags/${TAG}" 2>/dev/null || git checkout -f "${TAG}"
++else
++  # 允许传入分支名（如 release）以便 Actions 推进长期指针后构建当前 HEAD
++  git fetch origin "${TAG}" --force
++  git checkout -B "${TAG}" "FETCH_HEAD" 2>/dev/null || git checkout -f "${TAG}"
++fi
++
++echo "[lanius] HEAD=$(git rev-parse --short HEAD) $(git describe --tags --always 2>/dev/null || true)"
++
++corepack enable >/dev/null 2>&1 || true
++pnpm install --frozen-lockfile
++
++if [[ "${LANIUS_SKIP_PLAYWRIGHT:-0}" != "1" ]]; then
++  # 出图依赖：优先本机已装目录，否则走 package 脚本
++  if [[ -n "${PLAYWRIGHT_BROWSERS_PATH:-}" ]] && compgen -G "${PLAYWRIGHT_BROWSERS_PATH}/chromium-*" > /dev/null; then
++    echo "[lanius] Playwright browsers present at ${PLAYWRIGHT_BROWSERS_PATH}"
++  else
++    echo "[lanius] ensuring Playwright Chromium…"
++    pnpm --filter @lanius/render browsers:install || {
++      echo "[lanius] warn: browsers:install failed; bot 图片模式可能降级文本" >&2
++    }
++  fi
++fi
++
++# API/Bot dist + card-host；Web 单独 Nuxt build（根 package.json build 不含 web）
++pnpm --filter @lanius/render build:card-host
++pnpm build
++pnpm --filter @lanius/web build
++
++if [[ ! -f apps/api/dist/index.js ]]; then
++  echo "[lanius] missing apps/api/dist/index.js" >&2
++  exit 1
++fi
++if [[ ! -f apps/bot/dist/index.js ]]; then
++  echo "[lanius] missing apps/bot/dist/index.js" >&2
++  exit 1
++fi
++if [[ ! -f apps/web/.output/server/index.mjs ]]; then
++  echo "[lanius] missing apps/web/.output/server/index.mjs（须 Nuxt build，禁止 nuxt dev）" >&2
++  exit 1
++fi
++
++if [[ "${SYSTEMCTL_ON}" == "1" ]] && command -v systemctl >/dev/null 2>&1; then
++  echo "[lanius] restarting systemd units…"
++  # root 直接调；非 root 尝试无密码 sudo（见 DEPLOY.md sudoers 示例）
++  if [[ "$(id -u)" -eq 0 ]]; then
++    SCT=(systemctl)
++  else
++    SCT=(sudo -n systemctl)
++  fi
++  "${SCT[@]}" restart lanius-api.service lanius-bot.service lanius-web.service
++  "${SCT[@]}" start lanius.target 2>/dev/null || true
++else
++  echo "[lanius] skip systemctl (LANIUS_SYSTEMCTL=${SYSTEMCTL_ON})"
++fi
++
++echo "[lanius] waiting for health ${HEALTH_URL}…"
++ok=0
++for _ in $(seq 1 60); do
++  if curl -fsS "${HEALTH_URL}" >/dev/null 2>&1; then
++    ok=1
++    break
++  fi
++  sleep 2
++done
++
++if [[ "${ok}" != "1" ]]; then
++  echo "[lanius] health check failed" >&2
++  if command -v journalctl >/dev/null 2>&1; then
++    journalctl -u lanius-api -n 80 --no-pager || true
++  fi
++  exit 1
++fi
++
++echo "[lanius] done ${TAG}"
+diff --git a/docs/ARCHITECTURE.md b/docs/ARCHITECTURE.md
+index 5d9f508..80c4bf6 100644
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -20,8 +20,8 @@
+              （Nuxt / Vue 宿主）
+ ```
+ 
+-**生产推荐：** 主体单容器 `lanius-app`（api + web + bot + 内嵌 Redis）+ **旁路 Caddy**（HTTPS，不进主体镜像）。见 `deploy/docker-compose.app.yml`。  
+-开发/遗留可继续使用拆分 compose（`deploy/docker-compose.yml`）。  
++**生产默认：** 宿主机 **Node 三进程**（API `dist` + Bot `dist` + Web Nitro `.output`）+ **systemd** + 旁路 Caddy（`deploy/Caddyfile.node`）。见 [DEPLOY.md](./DEPLOY.md)。  
++Docker 单容器 `lanius-app`（`deploy/docker-compose.app.yml`）为**可选**路径，不再作为默认上线方式。  
+ 后期 Tauri 客户端仍只调 Lanius API，**不**替代 QQ、**不**直连上游。
+ 
+ ## 2. 目标 Monorepo 布局
+@@ -54,7 +54,7 @@ lanius-warframe-bot/
+ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/market/items` · `/v1/riven` · `/v1/void-trader` · `/v1/varzia` · `/v1/rotations/{tenet|coda}` · `/v1/subscriptions` · `/v1/push/{tick|ack}` · `/v1/admin/*`（含 **config** / **releases**）。  
+ 配置：`@lanius/config` 驱动，`config/default` ⊕ `config/local`；Admin 可改并热加载。  
+ 推送：可查询模块 → SQLite 订阅 → Bot `push/tick`；频率 `on_change|hourly|daily|weekly`。  
+-发版：CI 推 GHCR；长期分支 `release` / Admin 选版 → **pull 换版**（不 rebuild）。  
++发版：tag 后可选推 GHCR；长期分支 `release` / Admin 选版 → 默认 **`update-node.sh`（git + build + systemd）**；Docker pull 为可选。  
+ 指令前导：`commandPrefix` + `commandPrefixPolicy`；接 Agent 时建议 `required`。  
+ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/admin`（公开导航不展示）。  
+ **禁止**在未立项时脚手架 Tauri。  
+@@ -62,13 +62,13 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
+ 
+ ### 2.1 Web 公开路由（`apps/web`）
+ 
+-| 路由 | 职责 | 主要 API |
+-| ---- | ---- | -------- |
+-| `/` | **首页看板**：全模块可折叠 + 速跳；市场/紫卡内联搜索 | 世界状态（周期）/ 裂隙 / **入侵** / **午夜电波** / 商人 / 轮换 / 市场 / 紫卡 / 帮助 / 订阅（彼此独立面板） |
+-| `/tools` | 工具占位（待开发） | — |
+-| `/about` | 关于 | — |
+-| `/worldstate` 等 | 旧模块深链页（仍可用，不进主导航）；世界状态页仅周期 | 同前 |
+-| `/admin` | 运营控制台（不进公开 nav） | `/v1/admin/*` · 订阅 PATCH |
++| 路由             | 职责                                                 | 主要 API                                                                                                   |
++| ---------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
++| `/`              | **首页看板**：全模块可折叠 + 速跳；市场/紫卡内联搜索 | 世界状态（周期）/ 裂隙 / **入侵** / **午夜电波** / 商人 / 轮换 / 市场 / 紫卡 / 帮助 / 订阅（彼此独立面板） |
++| `/tools`         | 工具占位（待开发）                                   | —                                                                                                          |
++| `/about`         | 关于                                                 | —                                                                                                          |
++| `/worldstate` 等 | 旧模块深链页（仍可用，不进主导航）；世界状态页仅周期 | 同前                                                                                                       |
++| `/admin`         | 运营控制台（不进公开 nav）                           | `/v1/admin/*` · 订阅 PATCH                                                                                 |
+ 
+ 主导航：**首页 / 工具 / 关于 / 帮助 / 订阅**（左侧悬浮轨，可收起）。查询类模块集中在首页看板。视觉参考 wf.wiki 轻工具站气质的动漫风（暖底、软阴影、速跳条）。
+ 
+@@ -76,16 +76,16 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
+ 
+ ## 3. 依赖规则
+ 
+-| 包 / 应用             | 可依赖                                                 | 禁止                                         |
+-| --------------------- | ------------------------------------------------------ | -------------------------------------------- |
+-| `packages/core`       | 无业务应用依赖                                         | 依赖 api/bot/web                             |
+-| `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`              | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
+-| `packages/ui`         | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app`       | React；假设 `window` 必存在且无适配           |
+-| `apps/api` (`@lanius/server`) | `core`；上游 HTTP 客户端                        | 依赖 bot/web；把 QQ SDK 塞进 API             |
+-| `apps/bot`            | `@lanius/api`；`qq-official`；可选 `render`            | 直连 WF 上游；依赖 Nuxt/Web                   |
+-| `apps/web`            | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）       | 直连上游；依赖 bot 进程；默认 axios           |
+-| `qq-official`         | 仅 bot                                                 | 被 api/web 引用                              |
+-| `packages/render`     | bot（MVP）；可选 server 管理预览                       | 公开站直接渲染 QQ 卡片                       |
++| 包 / 应用                      | 可依赖                                             | 禁止                                              |
++| ------------------------------ | -------------------------------------------------- | ------------------------------------------------- |
++| `packages/core`                | 无业务应用依赖                                     | 依赖 api/bot/web                                  |
++| `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`                 | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
++| `packages/ui`                  | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app` | React；假设 `window` 必存在且无适配               |
++| `apps/api` (`@lanius/server`)  | `core`；上游 HTTP 客户端                           | 依赖 bot/web；把 QQ SDK 塞进 API                  |
++| `apps/bot`                     | `@lanius/api`；`qq-official`；可选 `render`        | 直连 WF 上游；依赖 Nuxt/Web                       |
++| `apps/web`                     | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）   | 直连上游；依赖 bot 进程；默认 axios               |
++| `qq-official`                  | 仅 bot                                             | 被 api/web 引用                                   |
++| `packages/render`              | bot（MVP）；可选 server 管理预览                   | 公开站直接渲染 QQ 卡片                            |
+ 
+ ## 4. Tauri 可插拔（现期）
+ 
+@@ -96,24 +96,24 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
+ 
+ ## 5. 横切约定
+ 
+-| 项       | 约定                                       | MVP                      |
+-| -------- | ------------------------------------------ | ------------------------ |
+-| `realm`  | `international` \| `china`                 | 仅实现 international     |
+-| `locale` | `zh` \| `en`（`@nuxtjs/i18n`）             | 中英骨架                 |
+-| Web UI   | Nuxt UI + Tailwind；Lanius 主题            | 避免默认紫系 AI 审美     |
+-| HTTP     | `fetch` via `packages/api`                 | 不默认 axios             |
+-| 密钥     | `config.local.yaml` 和/或 DB               | 不以 env 为主存储        |
++| 项       | 约定                                                                                                      | MVP                                |
++| -------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
++| `realm`  | `international` \| `china`                                                                                | 仅实现 international               |
++| `locale` | `zh` \| `en`（`@nuxtjs/i18n`）                                                                            | 中英骨架                           |
++| Web UI   | Nuxt UI + Tailwind；Lanius 主题                                                                           | 避免默认紫系 AI 审美               |
++| HTTP     | `fetch` via `packages/api`                                                                                | 不默认 axios                       |
++| 密钥     | `config.local.yaml` 和/或 DB                                                                              | 不以 env 为主存储                  |
+ | **缓存** | **业务 TTL / 上游快照 / 跨进程共享 → Redis**（或同等外部缓存）；进程内 `Map` 仅作本地降级或不可共享的短态 | 编排引入 Redis；API 缓存抽象可插拔 |
+-| QQ 回复  | `text` \| `image`                          | 均需支持；图片可降级文本 |
+-| Git      | 日常 → `develop`；发布 → `main` + `vX.Y.Z` | 二者禁直推 commit        |
++| QQ 回复  | `text` \| `image`                                                                                         | 均需支持；图片可降级文本           |
++| Git      | 日常 → `develop`；发布 → `main` + `vX.Y.Z`                                                                | 二者禁直推 commit                  |
+ 
+ ### 5.1 缓存边界
+ 
+-| 放入 Redis（或外部缓存） | 可留进程内 |
+-| ------------------------ | ---------- |
+-| worldstate / WFM 市场 / 紫卡等上游规范化结果 | 单次请求内的临时变量 |
+-| 管理配置热读缓存（DB 为源） | QQ `access_token` 极短槽（多实例时也应迁 Redis） |
+-| 调用审计的聚合计数、限流计数 | 纯本地调试开关 |
++| 放入 Redis（或外部缓存）                     | 可留进程内                                       |
++| -------------------------------------------- | ------------------------------------------------ |
++| worldstate / WFM 市场 / 紫卡等上游规范化结果 | 单次请求内的临时变量                             |
++| 管理配置热读缓存（DB 为源）                  | QQ `access_token` 极短槽（多实例时也应迁 Redis） |
++| 调用审计的聚合计数、限流计数                 | 纯本地调试开关                                   |
+ 
+ 现有 `apps/api` 的 `TtlCache`（内存 Map）视为过渡实现，重整时改为 `CacheStore` 接口 + Redis 适配；Redis 不可用时允许短暂内存降级并在 `/v1/health` 标 `cache=degraded`。
+ 
+diff --git a/docs/CONTRIBUTING.md b/docs/CONTRIBUTING.md
+index 7b83858..dcb7d13 100644
+--- a/docs/CONTRIBUTING.md
++++ b/docs/CONTRIBUTING.md
+@@ -14,7 +14,7 @@
+ ## CI（开源）
+ 
+ - PR（含 fork）与推送到 `develop`/`main`：只跑测试，**不使用任何部署 secrets**。
+-- 推送本仓库 tag `vX.Y.Z`：构建镜像并部署（维护者流程；贡献者无需配置）。
++- 推送本仓库 tag `vX.Y.Z`：可选推 GHCR；实际上线靠长期分支 `release` → Node `update-node.sh`（维护者流程；贡献者无需配置）。
+ 
+ ## 分支
+ 
+diff --git a/docs/DEPLOY.md b/docs/DEPLOY.md
+index ae96abe..6da14b5 100644
+--- a/docs/DEPLOY.md
++++ b/docs/DEPLOY.md
+@@ -1,6 +1,7 @@
+-# 部署指南（开源：手动 + Docker）
++# 部署指南（生产默认：Node + systemd）
+ 
+-Lanius 面向社区自托管。生产推荐 **Docker 单容器 `lanius-app` + 旁路 Caddy**；也可用纯 Node 手动部署。
++Lanius 面向社区自托管。**生产默认**为：git checkout/tag → `pnpm build` → **Node 进程**（systemd）+ 旁路 Caddy。  
++Docker 单容器 `lanius-app` 仍可用，但已降级为**可选**路径（见文末 §B）。
+ 
+ ## 架构摘要
+ 
+@@ -8,145 +9,168 @@ Lanius 面向社区自托管。生产推荐 **Docker 单容器 `lanius-app` + 
+ Internet
+    │
+    ▼
+- Caddy (:80/:443)                 ← deploy/Caddyfile.app
+-   ├─ /qq/*           → lanius-app:8788
+-   ├─ /api/lanius/*   → lanius-app:8787
+-   └─ /*              → lanius-app:8790
+-                              └─ 内嵌 Redis + SQLite(/data)
++ Caddy (:80/:443)                 ← deploy/Caddyfile.node（系统 Caddy）
++   ├─ /qq/*           → 127.0.0.1:8788   (lanius-bot)
++   ├─ /api/lanius/*   → 127.0.0.1:8787   (lanius-api，strip 前缀)
++   └─ /*              → 127.0.0.1:8790   (lanius-web Nitro .output)
++                              ├─ Redis（本机 redis-server，可选）
++                              └─ SQLite（config database.sqlitePath）
+ ```
+ 
+-配置：`config/default`（回退）+ `config/local`（可写，Admin 热更新）。见 [config/README.md](../config/README.md)。
++配置：`config/default`（回退）+ `config/local`（可写，Admin 热更新）。见 [config/README.md](../config/README.md)。  
++**密钥只放配置文件/DB**，不要写进仓库或环境变量主存储。
+ 
+ ## 发版与自动部署（维护者）
+ 
+-| 事件 | 行为 |
+-| --- | --- |
+-| PR / `develop` | 仅 [ci.yml](../.github/workflows/ci.yml) |
+-| tag `v*` / `main` auto-tag | [release.yml](../.github/workflows/release.yml)：测试 + **推 GHCR**（含 `lanius-app`），**不 SSH** |
+-| 长期分支 **`release`** push | [deploy-release.yml](../.github/workflows/deploy-release.yml)：SSH → **`update-image.sh`（pull + up，禁止 build）** |
+-| Admin「版本」 | 拉 GitHub Releases/tags，同样走 pull 换版 |
++| 事件                        | 行为                                                                                                               |
++| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
++| PR / `develop`              | 仅 [ci.yml](../.github/workflows/ci.yml)                                                                           |
++| tag `v*` / `main` auto-tag  | [release.yml](../.github/workflows/release.yml)：推 **GHCR（可选镜像产物）**，**不 SSH**                           |
++| 长期分支 **`release`** push | [deploy-release.yml](../.github/workflows/deploy-release.yml)：SSH → **`update-node.sh`（git + build + systemd）** |
++| Admin「版本」               | 默认执行 `update-node.sh`；`github.deployMode: docker` 时才走镜像                                                  |
+ 
+-约定：先确保 GHCR 上已有对应 tag 镜像，再更新 `release` 分支或 Admin 选版。
++约定：先在 `main` 打好 SemVer tag，再推进 `release` 分支（或 Admin 选版）完成上线。  
++旧「仅 pull GHCR、禁止 build」流程已降级：仅当显式选 `docker` 运行时使用。
+ 
+ Fork 安全：部署 / 推包 job 限制 `github.repository == Lexcubia/Lanius-Warframe-Bot`；`ci.yml` 无 secrets。
+ 
+-### Environment `production` secrets（仅 deploy-release）
++### Environment `production` secrets（deploy-release）
+ 
+-| Name | 含义 |
+-| --- | --- |
+-| `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` | SSH |
+-| `DEPLOY_PORT` | 可选，默认 22 |
+-| `DEPLOY_PATH` | 服务器上 `deploy/` 绝对路径 |
++| Name                                             | 含义                                                        |
++| ------------------------------------------------ | ----------------------------------------------------------- |
++| `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` | SSH                                                         |
++| `DEPLOY_PORT`                                    | 可选，默认 22                                               |
++| `DEPLOY_PATH`                                    | 服务器上 `deploy/` 绝对路径（如 `/opt/lanius/repo/deploy`） |
+ 
+ ---
+ 
+-## A. 手动部署（无 Docker）
++## A. Node 生产部署（推荐默认）
+ 
+-适合开发机或小型 VPS。
++适合 VPS / 裸机。三进程：**API `dist`**、**Bot `dist`**、**Web Nuxt/Nitro `.output`**（**禁止**生产用 `nuxt dev`）。
+ 
+-1. 安装 **Node ≥ 20**、**pnpm 9**；可选 Redis；Bot 出图需 Playwright Chromium。
++### A.1 首次安装
++
++1. 安装 **Node ≥ 20**、**pnpm 9**（建议 `corepack enable`）、**Caddy**、可选 **Redis**；系统用户建议专用账号 `lanius`。
+ 2. Clone 并检出版本：
+ 
+    ```bash
++   sudo mkdir -p /opt/lanius && sudo chown "$USER":"$USER" /opt/lanius
+    git clone https://github.com/Lexcubia/Lanius-Warframe-Bot.git /opt/lanius/repo
+    cd /opt/lanius/repo
+-   git checkout v0.2.0
++   git checkout v0.3.0   # 换成目标 tag
+    ```
+ 
+-3. 配置：
++3. 配置（密钥仅写 local，勿提交）：
+ 
+    ```bash
+    cp config/local/admin.yaml.example config/local/admin.yaml
+    cp config/local/api.yaml.example config/local/api.yaml
+    cp config/local/qq.yaml.example config/local/qq.yaml
+-   # 编辑口令哈希、adminToken、QQ 凭据等
++   cp config/local/redis.yaml.example config/local/redis.yaml
++   # 编辑口令哈希、adminToken、QQ 凭据、redis.url、sqlitePath 等
++   mkdir -p /opt/lanius/data
++   # 建议 config/local/database.yaml：
++   #   sqlitePath: '/opt/lanius/data/lanius.sqlite'
+    ```
+ 
+-4. 安装与构建：
++4. Redis（推荐；空 `redis.url` 则内存缓存）：
+ 
+    ```bash
+-   pnpm install --frozen-lockfile
+-   pnpm --filter @lanius/render exec playwright install chromium
+-   pnpm build
++   # Debian/Ubuntu 示例
++   sudo apt-get install -y redis-server
++   sudo systemctl enable --now redis-server
++   # config/local/redis.yaml → url: 'redis://127.0.0.1:6379'
+    ```
+ 
+-5. 启动（三进程，可用 systemd）：
++5. 安装依赖、Playwright、构建：
+ 
+    ```bash
+-   pnpm --filter @lanius/server start   # :8787
+-   pnpm --filter @lanius/bot start      # :8788
+-   # web：pnpm --filter @lanius/web build && node apps/web/.output/server/index.mjs  # :8790
++   cd /opt/lanius/repo
++   pnpm install --frozen-lockfile
++   bash deploy/prepare-playwright.sh   # 默认 native；浏览器进 /opt/lanius/ms-playwright
++   pnpm --filter @lanius/render build:card-host
++   pnpm build
++   pnpm --filter @lanius/web build
++   # 确认存在：
++   #   apps/api/dist/index.js
++   #   apps/bot/dist/index.js
++   #   apps/web/.output/server/index.mjs
+    ```
+ 
+-6. 反代：`/qq`→8788，`/api/lanius`→8787，`/`→8790。  
+-7. 升级：`git fetch && git checkout vX.Y.Z && pnpm install && pnpm build` 后重启进程。配置项优先在 Admin 改（热加载）。
+-
+-systemd 单元示例可放在 `deploy/systemd/`（按需复制）。
+-
+----
+-
+-## B. Docker 部署（推荐）
+-
+-### 首次安装
+-
+-1. 安装 Docker Engine + Compose；国内建议配置镜像加速。
+-2. 准备目录与密钥（**密钥在 git 工作树外**）：
++6. 安装 systemd 单元并启动：
+ 
+    ```bash
+-   mkdir -p /opt/lanius/secrets /opt/lanius/data
+-   git clone https://github.com/Lexcubia/Lanius-Warframe-Bot.git /opt/lanius/repo
+-   cd /opt/lanius/repo
+-   git checkout v0.2.0   # 或 release 分支
+-   # 填写 config/local/*.yaml（或仍用单体 secrets 文件，见下）
+-   cp deploy/.env.example deploy/.env
++   sudo bash deploy/install-node-services.sh
++   sudo systemctl start lanius.target
++   curl -fsS http://127.0.0.1:8787/v1/health
+    ```
+ 
+-3. `deploy/.env` 示例：
++   若希望 **Admin 选版** 能从 `lanius` 用户触发重启，配置受限 sudoers（勿放开任意命令）：
+ 
+-   ```env
+-   DOMAIN=warframe.xxxx.com
+-   PUBLIC_SITE_BASE_URL=https://warframe.xxxx.com
+-   IMAGE_TAG=v0.2.0
+-   GHCR_IMAGE_PREFIX=ghcr.io/lexcubia/lanius-warframe-bot
+-   LANIUS_CONFIG_DEFAULT=/opt/lanius/repo/config/default
+-   LANIUS_CONFIG_LOCAL=/opt/lanius/repo/config/local
+-   LANIUS_CONFIG_FILE=/opt/lanius/secrets/config.local.yaml
++   ```text
++   # /etc/sudoers.d/lanius-deploy
++   lanius ALL=(root) NOPASSWD: /bin/systemctl restart lanius-api.service, /bin/systemctl restart lanius-bot.service, /bin/systemctl restart lanius-web.service, /bin/systemctl start lanius.target
+    ```
+ 
+-4. Playwright（Bot 出图）：
++   无 sudo 时 Admin 会返回手动执行 `update-node.sh` 的指引。
+ 
+-   ```bash
+-   bash /opt/lanius/repo/deploy/prepare-playwright.sh
+-   ```
+-
+-5. 启动（优先 pull，避免每次重建）：
++7. Caddy（系统安装，非容器）：
+ 
+    ```bash
+-   cd /opt/lanius/repo/deploy
+-   export IMAGE_TAG=v0.2.0
+-   docker compose -f docker-compose.app.yml pull
+-   docker compose -f docker-compose.app.yml up -d
++   export DOMAIN=warframe.example.com
++   # 将 deploy/Caddyfile.node 装入 /etc/caddy/Caddyfile，或：
++   caddy run --config /opt/lanius/repo/deploy/Caddyfile.node
+    ```
+ 
+-   若 GHCR 拉取过慢，可首次 `docker compose -f docker-compose.app.yml build`，之后日常仍用 pull。
++### A.2 日常启停
+ 
+-6. DNS 指向服务器；Caddy 申请证书。
++```bash
++sudo systemctl start lanius.target
++sudo systemctl stop lanius.target
++sudo systemctl restart lanius-api lanius-bot lanius-web
++journalctl -u lanius-api -u lanius-bot -u lanius-web -f
++```
+ 
+-### 日常更新 / 回退（不 rebuild）
++### A.3 升级 / 回退
+ 
+ ```bash
+ cd /opt/lanius/repo/deploy
+-bash ./update-image.sh v0.2.1
++bash ./update-node.sh v0.3.1
+ ```
+ 
+-或：将 `release` 分支推进到目标版本（Actions 自动 pull），或在 **Admin → 版本** 选择 tag。
++脚本会：`git fetch` → checkout tag → `pnpm install` → build（含 Web）→ `systemctl restart` → 打健康检查。  
++配置项优先在 Admin 改（热加载）；改监听端口 / Redis URL / SQLite 路径后需重启对应单元。
++
++或：将长期分支 **`release`** 推进到含目标版本的提交（Actions 调用同一脚本），或在 **Admin → 版本** 选 tag（`github.deployMode` 须为 `node`）。
++
++### A.4 Playwright / SQLite / Redis 要点
+ 
+-Admin 自动执行需可选挂载 `docker.sock`（见 `docker-compose.app.yml` 注释；有安全风险，默认关闭）。
++| 组件       | 说明                                                                                                                                        |
++| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
++| Redis      | 本机 `redis-server`；`config` 中 `redis.url`；改 URL 需重启 API                                                                             |
++| SQLite     | 相对路径相对**仓库根**（systemd `WorkingDirectory`）；生产建议绝对路径到 `/opt/lanius/data`                                                 |
++| Playwright | `PLAYWRIGHT_BROWSERS_PATH`（单元已设）；`prepare-playwright.sh` 或 `pnpm --filter @lanius/render browsers:install`；失败时 Bot 图片降级文本 |
+ 
+-### 配置热更新
++---
++
++## B. Docker 部署（可选）
++
++仍提供 `deploy/docker-compose.app.yml` + `update-image.sh`，适合坚持镜像交付的环境。  
++**不是**当前推荐主路径；Admin 需设 `github.deployMode: docker`，`deploy-release` 需选 runtime=`docker`。
++
++### 首次（摘要）
++
++```bash
++cp deploy/.env.example deploy/.env
++# 填写 DOMAIN / IMAGE_TAG / 配置挂载路径
++bash deploy/prepare-playwright.sh   # 可加 LANIUS_PLAYWRIGHT_METHOD=docker
++cd deploy
++export IMAGE_TAG=v0.3.0
++docker compose -f docker-compose.app.yml pull
++docker compose -f docker-compose.app.yml up -d
++```
+ 
+-在 `/admin` 编辑模块配置并保存 → 写入 `config/local` → API/Bot 进程内重载。  
+-更改监听端口 / Redis URL / SQLite 路径后需重启容器或进程。
++日常：`bash ./update-image.sh v0.3.1`（仅 pull，不 rebuild）。
+ 
+ ---
+ 
+@@ -155,3 +179,4 @@ Admin 自动执行需可选挂载 `docker.sock`（见 `docker-compose.app.yml` 
+ - 勿将 `config/local`、`config.local.yaml`、真实口令提交进 git。
+ - 生产 `admin.passwordHash` 使用 bcrypt；`plain:` 仅本地。
+ - 不要把 API/Bot 端口直接暴露公网；经 Caddy 反代。
++- QQ 仅腾讯官方机器人开放平台；勿接入非官方协议。
+diff --git a/docs/VERSIONING.md b/docs/VERSIONING.md
+index 6e7ca83..11b8713 100644
+--- a/docs/VERSIONING.md
++++ b/docs/VERSIONING.md
+@@ -26,14 +26,15 @@ feature/*  fix/*  docs/*  …
+             |
+           main       ← 归档 / 已发布快照
+             |
+-       tag vX.Y.Z    ← Actions：测试 + 推 GHCR（不 SSH）
++       tag vX.Y.Z    ← Actions：可选推 GHCR（不 SSH）
+             |
+-         release     ← 长期「上线指针」分支；push 触发 pull 换版部署
++         release     ← 长期「上线指针」；push → Node：git + build + systemd
+ ```
+ 
+ - **日常功能**合入 `develop`，**不**因每个 PR 打 tag，**不**自动部署。
+-- **发布归档**：`develop` → `main`；Actions 按 CHANGELOG 打 **`vX.Y.Z`** 并 `release.yml` **仅推 GHCR**。
+-- **上线 / 回退**：更新长期分支 **`release`**（或 Admin 选版 / `deploy/update-image.sh`）→ `docker compose pull && up -d`，**禁止**部署路径 `build`。
++- **发布归档**：`develop` → `main`；Actions 按 CHANGELOG 打 **`vX.Y.Z`**；`release.yml` **可选**推 GHCR（镜像交付降级为可选产物）。
++- **上线 / 回退（默认）**：更新长期分支 **`release`**（或 Admin 选版 / `deploy/update-node.sh`）→ 宿主机 checkout tag → `pnpm build` → systemd 重启。
++- **可选 Docker 路径**：`github.deployMode: docker` 或 deploy workflow 选 `docker` → `update-image.sh`（pull，不 rebuild）。
+ - Hotfix：从 tag / `main` 拉 `fix/...` → 合回 `main` 与 `develop`；需要上线时再推进 `release`。
+ 
+ ## CHANGELOG
+@@ -49,8 +50,8 @@ feature/*  fix/*  docs/*  …
+ 1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
+ 2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
+ 3. PR：`develop` → `main`（或经 `release/x.y.z`）。
+-4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR，无预检）。
+-5. 确认 GHCR 镜像就绪后，将 `release` 分支快进到目标提交（或 Admin / `update-image.sh`）完成上线。
++4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（可选推 GHCR，无预检）。
++5. 将 `release` 分支快进到目标提交（或 Admin / `update-node.sh vX.Y.Z`）完成 **Node** 上线；仅当仍用镜像时才需等 GHCR 就绪并走 `update-image.sh`。
+ 6. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
+ 
+ ## 质量关卡
+diff --git a/packages/config/src/modules.ts b/packages/config/src/modules.ts
+index 99f722f..cc2e36f 100644
+--- a/packages/config/src/modules.ts
++++ b/packages/config/src/modules.ts
+@@ -149,13 +149,21 @@ export const WebModuleSchema = z.object({
+ 
+ /**
+  * GitHub 版本列表（Admin 选版）；token 可选提高限额。
++ * 生产默认 `deployMode=node`（git + pnpm build + systemd）；`docker` 为可选镜像路径。
+  */
+ export const GithubModuleSchema = z.object({
+   owner: z.string().default('Lexcubia'),
+   repo: z.string().default('Lanius-Warframe-Bot'),
+   token: z.string().optional(),
+-  /** compose 工程目录（容器内或宿主机路径，供 update 脚本） */
++  /** 升级脚本所在目录（宿主机 `deploy/`） */
+   deployDir: z.string().default('/opt/lanius/repo/deploy'),
++  /** 仓库根（Node 升级脚本 `LANIUS_REPO`；默认由 deployDir 上一级推断） */
++  repoRoot: z.string().default('/opt/lanius/repo'),
++  /**
++   * 选版执行路径：`node` → update-node.sh；`docker` → update-image.sh。
++   */
++  deployMode: z.enum(['node', 'docker']).default('node'),
++  /** 仅 docker 模式使用的 compose 文件名 */
+   composeFile: z.string().default('docker-compose.app.yml'),
+ });
+ 
+@@ -261,7 +269,9 @@ export const MODULE_FIELD_META: Record<ConfigModuleId, Record<string, FieldMeta>
+     owner: {},
+     repo: {},
+     deployDir: { description: '宿主机 deploy 目录' },
+-    composeFile: {},
++    repoRoot: { description: '仓库根（Node 升级用）' },
++    deployMode: { description: 'node | docker（生产默认 node）' },
++    composeFile: { description: '仅 docker 模式的 compose 文件' },
+   },
+ };
+ 
+-- 
+2.51.2.windows.1
+

@@ -1,0 +1,25 @@
+From 7d38502736a591f1795418f4aba9c1059ab253c8 Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Mon, 12 Oct 2026 03:38:32 +0800
+Subject: [PATCH 27/45] =?UTF-8?q?fix(repo):=20=E7=A7=BB=E9=99=A4=20.husky/?=
+ =?UTF-8?q?pre-commit=20=E7=9A=84=20BOM=20=E5=A4=B4=EF=BC=8C=E4=BF=AE?=
+ =?UTF-8?q?=E5=A4=8D=20husky=20=E5=9C=A8=20POSIX=20=E4=B8=8B=E6=89=A7?=
+ =?UTF-8?q?=E8=A1=8C=E5=A4=B1=E8=B4=A5?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ .husky/pre-commit | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/.husky/pre-commit b/.husky/pre-commit
+index 27fe073..5ee7abd 100644
+--- a/.husky/pre-commit
++++ b/.husky/pre-commit
+@@ -1 +1 @@
+-﻿pnpm exec lint-staged
++pnpm exec lint-staged
+-- 
+2.51.2.windows.1
+

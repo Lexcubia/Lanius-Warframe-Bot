@@ -1,0 +1,2893 @@
+From 2b653cd593dd83c0dcecc66ce44a51a915c38183 Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Mon, 12 Oct 2026 06:22:01 +0800
+Subject: [PATCH 29/45] =?UTF-8?q?feat(qq):=20=E8=A3=82=E9=9A=99=E5=9B=9E?=
+ =?UTF-8?q?=E5=A4=8D=20markdown=20=E5=B5=8C=E5=9B=BE=E5=9F=BA=E5=BB=BA?=
+ =?UTF-8?q?=E4=B8=8E=E5=8D=A1=E7=89=87=E5=B8=83=E5=B1=80=E4=BC=98=E5=8C=96?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 裂隙卡片倒计时移至首行末尾，节点名截断避免撑大容器
+- 新增腾讯云 COS 上传模块（PutObject，HMAC-SHA1 签名，无 SDK）
+- sendMarkdown 保留图片语法内 URL，仅剥除裸链
+- 新增 bot.markdownImage 开关（默认关，QQ 嵌图气泡渲染待排查）
+- 裂隙图片回复在开关开启+已配 COS 时走单条 markdown 嵌图+按钮
+---
+ apps/bot/src/config.test.ts                   |    1 +
+ apps/bot/src/pipeline/handle-command.ts       | 1233 +++++++++--------
+ packages/config/src/modules.ts                |   60 +-
+ packages/qq-official/src/client.test.ts       |  372 ++---
+ packages/qq-official/src/client.ts            |  784 ++++++-----
+ packages/qq-official/src/cos-upload.ts        |  150 ++
+ packages/qq-official/src/index.ts             |  111 +-
+ .../ui/src/components/FissuresModuleCard.vue  |   31 +-
+ 8 files changed, 1480 insertions(+), 1262 deletions(-)
+ create mode 100644 packages/qq-official/src/cos-upload.ts
+
+diff --git a/apps/bot/src/config.test.ts b/apps/bot/src/config.test.ts
+index c34bd64..e02e562 100644
+--- a/apps/bot/src/config.test.ts
++++ b/apps/bot/src/config.test.ts
+@@ -25,6 +25,7 @@ function sampleConfig(): BotConfig {
+       pushIntervalMs: 60_000,
+       commandPrefix: '/',
+       commandPrefixPolicy: 'optional',
++      markdownImage: true,
+       image: {
+         maxPerUserPerMinute: 5,
+         renderTimeoutMs: 4000,
+diff --git a/apps/bot/src/pipeline/handle-command.ts b/apps/bot/src/pipeline/handle-command.ts
+index c1d6223..3abf28d 100644
+--- a/apps/bot/src/pipeline/handle-command.ts
++++ b/apps/bot/src/pipeline/handle-command.ts
+@@ -1,601 +1,632 @@
+-import { createLaniusApiClient } from '@lanius/api';
+-import {
+-  renderFissuresCard,
+-  renderHelpCard,
+-  renderInvasionsCard,
+-  renderMarketCard,
+-  renderNightwaveCard,
+-  renderRivenCard,
+-  renderWorldstateCard,
+-} from '@lanius/render';
+-import {
+-  applyFissureQueryFilter,
+-  buildHelpDto,
+-  isFissureQueryActive,
+-  pickLocalized,
+-  type FissureQueryFilter,
+-  type Locale,
+-  type WorldstateDto,
+-} from '@lanius/core';
+-import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
+-
+-import type { BotConfig } from '../config.js';
+-import type { BotIntent } from '../commands/parse-command.js';
+-import { formatHelpText } from '../formatters/help-text.js';
+-import {
+-  formatMarketText,
+-  formatRivenText,
+-} from '../formatters/market-text.js';
+-import {
+-  formatRotationText,
+-  formatVarziaText,
+-  formatVoidTraderText,
+-} from '../formatters/traders-text.js';
+-import {
+-  formatFissuresText,
+-  formatInvasionsText,
+-  formatNightwaveText,
+-  formatWorldstateText,
+-} from '../formatters/worldstate-text.js';
+-import {
+-  buildFissureShortcutKeyboard,
+-  fissureShortcutMarkdownHint,
+-} from '../qq/build-fissure-keyboard.js';
+-
+-/**
+- * 会话级可变偏好（MVP 进程内内存）。
+- */
+-export type SessionPrefs = {
+-  replyMode: 'text' | 'image';
+-  locale: Locale;
+-};
+-
+-/**
+- * 命令处理管道的依赖。
+- */
+-export type HandleCommandDeps = {
+-  config: BotConfig;
+-  qq: QqOfficialClient;
+-  prefs: SessionPrefs;
+-  apiClient?: ReturnType<typeof createLaniusApiClient>;
+-  scene?: 'group' | 'c2c';
+-  userId?: string;
+-};
+-
+-/**
+- * 处理已解析的 Bot 意图。
+- *
+- * @param intent - 已解析的命令意图
+- * @param target - 官方 QQ 发送目标
+- * @param deps - 配置、QQ 客户端、会话偏好、可选 API 客户端
+- * @returns 供日志/测试使用的结果摘要字符串
+- */
+-export async function handleCommand(
+-  intent: BotIntent,
+-  target: QqSendTarget,
+-  deps: HandleCommandDeps,
+-): Promise<string> {
+-  const locale = deps.prefs.locale;
+-  const api =
+-    deps.apiClient ??
+-    createLaniusApiClient({
+-      baseUrl: deps.config.bot.apiBaseUrl,
+-      adminToken: deps.config.api?.adminToken,
+-    });
+-  const gateCtx = {
+-    scene:
+-      deps.scene ??
+-      (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
+-    targetId: target.targetId,
+-    userId: deps.userId ?? '',
+-  };
+-  const publicQuery = {
+-    realm: deps.config.defaults.realm,
+-    locale,
+-  };
+-
+-  if (intent.type === 'mode') {
+-    deps.prefs.replyMode = intent.mode;
+-    const msg =
+-      locale === 'en'
+-        ? `Reply mode set to ${intent.mode}.`
+-        : `已切换为${intent.mode === 'image' ? '图片' : '文本'}模式。`;
+-    const sent = await deps.qq.sendText(target, msg);
+-    if (!sent.ok) {
+-      return `send-failed:${sent.detail ?? 'unknown'}`;
+-    }
+-    return msg;
+-  }
+-
+-  if (intent.type === 'help' || intent.type === 'unknown') {
+-    const envelope = await api
+-      .getHelp(intent.type === 'help' ? intent.module : undefined)
+-      .catch(() => null);
+-    const help =
+-      envelope && envelope.ok
+-        ? envelope.data
+-        : buildHelpDto({
+-            moduleId: undefined,
+-          });
+-    const text = formatHelpText(help, locale, {
+-      unknownRaw: intent.type === 'unknown' ? intent.raw : undefined,
+-    });
+-    return replyTextOrImage({
+-      deps,
+-      target,
+-      text,
+-      preferImage: deps.prefs.replyMode === 'image',
+-      render: () => renderHelpCard({ help, locale }),
+-      label: 'help',
+-    });
+-  }
+-
+-  if (intent.type === 'market') {
+-    const envelope = await api.getMarketItems(intent.query, gateCtx);
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const text = formatMarketText(envelope.data, locale);
+-    return replyTextOrImage({
+-      deps,
+-      target,
+-      text,
+-      preferImage: deps.prefs.replyMode === 'image',
+-      render: () => renderMarketCard({ market: envelope.data, locale }),
+-      label: 'market',
+-    });
+-  }
+-
+-  if (intent.type === 'riven') {
+-    const envelope = await api.getRiven(intent.query, gateCtx);
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const text = formatRivenText(envelope.data, locale);
+-    return replyTextOrImage({
+-      deps,
+-      target,
+-      text,
+-      preferImage: deps.prefs.replyMode === 'image',
+-      render: () => renderRivenCard({ riven: envelope.data, locale }),
+-      label: 'riven',
+-    });
+-  }
+-
+-  if (intent.type === 'subscribe') {
+-    return handleSubscribe(intent, target, deps, api, gateCtx, locale);
+-  }
+-
+-  if (intent.type === 'voidTrader') {
+-    const envelope = await api.getVoidTrader(publicQuery, gateCtx);
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const text = formatVoidTraderText(envelope.data, locale, {
+-      stale: envelope.meta.stale,
+-    });
+-    const sent = await deps.qq.sendText(target, text);
+-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+-  }
+-
+-  if (intent.type === 'varzia') {
+-    const envelope = await api.getVarzia(publicQuery, gateCtx);
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const text = formatVarziaText(envelope.data, locale, {
+-      stale: envelope.meta.stale,
+-    });
+-    const sent = await deps.qq.sendText(target, text);
+-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+-  }
+-
+-  if (intent.type === 'tenetRotation' || intent.type === 'codaRotation') {
+-    const kind = intent.type === 'tenetRotation' ? 'tenet' : 'coda';
+-    const envelope = await api.getWeaponRotation(kind, publicQuery, gateCtx);
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const text = formatRotationText(envelope.data, locale);
+-    const sent = await deps.qq.sendText(target, text);
+-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+-  }
+-
+-  const envelope = await api.getWorldstate(publicQuery);
+-
+-  if (!envelope.ok) {
+-    return sendFail(deps, target, locale, envelope.error.message);
+-  }
+-
+-  const moduleKind =
+-    intent.type === 'fissures'
+-      ? 'fissures'
+-      : intent.type === 'invasions'
+-        ? 'invasions'
+-        : intent.type === 'nightwave'
+-          ? 'nightwave'
+-          : 'worldstate';
+-
+-  let worldstate: WorldstateDto = envelope.data;
+-  let filterSummary: string | undefined;
+-  if (intent.type === 'fissures' && intent.filter && isFissureQueryActive(intent.filter)) {
+-    const applied = applyFissureQueryFilter(envelope.data.fissures, intent.filter);
+-    worldstate = { ...envelope.data, fissures: applied.items };
+-    filterSummary = summarizeFissureFilter(intent.filter, locale);
+-  }
+-
+-  const text =
+-    moduleKind === 'fissures'
+-      ? formatFissuresText(worldstate, locale, {
+-          stale: envelope.meta.stale,
+-          filterSummary,
+-        })
+-      : moduleKind === 'invasions'
+-        ? formatInvasionsText(envelope.data, locale, {
+-            stale: envelope.meta.stale,
+-          })
+-        : moduleKind === 'nightwave'
+-          ? formatNightwaveText(envelope.data, locale, {
+-              stale: envelope.meta.stale,
+-            })
+-          : formatWorldstateText(envelope.data, locale, {
+-              stale: envelope.meta.stale,
+-            });
+-
+-  const renderInput = {
+-    worldstate,
+-    locale,
+-    stale: envelope.meta.stale,
+-  };
+-
+-  // 裂隙：Markdown + 底部指令按钮，便于 QQ 内一键筛选
+-  if (moduleKind === 'fissures') {
+-    return replyFissuresWithShortcuts({
+-      deps,
+-      target,
+-      text,
+-      preferImage: deps.prefs.replyMode === 'image',
+-      render: () => renderFissuresCard(renderInput),
+-    });
+-  }
+-
+-  return replyTextOrImage({
+-    deps,
+-    target,
+-    text,
+-    preferImage: deps.prefs.replyMode === 'image',
+-    render: () =>
+-      moduleKind === 'invasions'
+-        ? renderInvasionsCard(renderInput)
+-        : moduleKind === 'nightwave'
+-          ? renderNightwaveCard(renderInput)
+-          : renderWorldstateCard(renderInput),
+-    label: moduleKind,
+-  });
+-}
+-
+-/**
+- * 将裂隙筛选查询格式化为短摘要（QQ 文案用）。
+- *
+- * @param filter - 命令行查询
+- * @param locale - 语言
+- * @returns 摘要串；无条件时为空串
+- */
+-function summarizeFissureFilter(
+-  filter: FissureQueryFilter,
+-  locale: Locale,
+-): string {
+-  const zh = locale !== 'en';
+-  const eraLabel: Record<string, { zh: string; en: string }> = {
+-    lith: { zh: '古纪', en: 'Lith' },
+-    meso: { zh: '前纪', en: 'Meso' },
+-    neo: { zh: '中纪', en: 'Neo' },
+-    axi: { zh: '后纪', en: 'Axi' },
+-    requiem: { zh: '安魂', en: 'Requiem' },
+-    omnia: { zh: '全能', en: 'Omnia' },
+-  };
+-  const pathLabel: Record<string, { zh: string; en: string }> = {
+-    normal: { zh: '普通', en: 'Normal' },
+-    steelPath: { zh: '钢铁之路', en: 'Steel Path' },
+-    empyrean: { zh: '九重天', en: 'Empyrean' },
+-  };
+-  const parts: string[] = [];
+-  for (const era of filter.eras) {
+-    parts.push(pickLocalized(eraLabel[era] ?? { zh: era, en: era }, locale));
+-  }
+-  for (const path of filter.paths) {
+-    parts.push(pickLocalized(pathLabel[path] ?? { zh: path, en: path }, locale));
+-  }
+-  for (const hint of filter.missionHints) {
+-    parts.push(hint);
+-  }
+-  return parts.join(zh ? ' · ' : ' · ');
+-}
+-
+-/**
+- * 处理订阅列表 / 订阅 / 退订。
+- *
+- * @param intent - subscribe 意图
+- * @param target - QQ 目标
+- * @param deps - 依赖
+- * @param api - API 客户端
+- * @param gateCtx - 场景上下文
+- * @param locale - 语言
+- * @returns 结果摘要
+- */
+-async function handleSubscribe(
+-  intent: Extract<BotIntent, { type: 'subscribe' }>,
+-  target: QqSendTarget,
+-  deps: HandleCommandDeps,
+-  api: ReturnType<typeof createLaniusApiClient>,
+-  gateCtx: { scene: 'group' | 'c2c'; targetId: string; userId: string },
+-  locale: Locale,
+-): Promise<string> {
+-  const zh = locale === 'zh';
+-  const scene = gateCtx.scene;
+-
+-  if (intent.action === 'list') {
+-    const envelope = await api.listSubscriptions(scene, gateCtx.targetId);
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const rows = envelope.data.subscriptions.filter((row) => row.enabled);
+-    const lines =
+-      rows.length === 0
+-        ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
+-        : [
+-            zh ? '当前订阅：' : 'Subscriptions:',
+-            ...rows.map(
+-              (row) =>
+-                `· ${row.moduleId} (${row.frequency})`,
+-            ),
+-            zh
+-              ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
+-              : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
+-          ];
+-    const sent = await deps.qq.sendText(target, lines.join('\n'));
+-    return sent.ok ? 'subscribe-list' : `send-failed:${sent.detail ?? 'unknown'}`;
+-  }
+-
+-  if (intent.action === 'off') {
+-    if (!intent.moduleId) {
+-      return sendFail(
+-        deps,
+-        target,
+-        locale,
+-        zh ? '请指定要退订的模块' : 'module required',
+-      );
+-    }
+-    const envelope = await api.disableSubscription({
+-      scene,
+-      targetId: gateCtx.targetId,
+-      moduleId: intent.moduleId,
+-    });
+-    if (!envelope.ok) {
+-      return sendFail(deps, target, locale, envelope.error.message);
+-    }
+-    const msg = zh
+-      ? `已退订：${intent.moduleId}`
+-      : `Unsubscribed: ${intent.moduleId}`;
+-    const sent = await deps.qq.sendText(target, msg);
+-    return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
+-  }
+-
+-  if (!intent.moduleId) {
+-    return sendFail(
+-      deps,
+-      target,
+-      locale,
+-      zh ? '请指定要订阅的模块' : 'module required',
+-    );
+-  }
+-  const frequency = intent.frequency ?? 'on_change';
+-  const envelope = await api.upsertSubscription({
+-    scene,
+-    targetId: gateCtx.targetId,
+-    moduleId: intent.moduleId,
+-    frequency,
+-    userId: gateCtx.userId,
+-  });
+-  if (!envelope.ok) {
+-    return sendFail(deps, target, locale, envelope.error.message);
+-  }
+-  const msg = zh
+-    ? `已订阅 ${intent.moduleId}（频率：${frequency}）`
+-    : `Subscribed ${intent.moduleId} (${frequency})`;
+-  const sent = await deps.qq.sendText(target, msg);
+-  return sent.ok ? 'subscribe-on' : `send-failed:${sent.detail ?? 'unknown'}`;
+-}
+-
+-/**
+- * 裂隙回复：优先 Markdown + 快捷指令按钮；图片模式先出图再附带按钮条。
+- *
+- * @param options - 发送选项
+- * @returns 结果摘要
+- */
+-async function replyFissuresWithShortcuts(options: {
+-  deps: HandleCommandDeps;
+-  target: QqSendTarget;
+-  text: string;
+-  preferImage: boolean;
+-  render: () => Promise<Buffer>;
+-}): Promise<string> {
+-  const { deps, target, text, preferImage, render } = options;
+-  const locale = deps.prefs.locale;
+-  const keyboard = buildFissureShortcutKeyboard({
+-    locale,
+-    enter: target.scene === 'c2c',
+-    botAppId: deps.config.qq.appId,
+-  });
+-  const mdBody = toFissureMarkdown(text);
+-
+-  if (!preferImage) {
+-    const sent = await deps.qq.sendMarkdown(target, mdBody, keyboard);
+-    if (sent.ok) {
+-      return 'markdown-fissures';
+-    }
+-    const fallback = await deps.qq.sendText(target, text);
+-    if (!fallback.ok) {
+-      return `send-failed:${fallback.detail ?? sent.detail ?? 'unknown'}`;
+-    }
+-    return 'markdown-fallback-text';
+-  }
+-
+-  try {
+-    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+-    const img = await deps.qq.sendImage(target, png);
+-    if (img.ok) {
+-      // 图片消息无法挂按钮：再发一条短 Markdown 承载 keyboard
+-      const tip = await deps.qq.sendMarkdown(
+-        target,
+-        fissureShortcutMarkdownHint(locale),
+-        keyboard,
+-      );
+-      return tip.ok ? 'image+markdown-fissures' : 'image';
+-    }
+-    const fallback = await deps.qq.sendMarkdown(
+-      target,
+-      `${mdBody}\n\n${locale === 'en' ? '_(image send failed; text fallback)_' : '_（图片发送失败，已降级文本）_'}`,
+-      keyboard,
+-    );
+-    if (fallback.ok) {
+-      return 'image-fallback-markdown';
+-    }
+-    const plain = await deps.qq.sendText(target, text);
+-    return plain.ok
+-      ? 'image-fallback-text'
+-      : `send-failed:${plain.detail ?? img.detail ?? 'unknown'}`;
+-  } catch (error) {
+-    const detail = error instanceof Error ? error.message : String(error);
+-    console.error(`[lanius-bot] image render failed (fissures): ${detail}`);
+-    const fallback = await deps.qq.sendMarkdown(
+-      target,
+-      `${mdBody}\n\n${locale === 'en' ? '_(image render failed; text fallback)_' : '_（图片渲染失败，已降级文本）_'}`,
+-      keyboard,
+-    );
+-    if (fallback.ok) {
+-      return `image-fallback-render:${detail.slice(0, 160)}`;
+-    }
+-    const plain = await deps.qq.sendText(target, text);
+-    return plain.ok
+-      ? `image-fallback-text:${detail.slice(0, 80)}`
+-      : `send-failed:${plain.detail ?? detail}`;
+-  }
+-}
+-
+-/**
+- * 将裂隙纯文本转为简 Markdown（保留换行，标题行加粗）。
+- *
+- * @param text - formatFissuresText 产出
+- * @returns Markdown content
+- */
+-function toFissureMarkdown(text: string): string {
+-  const lines = text.split('\n');
+-  const head = lines[0];
+-  if (!head) {
+-    return text;
+-  }
+-  const rest = lines.slice(1);
+-  return [`**${head.replace(/^\*+|\*+$/g, '').trim()}**`, ...rest].join('\n');
+-}
+-
+-/**
+- * 按偏好发送文本或图片（失败降级文本）。
+- *
+- * @param options - 发送选项
+- * @returns 结果摘要
+- */
+-async function replyTextOrImage(options: {
+-  deps: HandleCommandDeps;
+-  target: QqSendTarget;
+-  text: string;
+-  preferImage: boolean;
+-  render: () => Promise<Buffer>;
+-  label: string;
+-}): Promise<string> {
+-  const { deps, target, text, preferImage, render, label } = options;
+-  const locale = deps.prefs.locale;
+-
+-  if (!preferImage) {
+-    const sent = await deps.qq.sendText(target, text);
+-    if (!sent.ok) {
+-      return `send-failed:${sent.detail ?? 'unknown'}`;
+-    }
+-    return 'text';
+-  }
+-
+-  try {
+-    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+-    const sent = await deps.qq.sendImage(target, png);
+-    if (sent.ok) {
+-      return 'image';
+-    }
+-    const fallback = await deps.qq.sendText(
+-      target,
+-      `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
+-    );
+-    if (!fallback.ok) {
+-      return `send-failed:${fallback.detail ?? 'unknown'}`;
+-    }
+-    return 'image-fallback-send';
+-  } catch (error) {
+-    const detail = error instanceof Error ? error.message : String(error);
+-    console.error(`[lanius-bot] image render failed (${label}): ${detail}`);
+-    const fallback = await deps.qq.sendText(
+-      target,
+-      `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
+-    );
+-    if (!fallback.ok) {
+-      return `send-failed:${fallback.detail ?? 'unknown'}`;
+-    }
+-    return `image-fallback-render:${detail.slice(0, 160)}`;
+-  }
+-}
+-
+-/**
+- * 发送查询失败文本。
+- *
+- * @param deps - 依赖
+- * @param target - 目标
+- * @param locale - 语言
+- * @param message - 错误信息
+- * @returns 摘要
+- */
+-async function sendFail(
+-  deps: HandleCommandDeps,
+-  target: QqSendTarget,
+-  locale: Locale,
+-  message: string,
+-): Promise<string> {
+-  const fail =
+-    locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
+-  const sent = await deps.qq.sendText(target, fail);
+-  if (!sent.ok) {
+-    return `send-failed:${sent.detail ?? 'unknown'}`;
+-  }
+-  return fail;
+-}
+-
+-/**
+- * 为 Promise 增加超时竞态。
+- *
+- * @param promise - 需要限时的异步工作
+- * @param timeoutMs - 超时毫秒数
+- * @returns 在超时前完成时返回 promise 结果
+- * @throws Error 超时先到达时抛出
+- */
+-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+-  let timer: ReturnType<typeof setTimeout> | undefined;
+-  try {
+-    return await Promise.race([
+-      promise,
+-      new Promise<T>((_, reject) => {
+-        timer = setTimeout(() => reject(new Error('render timeout')), timeoutMs);
+-      }),
+-    ]);
+-  } finally {
+-    if (timer) {
+-      clearTimeout(timer);
+-    }
+-  }
+-}
++import { createLaniusApiClient } from '@lanius/api';
++import {
++  renderFissuresCard,
++  renderHelpCard,
++  renderInvasionsCard,
++  renderMarketCard,
++  renderNightwaveCard,
++  renderRivenCard,
++  renderWorldstateCard,
++} from '@lanius/render';
++import {
++  applyFissureQueryFilter,
++  buildHelpDto,
++  isFissureQueryActive,
++  pickLocalized,
++  type FissureQueryFilter,
++  type Locale,
++  type WorldstateDto,
++} from '@lanius/core';
++import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
++import { uploadCardPng } from '@lanius/qq-official';
++
++import type { BotConfig } from '../config.js';
++import type { BotIntent } from '../commands/parse-command.js';
++import { formatHelpText } from '../formatters/help-text.js';
++import { formatMarketText, formatRivenText } from '../formatters/market-text.js';
++import {
++  formatRotationText,
++  formatVarziaText,
++  formatVoidTraderText,
++} from '../formatters/traders-text.js';
++import {
++  formatFissuresText,
++  formatInvasionsText,
++  formatNightwaveText,
++  formatWorldstateText,
++} from '../formatters/worldstate-text.js';
++import {
++  buildFissureShortcutKeyboard,
++  fissureShortcutMarkdownHint,
++} from '../qq/build-fissure-keyboard.js';
++
++/**
++ * 会话级可变偏好（MVP 进程内内存）。
++ */
++export type SessionPrefs = {
++  replyMode: 'text' | 'image';
++  locale: Locale;
++};
++
++/**
++ * 命令处理管道的依赖。
++ */
++export type HandleCommandDeps = {
++  config: BotConfig;
++  qq: QqOfficialClient;
++  prefs: SessionPrefs;
++  apiClient?: ReturnType<typeof createLaniusApiClient>;
++  scene?: 'group' | 'c2c';
++  userId?: string;
++};
++
++/**
++ * 处理已解析的 Bot 意图。
++ *
++ * @param intent - 已解析的命令意图
++ * @param target - 官方 QQ 发送目标
++ * @param deps - 配置、QQ 客户端、会话偏好、可选 API 客户端
++ * @returns 供日志/测试使用的结果摘要字符串
++ */
++export async function handleCommand(
++  intent: BotIntent,
++  target: QqSendTarget,
++  deps: HandleCommandDeps,
++): Promise<string> {
++  const locale = deps.prefs.locale;
++  const api =
++    deps.apiClient ??
++    createLaniusApiClient({
++      baseUrl: deps.config.bot.apiBaseUrl,
++      adminToken: deps.config.api?.adminToken,
++    });
++  const gateCtx = {
++    scene:
++      deps.scene ?? (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
++    targetId: target.targetId,
++    userId: deps.userId ?? '',
++  };
++  const publicQuery = {
++    realm: deps.config.defaults.realm,
++    locale,
++  };
++
++  if (intent.type === 'mode') {
++    deps.prefs.replyMode = intent.mode;
++    const msg =
++      locale === 'en'
++        ? `Reply mode set to ${intent.mode}.`
++        : `已切换为${intent.mode === 'image' ? '图片' : '文本'}模式。`;
++    const sent = await deps.qq.sendText(target, msg);
++    if (!sent.ok) {
++      return `send-failed:${sent.detail ?? 'unknown'}`;
++    }
++    return msg;
++  }
++
++  if (intent.type === 'help' || intent.type === 'unknown') {
++    const envelope = await api
++      .getHelp(intent.type === 'help' ? intent.module : undefined)
++      .catch(() => null);
++    const help =
++      envelope && envelope.ok
++        ? envelope.data
++        : buildHelpDto({
++            moduleId: undefined,
++          });
++    const text = formatHelpText(help, locale, {
++      unknownRaw: intent.type === 'unknown' ? intent.raw : undefined,
++    });
++    return replyTextOrImage({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () => renderHelpCard({ help, locale }),
++      label: 'help',
++    });
++  }
++
++  if (intent.type === 'market') {
++    const envelope = await api.getMarketItems(intent.query, gateCtx);
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const text = formatMarketText(envelope.data, locale);
++    return replyTextOrImage({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () => renderMarketCard({ market: envelope.data, locale }),
++      label: 'market',
++    });
++  }
++
++  if (intent.type === 'riven') {
++    const envelope = await api.getRiven(intent.query, gateCtx);
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const text = formatRivenText(envelope.data, locale);
++    return replyTextOrImage({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () => renderRivenCard({ riven: envelope.data, locale }),
++      label: 'riven',
++    });
++  }
++
++  if (intent.type === 'subscribe') {
++    return handleSubscribe(intent, target, deps, api, gateCtx, locale);
++  }
++
++  if (intent.type === 'voidTrader') {
++    const envelope = await api.getVoidTrader(publicQuery, gateCtx);
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const text = formatVoidTraderText(envelope.data, locale, {
++      stale: envelope.meta.stale,
++    });
++    const sent = await deps.qq.sendText(target, text);
++    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
++  }
++
++  if (intent.type === 'varzia') {
++    const envelope = await api.getVarzia(publicQuery, gateCtx);
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const text = formatVarziaText(envelope.data, locale, {
++      stale: envelope.meta.stale,
++    });
++    const sent = await deps.qq.sendText(target, text);
++    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
++  }
++
++  if (intent.type === 'tenetRotation' || intent.type === 'codaRotation') {
++    const kind = intent.type === 'tenetRotation' ? 'tenet' : 'coda';
++    const envelope = await api.getWeaponRotation(kind, publicQuery, gateCtx);
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const text = formatRotationText(envelope.data, locale);
++    const sent = await deps.qq.sendText(target, text);
++    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
++  }
++
++  const envelope = await api.getWorldstate(publicQuery);
++
++  if (!envelope.ok) {
++    return sendFail(deps, target, locale, envelope.error.message);
++  }
++
++  const moduleKind =
++    intent.type === 'fissures'
++      ? 'fissures'
++      : intent.type === 'invasions'
++        ? 'invasions'
++        : intent.type === 'nightwave'
++          ? 'nightwave'
++          : 'worldstate';
++
++  let worldstate: WorldstateDto = envelope.data;
++  let filterSummary: string | undefined;
++  if (intent.type === 'fissures' && intent.filter && isFissureQueryActive(intent.filter)) {
++    const applied = applyFissureQueryFilter(envelope.data.fissures, intent.filter);
++    worldstate = { ...envelope.data, fissures: applied.items };
++    filterSummary = summarizeFissureFilter(intent.filter, locale);
++  }
++
++  const text =
++    moduleKind === 'fissures'
++      ? formatFissuresText(worldstate, locale, {
++          stale: envelope.meta.stale,
++          filterSummary,
++        })
++      : moduleKind === 'invasions'
++        ? formatInvasionsText(envelope.data, locale, {
++            stale: envelope.meta.stale,
++          })
++        : moduleKind === 'nightwave'
++          ? formatNightwaveText(envelope.data, locale, {
++              stale: envelope.meta.stale,
++            })
++          : formatWorldstateText(envelope.data, locale, {
++              stale: envelope.meta.stale,
++            });
++
++  const renderInput = {
++    worldstate,
++    locale,
++    stale: envelope.meta.stale,
++  };
++
++  // 裂隙：Markdown + 底部指令按钮，便于 QQ 内一键筛选
++  if (moduleKind === 'fissures') {
++    return replyFissuresWithShortcuts({
++      deps,
++      target,
++      text,
++      preferImage: deps.prefs.replyMode === 'image',
++      render: () => renderFissuresCard(renderInput),
++    });
++  }
++
++  return replyTextOrImage({
++    deps,
++    target,
++    text,
++    preferImage: deps.prefs.replyMode === 'image',
++    render: () =>
++      moduleKind === 'invasions'
++        ? renderInvasionsCard(renderInput)
++        : moduleKind === 'nightwave'
++          ? renderNightwaveCard(renderInput)
++          : renderWorldstateCard(renderInput),
++    label: moduleKind,
++  });
++}
++
++/**
++ * 将裂隙筛选查询格式化为短摘要（QQ 文案用）。
++ *
++ * @param filter - 命令行查询
++ * @param locale - 语言
++ * @returns 摘要串；无条件时为空串
++ */
++function summarizeFissureFilter(filter: FissureQueryFilter, locale: Locale): string {
++  const zh = locale !== 'en';
++  const eraLabel: Record<string, { zh: string; en: string }> = {
++    lith: { zh: '古纪', en: 'Lith' },
++    meso: { zh: '前纪', en: 'Meso' },
++    neo: { zh: '中纪', en: 'Neo' },
++    axi: { zh: '后纪', en: 'Axi' },
++    requiem: { zh: '安魂', en: 'Requiem' },
++    omnia: { zh: '全能', en: 'Omnia' },
++  };
++  const pathLabel: Record<string, { zh: string; en: string }> = {
++    normal: { zh: '普通', en: 'Normal' },
++    steelPath: { zh: '钢铁之路', en: 'Steel Path' },
++    empyrean: { zh: '九重天', en: 'Empyrean' },
++  };
++  const parts: string[] = [];
++  for (const era of filter.eras) {
++    parts.push(pickLocalized(eraLabel[era] ?? { zh: era, en: era }, locale));
++  }
++  for (const path of filter.paths) {
++    parts.push(pickLocalized(pathLabel[path] ?? { zh: path, en: path }, locale));
++  }
++  for (const hint of filter.missionHints) {
++    parts.push(hint);
++  }
++  return parts.join(zh ? ' · ' : ' · ');
++}
++
++/**
++ * 处理订阅列表 / 订阅 / 退订。
++ *
++ * @param intent - subscribe 意图
++ * @param target - QQ 目标
++ * @param deps - 依赖
++ * @param api - API 客户端
++ * @param gateCtx - 场景上下文
++ * @param locale - 语言
++ * @returns 结果摘要
++ */
++async function handleSubscribe(
++  intent: Extract<BotIntent, { type: 'subscribe' }>,
++  target: QqSendTarget,
++  deps: HandleCommandDeps,
++  api: ReturnType<typeof createLaniusApiClient>,
++  gateCtx: { scene: 'group' | 'c2c'; targetId: string; userId: string },
++  locale: Locale,
++): Promise<string> {
++  const zh = locale === 'zh';
++  const scene = gateCtx.scene;
++
++  if (intent.action === 'list') {
++    const envelope = await api.listSubscriptions(scene, gateCtx.targetId);
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const rows = envelope.data.subscriptions.filter((row) => row.enabled);
++    const lines =
++      rows.length === 0
++        ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
++        : [
++            zh ? '当前订阅：' : 'Subscriptions:',
++            ...rows.map((row) => `· ${row.moduleId} (${row.frequency})`),
++            zh
++              ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
++              : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
++          ];
++    const sent = await deps.qq.sendText(target, lines.join('\n'));
++    return sent.ok ? 'subscribe-list' : `send-failed:${sent.detail ?? 'unknown'}`;
++  }
++
++  if (intent.action === 'off') {
++    if (!intent.moduleId) {
++      return sendFail(deps, target, locale, zh ? '请指定要退订的模块' : 'module required');
++    }
++    const envelope = await api.disableSubscription({
++      scene,
++      targetId: gateCtx.targetId,
++      moduleId: intent.moduleId,
++    });
++    if (!envelope.ok) {
++      return sendFail(deps, target, locale, envelope.error.message);
++    }
++    const msg = zh ? `已退订：${intent.moduleId}` : `Unsubscribed: ${intent.moduleId}`;
++    const sent = await deps.qq.sendText(target, msg);
++    return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
++  }
++
++  if (!intent.moduleId) {
++    return sendFail(deps, target, locale, zh ? '请指定要订阅的模块' : 'module required');
++  }
++  const frequency = intent.frequency ?? 'on_change';
++  const envelope = await api.upsertSubscription({
++    scene,
++    targetId: gateCtx.targetId,
++    moduleId: intent.moduleId,
++    frequency,
++    userId: gateCtx.userId,
++  });
++  if (!envelope.ok) {
++    return sendFail(deps, target, locale, envelope.error.message);
++  }
++  const msg = zh
++    ? `已订阅 ${intent.moduleId}（频率：${frequency}）`
++    : `Subscribed ${intent.moduleId} (${frequency})`;
++  const sent = await deps.qq.sendText(target, msg);
++  return sent.ok ? 'subscribe-on' : `send-failed:${sent.detail ?? 'unknown'}`;
++}
++
++/**
++ * 裂隙回复：优先 Markdown + 快捷指令按钮；图片模式先出图再附带按钮条。
++ *
++ * @param options - 发送选项
++ * @returns 结果摘要
++ */
++async function replyFissuresWithShortcuts(options: {
++  deps: HandleCommandDeps;
++  target: QqSendTarget;
++  text: string;
++  preferImage: boolean;
++  render: () => Promise<Buffer>;
++}): Promise<string> {
++  const { deps, target, text, preferImage, render } = options;
++  const locale = deps.prefs.locale;
++  const keyboard = buildFissureShortcutKeyboard({
++    locale,
++    enter: target.scene === 'c2c',
++    botAppId: deps.config.qq.appId,
++  });
++  const mdBody = toFissureMarkdown(text);
++
++  if (!preferImage) {
++    const sent = await deps.qq.sendMarkdown(target, mdBody, keyboard);
++    if (sent.ok) {
++      return 'markdown-fissures';
++    }
++    const fallback = await deps.qq.sendText(target, text);
++    if (!fallback.ok) {
++      return `send-failed:${fallback.detail ?? sent.detail ?? 'unknown'}`;
++    }
++    return 'markdown-fallback-text';
++  }
++
++  try {
++    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
++    // 优先：Markdown 嵌图单条（需开关开启 + 已配 COS）。
++    const cos = deps.config.bot.cos;
++    if (deps.config.bot.markdownImage !== false && cos) {
++      const uploaded = await uploadCardPng(cos, png);
++      if (uploaded.ok && uploaded.url) {
++        const size = pngImageSize(png) ?? { width: 640, height: 534 };
++        const md = fissureImageMarkdown(locale, uploaded.url, size);
++        const sent = await deps.qq.sendMarkdown(target, md, keyboard);
++        if (sent.ok) {
++          return 'markdown-image+keyboard';
++        }
++        // 嵌图 markdown 失败则落到下方两条路径。
++      } else {
++        console.warn(`[lanius-bot] cos upload failed: ${uploaded.detail ?? 'unknown'}`);
++      }
++    }
++    // 回退：QQ 富媒体不支持挂按钮，发图片 + 一条 Markdown 按钮提示。
++    const img = await deps.qq.sendImage(target, png);
++    if (img.ok) {
++      const tip = await deps.qq.sendMarkdown(target, fissureShortcutMarkdownHint(locale), keyboard);
++      return tip.ok ? 'image+markdown-fissures' : 'image';
++    }
++    const fallback = await deps.qq.sendMarkdown(
++      target,
++      `${mdBody}\n\n${locale === 'en' ? '_(image send failed; text fallback)_' : '_（图片发送失败，已降级文本）_'}`,
++      keyboard,
++    );
++    if (fallback.ok) {
++      return 'image-fallback-markdown';
++    }
++    const plain = await deps.qq.sendText(target, text);
++    return plain.ok
++      ? 'image-fallback-text'
++      : `send-failed:${plain.detail ?? img.detail ?? 'unknown'}`;
++  } catch (error) {
++    const detail = error instanceof Error ? error.message : String(error);
++    console.error(`[lanius-bot] image render failed (fissures): ${detail}`);
++    const fallback = await deps.qq.sendMarkdown(
++      target,
++      `${mdBody}\n\n${locale === 'en' ? '_(image render failed; text fallback)_' : '_（图片渲染失败，已降级文本）_'}`,
++      keyboard,
++    );
++    if (fallback.ok) {
++      return `image-fallback-render:${detail.slice(0, 160)}`;
++    }
++    const plain = await deps.qq.sendText(target, text);
++    return plain.ok
++      ? `image-fallback-text:${detail.slice(0, 80)}`
++      : `send-failed:${plain.detail ?? detail}`;
++  }
++}
++
++/**
++ * 将裂隙纯文本转为简 Markdown（保留换行，标题行加粗）。
++ *
++ * @param text - formatFissuresText 产出
++ * @returns Markdown content
++ */
++function toFissureMarkdown(text: string): string {
++  const lines = text.split('\n');
++  const head = lines[0];
++  if (!head) {
++    return text;
++  }
++  const rest = lines.slice(1);
++  return [`**${head.replace(/^\*+|\*+$/g, '').trim()}**`, ...rest].join('\n');
++}
++
++/**
++ * 裂隙 Markdown 嵌图消息体（图片 + 底部快捷键盘的单条消息）。
++ *
++ * 语法：QQ 自定义 Markdown 支持 `![alt #Wpx #Hpx](url)` 内嵌公网图片。
++ *
++ * @param locale - 语言
++ * @param imageUrl - 卡片图公网 URL（COS）
++ * @param size - PNG 宽高（`#Wpx #Hpx`）
++ * @returns Markdown content
++ */
++function fissureImageMarkdown(
++  locale: Locale,
++  imageUrl: string,
++  size: { width: number; height: number },
++): string {
++  const title = locale === 'en' ? 'Void Fissures' : '虚空裂隙';
++  // 官方嵌图语法 `![text #Wpx #Hpx](url)`，标注使用图片原始尺寸。
++  const dim = ` #${size.width}px #${size.height}px`;
++  const hint = locale === 'en' ? 'Tap a button below to filter.' : '点击下方按钮快速筛选。';
++  return `**${title}**\n\n![text${dim}](${imageUrl})\n\n${hint}`;
++}
++
++/**
++ * 读取 PNG 头部 IHDR 的宽高（不依赖完整解码）。
++ *
++ * @param png - PNG 字节
++ * @returns 宽高；非法或读取失败返回 `null`
++ */
++function pngImageSize(png: Buffer): { width: number; height: number } | null {
++  // PNG: 8 字节签名 + IHDR(长度4+类型4+宽4+高4)。宽高于偏移 16/20。
++  if (png.length < 24 || png.readUInt32BE(12) !== 0x49484452) {
++    return null;
++  }
++  const width = png.readUInt32BE(16);
++  const height = png.readUInt32BE(20);
++  if (width <= 0 || height <= 0) {
++    return null;
++  }
++  return { width, height };
++}
++
++/**
++ * 按偏好发送文本或图片（失败降级文本）。
++ *
++ * @param options - 发送选项
++ * @returns 结果摘要
++ */
++async function replyTextOrImage(options: {
++  deps: HandleCommandDeps;
++  target: QqSendTarget;
++  text: string;
++  preferImage: boolean;
++  render: () => Promise<Buffer>;
++  label: string;
++}): Promise<string> {
++  const { deps, target, text, preferImage, render, label } = options;
++  const locale = deps.prefs.locale;
++
++  if (!preferImage) {
++    const sent = await deps.qq.sendText(target, text);
++    if (!sent.ok) {
++      return `send-failed:${sent.detail ?? 'unknown'}`;
++    }
++    return 'text';
++  }
++
++  try {
++    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
++    const sent = await deps.qq.sendImage(target, png);
++    if (sent.ok) {
++      return 'image';
++    }
++    const fallback = await deps.qq.sendText(
++      target,
++      `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
++    );
++    if (!fallback.ok) {
++      return `send-failed:${fallback.detail ?? 'unknown'}`;
++    }
++    return 'image-fallback-send';
++  } catch (error) {
++    const detail = error instanceof Error ? error.message : String(error);
++    console.error(`[lanius-bot] image render failed (${label}): ${detail}`);
++    const fallback = await deps.qq.sendText(
++      target,
++      `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
++    );
++    if (!fallback.ok) {
++      return `send-failed:${fallback.detail ?? 'unknown'}`;
++    }
++    return `image-fallback-render:${detail.slice(0, 160)}`;
++  }
++}
++
++/**
++ * 发送查询失败文本。
++ *
++ * @param deps - 依赖
++ * @param target - 目标
++ * @param locale - 语言
++ * @param message - 错误信息
++ * @returns 摘要
++ */
++async function sendFail(
++  deps: HandleCommandDeps,
++  target: QqSendTarget,
++  locale: Locale,
++  message: string,
++): Promise<string> {
++  const fail = locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
++  const sent = await deps.qq.sendText(target, fail);
++  if (!sent.ok) {
++    return `send-failed:${sent.detail ?? 'unknown'}`;
++  }
++  return fail;
++}
++
++/**
++ * 为 Promise 增加超时竞态。
++ *
++ * @param promise - 需要限时的异步工作
++ * @param timeoutMs - 超时毫秒数
++ * @returns 在超时前完成时返回 promise 结果
++ * @throws Error 超时先到达时抛出
++ */
++async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
++  let timer: ReturnType<typeof setTimeout> | undefined;
++  try {
++    return await Promise.race([
++      promise,
++      new Promise<T>((_, reject) => {
++        timer = setTimeout(() => reject(new Error('render timeout')), timeoutMs);
++      }),
++    ]);
++  } finally {
++    if (timer) {
++      clearTimeout(timer);
++    }
++  }
++}
+diff --git a/packages/config/src/modules.ts b/packages/config/src/modules.ts
+index 06e691f..99f722f 100644
+--- a/packages/config/src/modules.ts
++++ b/packages/config/src/modules.ts
+@@ -1,9 +1,4 @@
+-import {
+-  LabelsConfigSchema,
+-  SiteDtoSchema,
+-  type LabelsConfig,
+-  type SiteDto,
+-} from '@lanius/core';
++import { LabelsConfigSchema, SiteDtoSchema, type LabelsConfig, type SiteDto } from '@lanius/core';
+ import { z } from 'zod';
+ 
+ /**
+@@ -42,14 +37,8 @@ export const ApiModuleSchema = z.object({
+   adminToken: z.string().optional(),
+   upstream: z
+     .object({
+-      worldstateUrl: z
+-        .string()
+-        .url()
+-        .default('https://api.warframe.com/cdn/worldState.php'),
+-      warframeMarketUrl: z
+-        .string()
+-        .url()
+-        .default('https://api.warframe.market/v1'),
++      worldstateUrl: z.string().url().default('https://api.warframe.com/cdn/worldState.php'),
++      warframeMarketUrl: z.string().url().default('https://api.warframe.market/v1'),
+       timeoutMs: z.number().int().positive().default(8000),
+     })
+     .default({}),
+@@ -68,15 +57,40 @@ export const BotModuleSchema = z.object({
+   panelIdStorePath: z.string().optional(),
+   pushIntervalMs: z.number().int().nonnegative().default(60_000),
+   commandPrefix: z.string().default('/'),
+-  commandPrefixPolicy: z
+-    .enum(['optional', 'required', 'bare'])
+-    .default('optional'),
++  commandPrefixPolicy: z.enum(['optional', 'required', 'bare']).default('optional'),
+   image: z
+     .object({
+       maxPerUserPerMinute: z.number().int().positive().default(5),
+       renderTimeoutMs: z.number().int().positive().default(4000),
+     })
+     .default({}),
++  /**
++   * 裂隙回复的 Markdown 嵌图开关（默认关）。
++   * 开启且配置 COS 时，卡片图经 COS 转公网 URL，
++   * 以单条 Markdown（嵌图 + 底部按钮）发送；关闭则退回「图片 + Markdown 按钮」两条。
++   * 后续其他功能模块可复用同一 Markdown 嵌图通道。
++   * TODO: QQ markdown 嵌图在气泡中仍被裁切/不渲染（桌面端只显示局部、移动端显示 [img]），
++   *       待排查官方对自定义 content 嵌图的支持细节后再开启。
++   */
++  markdownImage: z.boolean().default(false),
++  /**
++   * 腾讯云 COS（卡片图公网托管，供 Markdown 内嵌图片）。
++   * 缺省时 Markdown 嵌图降级为纯文本。
++   */
++  cos: z
++    .object({
++      secretId: z.string().min(1),
++      secretKey: z.string().min(1),
++      /** 桶名，含 APPID，如 `xxx-1257961979` */
++      bucket: z.string().min(1),
++      /** 地域，如 `ap-shanghai` */
++      region: z.string().min(1),
++      /** 自定义 CDN/域名（缺省用桶默认域名） */
++      domain: z.string().optional(),
++      /** 对象键前缀，如 `lanius/cards/` */
++      prefix: z.string().default('lanius/cards/'),
++    })
++    .optional(),
+ });
+ 
+ /**
+@@ -191,10 +205,7 @@ export type FieldMeta = {
+ /**
+  * 各模块字段元数据（点分路径）。
+  */
+-export const MODULE_FIELD_META: Record<
+-  ConfigModuleId,
+-  Record<string, FieldMeta>
+-> = {
++export const MODULE_FIELD_META: Record<ConfigModuleId, Record<string, FieldMeta>> = {
+   api: {
+     host: { restartRequired: true, description: '监听地址' },
+     port: { restartRequired: true, description: '监听端口' },
+@@ -211,6 +222,13 @@ export const MODULE_FIELD_META: Record<
+     pushIntervalMs: { description: '推送轮询间隔' },
+     commandPrefix: { description: '指令前导符' },
+     commandPrefixPolicy: { description: '前导策略 optional|required|bare' },
++    markdownImage: { description: '裂隙 Markdown 嵌图开关（默认开）' },
++    'cos.secretId': { secret: true, description: 'COS SecretId' },
++    'cos.secretKey': { secret: true, description: 'COS SecretKey' },
++    'cos.bucket': { description: 'COS 桶名（含 APPID）' },
++    'cos.region': { description: 'COS 地域' },
++    'cos.domain': { description: 'COS 自定义域名' },
++    'cos.prefix': { description: 'COS 对象键前缀' },
+   },
+   qq: {
+     appId: { secret: true },
+diff --git a/packages/qq-official/src/client.test.ts b/packages/qq-official/src/client.test.ts
+index 4f427c5..cf0b721 100644
+--- a/packages/qq-official/src/client.test.ts
++++ b/packages/qq-official/src/client.test.ts
+@@ -1,174 +1,198 @@
+-import { describe, expect, it, vi } from 'vitest';
+-
+-import { createQqOfficialClient } from './client.js';
+-
+-describe('QqOfficialClient.sendText', () => {
+-  it('posts group passive reply with msg_id and strips URLs', async () => {
+-    const fetchImpl = vi
+-      .fn()
+-      .mockResolvedValueOnce({
+-        // getAppAccessToken
+-        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
+-      })
+-      .mockResolvedValueOnce({
+-        ok: true,
+-        text: async () => JSON.stringify({ id: 'out-1' }),
+-      });
+-
+-    const client = createQqOfficialClient({
+-      appId: 'app',
+-      appSecret: 'secret',
+-      fetchImpl: fetchImpl as unknown as typeof fetch,
+-    });
+-
+-    const result = await client.sendText(
+-      { scene: 'group', targetId: 'g1', msgId: 'm1' },
+-      'hello\nhttps://warframe.lexcubia.com/zh/worldstate\nworld',
+-    );
+-
+-    expect(result).toEqual({ ok: true, messageId: 'out-1' });
+-    expect(fetchImpl).toHaveBeenCalledTimes(2);
+-    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
+-    const body = JSON.parse(String(sendInit.body)) as {
+-      content: string;
+-      msg_id: string;
+-      msg_seq: number;
+-      msg_type: number;
+-    };
+-    expect(body.msg_type).toBe(0);
+-    expect(body.msg_id).toBe('m1');
+-    expect(body.msg_seq).toBe(1);
+-    expect(body.content).not.toMatch(/https?:\/\//);
+-    expect(body.content).toContain('hello');
+-    expect(body.content).toContain('world');
+-  });
+-
+-  it('returns ok in dryRun without network', async () => {
+-    const fetchImpl = vi.fn();
+-    const client = createQqOfficialClient({
+-      appId: 'app',
+-      appSecret: 'secret',
+-      dryRun: true,
+-      fetchImpl: fetchImpl as unknown as typeof fetch,
+-    });
+-    const result = await client.sendText(
+-      { scene: 'c2c', targetId: 'u1', msgId: 'm1' },
+-      'ping',
+-    );
+-    expect(result.ok).toBe(true);
+-    expect(fetchImpl).not.toHaveBeenCalled();
+-  });
+-});
+-
+-describe('QqOfficialClient.sendMarkdown', () => {
+-  it('posts msg_type=2 with markdown and keyboard', async () => {
+-    const fetchImpl = vi
+-      .fn()
+-      .mockResolvedValueOnce({
+-        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
+-      })
+-      .mockResolvedValueOnce({
+-        ok: true,
+-        text: async () => JSON.stringify({ id: 'md-1' }),
+-      });
+-
+-    const client = createQqOfficialClient({
+-      appId: '42',
+-      appSecret: 'secret',
+-      fetchImpl: fetchImpl as unknown as typeof fetch,
+-    });
+-
+-    const result = await client.sendMarkdown(
+-      { scene: 'group', targetId: 'g1', msgId: 'm1' },
+-      '**裂隙**\n一行',
+-      {
+-        rows: [
+-          {
+-            buttons: [
+-              {
+-                id: 'f-all',
+-                label: '全部',
+-                actionType: 2,
+-                data: '裂隙',
+-                enter: false,
+-              },
+-            ],
+-          },
+-        ],
+-      },
+-    );
+-
+-    expect(result).toEqual({ ok: true, messageId: 'md-1' });
+-    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
+-    const body = JSON.parse(String(sendInit.body)) as {
+-      msg_type: number;
+-      markdown: { content: string };
+-      keyboard: { content: { bot_appid?: number; rows: unknown[] } };
+-      msg_id: string;
+-    };
+-    expect(body.msg_type).toBe(2);
+-    expect(body.markdown.content).toContain('裂隙');
+-    expect(body.keyboard.content.bot_appid).toBe(42);
+-    expect(body.keyboard.content.rows).toHaveLength(1);
+-    expect(body.msg_id).toBe('m1');
+-  });
+-});
+-
+-describe('QqOfficialClient.sendImage', () => {
+-  it('uploads file_data then posts msg_type=7 media', async () => {
+-    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
+-    const fetchImpl = vi
+-      .fn()
+-      .mockResolvedValueOnce({
+-        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
+-      })
+-      .mockResolvedValueOnce({
+-        ok: true,
+-        text: async () =>
+-          JSON.stringify({ code: 0, file_info: 'FILEINFO', file_uuid: 'fu1' }),
+-      })
+-      .mockResolvedValueOnce({
+-        ok: true,
+-        text: async () => JSON.stringify({ code: 0, id: 'img-1' }),
+-      });
+-
+-    const client = createQqOfficialClient({
+-      appId: 'app',
+-      appSecret: 'secret',
+-      fetchImpl: fetchImpl as unknown as typeof fetch,
+-    });
+-
+-    const result = await client.sendImage(
+-      { scene: 'group', targetId: 'g1', msgId: 'm1' },
+-      png,
+-    );
+-
+-    expect(result).toMatchObject({ ok: true, messageId: 'img-1' });
+-    expect(fetchImpl).toHaveBeenCalledTimes(3);
+-
+-    const [uploadUrl, uploadInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
+-    expect(uploadUrl).toContain('/v2/groups/g1/files');
+-    const uploadBody = JSON.parse(String(uploadInit.body)) as {
+-      file_type: number;
+-      file_data: string;
+-      file_name: string;
+-      srv_send_msg: boolean;
+-    };
+-    expect(uploadBody.file_type).toBe(1);
+-    expect(uploadBody.file_name).toBe('lanius-card.png');
+-    expect(uploadBody.srv_send_msg).toBe(false);
+-    expect(uploadBody.file_data).toBe(png.toString('base64'));
+-
+-    const [, sendInit] = fetchImpl.mock.calls[2] as [string, RequestInit];
+-    const sendBody = JSON.parse(String(sendInit.body)) as {
+-      msg_type: number;
+-      media: { file_info: string };
+-      msg_id: string;
+-      msg_seq: number;
+-    };
+-    expect(sendBody.msg_type).toBe(7);
+-    expect(sendBody.media.file_info).toBe('FILEINFO');
+-    expect(sendBody.msg_id).toBe('m1');
+-    expect(sendBody.msg_seq).toBe(1);
+-  });
+-});
++import { describe, expect, it, vi } from 'vitest';
++
++import { createQqOfficialClient } from './client.js';
++
++describe('QqOfficialClient.sendText', () => {
++  it('posts group passive reply with msg_id and strips URLs', async () => {
++    const fetchImpl = vi
++      .fn()
++      .mockResolvedValueOnce({
++        // getAppAccessToken
++        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
++      })
++      .mockResolvedValueOnce({
++        ok: true,
++        text: async () => JSON.stringify({ id: 'out-1' }),
++      });
++
++    const client = createQqOfficialClient({
++      appId: 'app',
++      appSecret: 'secret',
++      fetchImpl: fetchImpl as unknown as typeof fetch,
++    });
++
++    const result = await client.sendText(
++      { scene: 'group', targetId: 'g1', msgId: 'm1' },
++      'hello\nhttps://warframe.lexcubia.com/zh/worldstate\nworld',
++    );
++
++    expect(result).toEqual({ ok: true, messageId: 'out-1' });
++    expect(fetchImpl).toHaveBeenCalledTimes(2);
++    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
++    const body = JSON.parse(String(sendInit.body)) as {
++      content: string;
++      msg_id: string;
++      msg_seq: number;
++      msg_type: number;
++    };
++    expect(body.msg_type).toBe(0);
++    expect(body.msg_id).toBe('m1');
++    expect(body.msg_seq).toBe(1);
++    expect(body.content).not.toMatch(/https?:\/\//);
++    expect(body.content).toContain('hello');
++    expect(body.content).toContain('world');
++  });
++
++  it('returns ok in dryRun without network', async () => {
++    const fetchImpl = vi.fn();
++    const client = createQqOfficialClient({
++      appId: 'app',
++      appSecret: 'secret',
++      dryRun: true,
++      fetchImpl: fetchImpl as unknown as typeof fetch,
++    });
++    const result = await client.sendText({ scene: 'c2c', targetId: 'u1', msgId: 'm1' }, 'ping');
++    expect(result.ok).toBe(true);
++    expect(fetchImpl).not.toHaveBeenCalled();
++  });
++});
++
++describe('QqOfficialClient.sendMarkdown', () => {
++  it('posts msg_type=2 with markdown and keyboard', async () => {
++    const fetchImpl = vi
++      .fn()
++      .mockResolvedValueOnce({
++        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
++      })
++      .mockResolvedValueOnce({
++        ok: true,
++        text: async () => JSON.stringify({ id: 'md-1' }),
++      });
++
++    const client = createQqOfficialClient({
++      appId: '42',
++      appSecret: 'secret',
++      fetchImpl: fetchImpl as unknown as typeof fetch,
++    });
++
++    const result = await client.sendMarkdown(
++      { scene: 'group', targetId: 'g1', msgId: 'm1' },
++      '**裂隙**\n一行',
++      {
++        rows: [
++          {
++            buttons: [
++              {
++                id: 'f-all',
++                label: '全部',
++                actionType: 2,
++                data: '裂隙',
++                enter: false,
++              },
++            ],
++          },
++        ],
++      },
++    );
++
++    expect(result).toEqual({ ok: true, messageId: 'md-1' });
++    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
++    const body = JSON.parse(String(sendInit.body)) as {
++      msg_type: number;
++      markdown: { content: string };
++      keyboard: { content: { bot_appid?: number; rows: unknown[] } };
++      msg_id: string;
++    };
++    expect(body.msg_type).toBe(2);
++    expect(body.markdown.content).toContain('裂隙');
++    expect(body.keyboard.content.bot_appid).toBe(42);
++    expect(body.keyboard.content.rows).toHaveLength(1);
++    expect(body.msg_id).toBe('m1');
++  });
++
++  it('keeps image markdown url but strips bare links', async () => {
++    const fetchImpl = vi
++      .fn()
++      .mockResolvedValueOnce({
++        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
++      })
++      .mockResolvedValueOnce({
++        ok: true,
++        text: async () => JSON.stringify({ id: 'md-2' }),
++      });
++
++    const client = createQqOfficialClient({
++      appId: '42',
++      appSecret: 'secret',
++      fetchImpl: fetchImpl as unknown as typeof fetch,
++    });
++
++    await client.sendMarkdown(
++      { scene: 'c2c', targetId: 'u1', msgId: 'm2' },
++      '**虚空裂隙**\n\n![虚空裂隙 #640px #534px](https://cos.lexcubia.com/lanius/cards/a.png)\n\n见 https://example.com/x',
++    );
++
++    const [, sendInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
++    const body = JSON.parse(String(sendInit.body)) as {
++      markdown: { content: string };
++    };
++    // 图片语法内 URL 保留；裸链被剥除
++    expect(body.markdown.content).toContain('](https://cos.lexcubia.com/lanius/cards/a.png)');
++    expect(body.markdown.content).not.toContain('https://example.com/x');
++  });
++});
++
++describe('QqOfficialClient.sendImage', () => {
++  it('uploads file_data then posts msg_type=7 media', async () => {
++    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00]);
++    const fetchImpl = vi
++      .fn()
++      .mockResolvedValueOnce({
++        json: async () => ({ access_token: 'tok', expires_in: 7200 }),
++      })
++      .mockResolvedValueOnce({
++        ok: true,
++        text: async () => JSON.stringify({ code: 0, file_info: 'FILEINFO', file_uuid: 'fu1' }),
++      })
++      .mockResolvedValueOnce({
++        ok: true,
++        text: async () => JSON.stringify({ code: 0, id: 'img-1' }),
++      });
++
++    const client = createQqOfficialClient({
++      appId: 'app',
++      appSecret: 'secret',
++      fetchImpl: fetchImpl as unknown as typeof fetch,
++    });
++
++    const result = await client.sendImage({ scene: 'group', targetId: 'g1', msgId: 'm1' }, png);
++
++    expect(result).toMatchObject({ ok: true, messageId: 'img-1' });
++    expect(fetchImpl).toHaveBeenCalledTimes(3);
++
++    const [uploadUrl, uploadInit] = fetchImpl.mock.calls[1] as [string, RequestInit];
++    expect(uploadUrl).toContain('/v2/groups/g1/files');
++    const uploadBody = JSON.parse(String(uploadInit.body)) as {
++      file_type: number;
++      file_data: string;
++      file_name: string;
++      srv_send_msg: boolean;
++    };
++    expect(uploadBody.file_type).toBe(1);
++    expect(uploadBody.file_name).toBe('lanius-card.png');
++    expect(uploadBody.srv_send_msg).toBe(false);
++    expect(uploadBody.file_data).toBe(png.toString('base64'));
++
++    const [, sendInit] = fetchImpl.mock.calls[2] as [string, RequestInit];
++    const sendBody = JSON.parse(String(sendInit.body)) as {
++      msg_type: number;
++      media: { file_info: string };
++      msg_id: string;
++      msg_seq: number;
++    };
++    expect(sendBody.msg_type).toBe(7);
++    expect(sendBody.media.file_info).toBe('FILEINFO');
++    expect(sendBody.msg_id).toBe('m1');
++    expect(sendBody.msg_seq).toBe(1);
++  });
++});
+diff --git a/packages/qq-official/src/client.ts b/packages/qq-official/src/client.ts
+index 2ab536d..a3d80e7 100644
+--- a/packages/qq-official/src/client.ts
++++ b/packages/qq-official/src/client.ts
+@@ -1,393 +1,391 @@
+-import type { AccessTokenCache } from './access-token.js';
+-import { getAppAccessToken } from './access-token.js';
+-import {
+-  toQqKeyboardPayload,
+-  type QqKeyboardContent,
+-} from './keyboard.js';
+-
+-/**
+- * 官方 QQ 下行消息的目标通道描述。
+- */
+-export type QqSendTarget = {
+-  /** 会话场景：群 / 单聊 / 文字子频道 / 频道私信。 */
+-  scene: 'group' | 'c2c' | 'channel' | 'dm';
+-  /**
+-   * 场景对应的目标 id：
+-   * group→group_openid；c2c→user_openid；channel→channel_id；dm→guild_id。
+-   */
+-  targetId: string;
+-  /** 被动回复用的消息 id（事件 `d.id`），5 分钟内有效。 */
+-  msgId?: string;
+-  /** 部分事件可用的外层 event id（与 msgId 二选一）。 */
+-  eventId?: string;
+-};
+-
+-/**
+- * 下行发送辅助方法的返回结果。
+- */
+-export type QqSendResult = {
+-  ok: boolean;
+-  messageId?: string;
+-  degraded?: boolean;
+-  detail?: string;
+-};
+-
+-/**
+- * 官方 QQ 下行客户端的依赖选项。
+- */
+-export type QqOfficialClientOptions = {
+-  appId: string;
+-  appSecret: string;
+-  /** 可注入的 fetch，便于测试或替换传输层。 */
+-  fetchImpl?: typeof fetch;
+-  /**
+-   * 为 true 时跳过真实网络调用，仅本地确认。
+-   * 在平台凭据尚未接通时用于本地开发。
+-   */
+-  dryRun?: boolean;
+-  /** OpenAPI 基址，默认 `https://api.bot.qq.com`。 */
+-  apiBaseUrl?: string;
+-};
+-
+-/**
+- * 官方 QQ 文本/图片下行的薄封装客户端（验签与发信）。
+- */
+-export class QqOfficialClient {
+-  private readonly appId: string;
+-  private readonly appSecret: string;
+-  private readonly fetchImpl: typeof fetch;
+-  private readonly dryRun: boolean;
+-  private readonly apiBaseUrl: string;
+-  private readonly tokenCache: { current?: AccessTokenCache } = {};
+-  /** 同一 msg_id 下递增 msg_seq，避免被动回复去重失败。 */
+-  private readonly msgSeqByMsgId = new Map<string, number>();
+-
+-  /**
+-   * 创建官方 QQ 下行客户端。
+-   *
+-   * @param options - 应用凭据、fetch 实现与 dry-run 开关
+-   */
+-  constructor(options: QqOfficialClientOptions) {
+-    this.appId = options.appId;
+-    this.appSecret = options.appSecret;
+-    this.fetchImpl = options.fetchImpl ?? fetch;
+-    this.dryRun = options.dryRun ?? false;
+-    this.apiBaseUrl = (options.apiBaseUrl ?? 'https://api.bot.qq.com').replace(
+-      /\/$/,
+-      '',
+-    );
+-  }
+-
+-  /**
+-   * 暴露 token 缓存槽，供指令面板同步与发信共用同一凭证。
+-   *
+-   * @returns 可写入的 token 缓存引用
+-   */
+-  getAccessTokenCache(): { current?: AccessTokenCache } {
+-    return this.tokenCache;
+-  }
+-
+-  /**
+-   * 向目标发送纯文本回复（`msg_type=0`）。
+-   * 群/单聊优先带 `msg_id` 做被动回复；平台禁止消息内含 URL。
+-   *
+-   * @param target - 频道/会话目标
+-   * @param content - UTF-8 文本（必要时由 bot 侧已截断）
+-   * @returns 发送确认；dry-run 时不发起网络 I/O
+-   */
+-  async sendText(target: QqSendTarget, content: string): Promise<QqSendResult> {
+-    const safeContent = stripHttpUrls(content).trim();
+-    if (!safeContent) {
+-      return { ok: false, detail: 'empty content after URL strip' };
+-    }
+-
+-    if (this.dryRun) {
+-      return {
+-        ok: true,
+-        messageId: `dry-text-${target.targetId}`,
+-        detail: safeContent.slice(0, 80),
+-      };
+-    }
+-
+-    if (!target.targetId) {
+-      return { ok: false, detail: 'missing targetId' };
+-    }
+-
+-    try {
+-      const path = messagePath(target);
+-      const body: Record<string, unknown> = {
+-        msg_type: 0,
+-        content: safeContent,
+-      };
+-      this.applyPassiveReplyFields(body, target);
+-      const result = await this.openApiPost<{ id?: string }>(path, body);
+-      return { ok: true, messageId: result.id };
+-    } catch (error) {
+-      return {
+-        ok: false,
+-        detail: error instanceof Error ? error.message : String(error),
+-      };
+-    }
+-  }
+-
+-  /**
+-   * 发送自定义 Markdown 消息（`msg_type=2`），可选挂载底部 keyboard 按钮。
+-   * 群/单聊已开放自定义 Markdown；频道可能需内邀——失败时由调用方降级文本。
+-   *
+-   * @param target - 频道/会话目标
+-   * @param content - Markdown 正文（勿依赖外链；群场景会剥 http URL）
+-   * @param keyboard - 可选自定义按钮（需与 markdown 同发）
+-   * @returns 发送确认；dry-run 时不发起网络 I/O
+-   */
+-  async sendMarkdown(
+-    target: QqSendTarget,
+-    content: string,
+-    keyboard?: QqKeyboardContent,
+-  ): Promise<QqSendResult> {
+-    const safeContent = stripHttpUrls(content).trim();
+-    if (!safeContent) {
+-      return { ok: false, detail: 'empty markdown content after URL strip' };
+-    }
+-
+-    if (this.dryRun) {
+-      return {
+-        ok: true,
+-        messageId: `dry-md-${target.targetId}`,
+-        detail: safeContent.slice(0, 80),
+-      };
+-    }
+-
+-    if (!target.targetId) {
+-      return { ok: false, detail: 'missing targetId' };
+-    }
+-
+-    try {
+-      const path = messagePath(target);
+-      const body: Record<string, unknown> = {
+-        msg_type: 2,
+-        markdown: { content: safeContent },
+-      };
+-      if (keyboard && keyboard.rows.length > 0) {
+-        body.keyboard = toQqKeyboardPayload({
+-          ...keyboard,
+-          botAppId: keyboard.botAppId ?? this.appId,
+-        });
+-      }
+-      this.applyPassiveReplyFields(body, target);
+-      const result = await this.openApiPost<{ id?: string }>(path, body);
+-      return { ok: true, messageId: result.id };
+-    } catch (error) {
+-      return {
+-        ok: false,
+-        degraded: true,
+-        detail: error instanceof Error ? error.message : String(error),
+-      };
+-    }
+-  }
+-
+-  /**
+-   * 上传 PNG（`file_data` base64，≤5MB）并作为富媒体消息发送（`msg_type=7`）。
+-   * 群/单聊走各自 `/files` 接口；频道场景暂未接线，返回降级提示。
+-   *
+-   * @param target - 频道/会话目标
+-   * @param imagePng - 来自 `@lanius/render` 的 PNG 字节
+-   * @returns 发送确认；dry-run 时不实际上传
+-   */
+-  async sendImage(target: QqSendTarget, imagePng: Buffer): Promise<QqSendResult> {
+-    if (this.dryRun) {
+-      return {
+-        ok: true,
+-        messageId: `dry-image-${target.targetId}`,
+-        detail: `png:${imagePng.length}`,
+-      };
+-    }
+-
+-    if (!target.targetId) {
+-      return { ok: false, detail: 'missing targetId' };
+-    }
+-    if (target.scene !== 'group' && target.scene !== 'c2c') {
+-      return {
+-        ok: false,
+-        degraded: true,
+-        detail: `image upload unsupported for scene=${target.scene}`,
+-      };
+-    }
+-    // 官方 file_data 直传软上限约 5MB；卡片 PNG 通常远小于此
+-    if (imagePng.length > 5 * 1024 * 1024) {
+-      return {
+-        ok: false,
+-        degraded: true,
+-        detail: `png too large for file_data upload: ${imagePng.length} bytes`,
+-      };
+-    }
+-
+-    try {
+-      const uploadPath = filesPath(target);
+-      const uploaded = await this.openApiPost<{
+-        file_info?: string;
+-        file_uuid?: string;
+-      }>(uploadPath, {
+-        file_type: 1,
+-        file_name: 'lanius-card.png',
+-        file_data: imagePng.toString('base64'),
+-        srv_send_msg: false,
+-      });
+-      if (!uploaded.file_info) {
+-        return {
+-          ok: false,
+-          degraded: true,
+-          detail: 'files upload missing file_info',
+-        };
+-      }
+-
+-      const body: Record<string, unknown> = {
+-        msg_type: 7,
+-        media: { file_info: uploaded.file_info },
+-      };
+-      this.applyPassiveReplyFields(body, target);
+-      const result = await this.openApiPost<{ id?: string }>(
+-        messagePath(target),
+-        body,
+-      );
+-      return {
+-        ok: true,
+-        messageId: result.id,
+-        detail: uploaded.file_uuid ? `file_uuid:${uploaded.file_uuid}` : undefined,
+-      };
+-    } catch (error) {
+-      return {
+-        ok: false,
+-        degraded: true,
+-        detail: error instanceof Error ? error.message : String(error),
+-      };
+-    }
+-  }
+-
+-  /**
+-   * 写入被动回复字段 `msg_id`/`event_id` 与递增 `msg_seq`。
+-   *
+-   * @param body - 即将 POST 的消息体
+-   * @param target - 发送目标
+-   * @returns 无返回值
+-   */
+-  private applyPassiveReplyFields(
+-    body: Record<string, unknown>,
+-    target: QqSendTarget,
+-  ): void {
+-    if (target.msgId) {
+-      body.msg_id = target.msgId;
+-      const next = (this.msgSeqByMsgId.get(target.msgId) ?? 0) + 1;
+-      this.msgSeqByMsgId.set(target.msgId, next);
+-      body.msg_seq = next;
+-      return;
+-    }
+-    if (target.eventId) {
+-      body.event_id = target.eventId;
+-    }
+-  }
+-
+-  /**
+-   * 带鉴权的 OpenAPI POST JSON。
+-   *
+-   * @param path - 以 `/` 开头的路径
+-   * @param body - JSON 请求体
+-   * @returns 解析后的响应对象
+-   * @throws Error 当 HTTP 或业务码失败
+-   */
+-  private async openApiPost<T>(path: string, body: unknown): Promise<T> {
+-    const token = await getAppAccessToken({
+-      appId: this.appId,
+-      clientSecret: this.appSecret,
+-      fetchImpl: this.fetchImpl,
+-      apiBaseUrl: this.apiBaseUrl,
+-      cache: this.tokenCache,
+-    });
+-    const response = await this.fetchImpl(`${this.apiBaseUrl}${path}`, {
+-      method: 'POST',
+-      headers: {
+-        Authorization: `QQBot ${token}`,
+-        'Content-Type': 'application/json; charset=utf-8',
+-      },
+-      body: JSON.stringify(body),
+-    });
+-    const text = await response.text();
+-    let parsed: T & { code?: number; message?: string; msg?: string };
+-    try {
+-      parsed = (text ? JSON.parse(text) : {}) as T & {
+-        code?: number;
+-        message?: string;
+-        msg?: string;
+-      };
+-    } catch {
+-      throw new Error(`QQ OpenAPI POST ${path} non-json: HTTP ${response.status}`);
+-    }
+-    // 官方成功响应常带 code:0，仅非 0 视为失败
+-    const businessFailed = parsed.code != null && Number(parsed.code) !== 0;
+-    if (!response.ok || businessFailed) {
+-      throw new Error(
+-        `QQ OpenAPI POST ${path} failed: HTTP ${response.status} code=${parsed.code ?? 'n/a'} message=${parsed.message ?? parsed.msg ?? text.slice(0, 200)}`,
+-      );
+-    }
+-    return parsed;
+-  }
+-}
+-
+-/**
+- * 按场景拼出发送消息的路径。
+- *
+- * @param target - 发送目标
+- * @returns OpenAPI 路径
+- */
+-function messagePath(target: QqSendTarget): string {
+-  const id = encodeURIComponent(target.targetId);
+-  switch (target.scene) {
+-    case 'group':
+-      return `/v2/groups/${id}/messages`;
+-    case 'c2c':
+-      return `/v2/users/${id}/messages`;
+-    case 'channel':
+-      return `/channels/${id}/messages`;
+-    case 'dm':
+-      return `/dms/${id}/messages`;
+-    default: {
+-      const _exhaustive: never = target.scene;
+-      return _exhaustive;
+-    }
+-  }
+-}
+-
+-/**
+- * 按场景拼出富媒体上传路径（仅 group / c2c）。
+- *
+- * @param target - 发送目标（须为 group 或 c2c）
+- * @returns OpenAPI `/files` 路径
+- */
+-function filesPath(target: QqSendTarget): string {
+-  const id = encodeURIComponent(target.targetId);
+-  if (target.scene === 'group') {
+-    return `/v2/groups/${id}/files`;
+-  }
+-  return `/v2/users/${id}/files`;
+-}
+-
+-/**
+- * 移除 http(s) URL，规避群聊「不允许发送 URL」限制。
+- *
+- * @param content - 原始回复文本
+- * @returns 去掉链接后的文本
+- */
+-function stripHttpUrls(content: string): string {
+-  return content.replace(/https?:\/\/\S+/gi, '').replace(/[ \t]+\n/g, '\n');
+-}
+-
+-/**
+- * 官方 QQ 客户端工厂。
+- *
+- * @param options - 客户端构造选项
+- * @returns 已配置的 `QqOfficialClient`
+- */
+-export function createQqOfficialClient(
+-  options: QqOfficialClientOptions,
+-): QqOfficialClient {
+-  return new QqOfficialClient(options);
+-}
++import type { AccessTokenCache } from './access-token.js';
++import { getAppAccessToken } from './access-token.js';
++import { toQqKeyboardPayload, type QqKeyboardContent } from './keyboard.js';
++
++/**
++ * 官方 QQ 下行消息的目标通道描述。
++ */
++export type QqSendTarget = {
++  /** 会话场景：群 / 单聊 / 文字子频道 / 频道私信。 */
++  scene: 'group' | 'c2c' | 'channel' | 'dm';
++  /**
++   * 场景对应的目标 id：
++   * group→group_openid；c2c→user_openid；channel→channel_id；dm→guild_id。
++   */
++  targetId: string;
++  /** 被动回复用的消息 id（事件 `d.id`），5 分钟内有效。 */
++  msgId?: string;
++  /** 部分事件可用的外层 event id（与 msgId 二选一）。 */
++  eventId?: string;
++};
++
++/**
++ * 下行发送辅助方法的返回结果。
++ */
++export type QqSendResult = {
++  ok: boolean;
++  messageId?: string;
++  degraded?: boolean;
++  detail?: string;
++};
++
++/**
++ * 官方 QQ 下行客户端的依赖选项。
++ */
++export type QqOfficialClientOptions = {
++  appId: string;
++  appSecret: string;
++  /** 可注入的 fetch，便于测试或替换传输层。 */
++  fetchImpl?: typeof fetch;
++  /**
++   * 为 true 时跳过真实网络调用，仅本地确认。
++   * 在平台凭据尚未接通时用于本地开发。
++   */
++  dryRun?: boolean;
++  /** OpenAPI 基址，默认 `https://api.bot.qq.com`。 */
++  apiBaseUrl?: string;
++};
++
++/**
++ * 官方 QQ 文本/图片下行的薄封装客户端（验签与发信）。
++ */
++export class QqOfficialClient {
++  private readonly appId: string;
++  private readonly appSecret: string;
++  private readonly fetchImpl: typeof fetch;
++  private readonly dryRun: boolean;
++  private readonly apiBaseUrl: string;
++  private readonly tokenCache: { current?: AccessTokenCache } = {};
++  /** 同一 msg_id 下递增 msg_seq，避免被动回复去重失败。 */
++  private readonly msgSeqByMsgId = new Map<string, number>();
++
++  /**
++   * 创建官方 QQ 下行客户端。
++   *
++   * @param options - 应用凭据、fetch 实现与 dry-run 开关
++   */
++  constructor(options: QqOfficialClientOptions) {
++    this.appId = options.appId;
++    this.appSecret = options.appSecret;
++    this.fetchImpl = options.fetchImpl ?? fetch;
++    this.dryRun = options.dryRun ?? false;
++    this.apiBaseUrl = (options.apiBaseUrl ?? 'https://api.bot.qq.com').replace(/\/$/, '');
++  }
++
++  /**
++   * 暴露 token 缓存槽，供指令面板同步与发信共用同一凭证。
++   *
++   * @returns 可写入的 token 缓存引用
++   */
++  getAccessTokenCache(): { current?: AccessTokenCache } {
++    return this.tokenCache;
++  }
++
++  /**
++   * 向目标发送纯文本回复（`msg_type=0`）。
++   * 群/单聊优先带 `msg_id` 做被动回复；平台禁止消息内含 URL。
++   *
++   * @param target - 频道/会话目标
++   * @param content - UTF-8 文本（必要时由 bot 侧已截断）
++   * @returns 发送确认；dry-run 时不发起网络 I/O
++   */
++  async sendText(target: QqSendTarget, content: string): Promise<QqSendResult> {
++    const safeContent = stripHttpUrls(content).trim();
++    if (!safeContent) {
++      return { ok: false, detail: 'empty content after URL strip' };
++    }
++
++    if (this.dryRun) {
++      return {
++        ok: true,
++        messageId: `dry-text-${target.targetId}`,
++        detail: safeContent.slice(0, 80),
++      };
++    }
++
++    if (!target.targetId) {
++      return { ok: false, detail: 'missing targetId' };
++    }
++
++    try {
++      const path = messagePath(target);
++      const body: Record<string, unknown> = {
++        msg_type: 0,
++        content: safeContent,
++      };
++      this.applyPassiveReplyFields(body, target);
++      const result = await this.openApiPost<{ id?: string }>(path, body);
++      return { ok: true, messageId: result.id };
++    } catch (error) {
++      return {
++        ok: false,
++        detail: error instanceof Error ? error.message : String(error),
++      };
++    }
++  }
++
++  /**
++   * 发送自定义 Markdown 消息（`msg_type=2`），可选挂载底部 keyboard 按钮。
++   * 群/单聊已开放自定义 Markdown；频道可能需内邀——失败时由调用方降级文本。
++   *
++   * @param target - 频道/会话目标
++   * @param content - Markdown 正文（勿依赖外链；群场景会剥 http URL）
++   * @param keyboard - 可选自定义按钮（需与 markdown 同发）
++   * @returns 发送确认；dry-run 时不发起网络 I/O
++   */
++  async sendMarkdown(
++    target: QqSendTarget,
++    content: string,
++    keyboard?: QqKeyboardContent,
++  ): Promise<QqSendResult> {
++    const safeContent = stripHttpUrls(content).trim();
++    if (!safeContent) {
++      return { ok: false, detail: 'empty markdown content after URL strip' };
++    }
++
++    if (this.dryRun) {
++      return {
++        ok: true,
++        messageId: `dry-md-${target.targetId}`,
++        detail: safeContent.slice(0, 80),
++      };
++    }
++
++    if (!target.targetId) {
++      return { ok: false, detail: 'missing targetId' };
++    }
++
++    try {
++      const path = messagePath(target);
++      const body: Record<string, unknown> = {
++        msg_type: 2,
++        markdown: { content: safeContent },
++      };
++      if (keyboard && keyboard.rows.length > 0) {
++        body.keyboard = toQqKeyboardPayload({
++          ...keyboard,
++          botAppId: keyboard.botAppId ?? this.appId,
++        });
++      }
++      this.applyPassiveReplyFields(body, target);
++      const result = await this.openApiPost<{ id?: string }>(path, body);
++      return { ok: true, messageId: result.id };
++    } catch (error) {
++      return {
++        ok: false,
++        degraded: true,
++        detail: error instanceof Error ? error.message : String(error),
++      };
++    }
++  }
++
++  /**
++   * 上传 PNG（`file_data` base64，≤5MB）并作为富媒体消息发送（`msg_type=7`）。
++   * 群/单聊走各自 `/files` 接口；频道场景暂未接线，返回降级提示。
++   *
++   * @param target - 频道/会话目标
++   * @param imagePng - 来自 `@lanius/render` 的 PNG 字节
++   * @returns 发送确认；dry-run 时不实际上传
++   */
++  async sendImage(target: QqSendTarget, imagePng: Buffer): Promise<QqSendResult> {
++    if (this.dryRun) {
++      return {
++        ok: true,
++        messageId: `dry-image-${target.targetId}`,
++        detail: `png:${imagePng.length}`,
++      };
++    }
++
++    if (!target.targetId) {
++      return { ok: false, detail: 'missing targetId' };
++    }
++    if (target.scene !== 'group' && target.scene !== 'c2c') {
++      return {
++        ok: false,
++        degraded: true,
++        detail: `image upload unsupported for scene=${target.scene}`,
++      };
++    }
++    // 官方 file_data 直传软上限约 5MB；卡片 PNG 通常远小于此
++    if (imagePng.length > 5 * 1024 * 1024) {
++      return {
++        ok: false,
++        degraded: true,
++        detail: `png too large for file_data upload: ${imagePng.length} bytes`,
++      };
++    }
++
++    try {
++      const uploadPath = filesPath(target);
++      const uploaded = await this.openApiPost<{
++        file_info?: string;
++        file_uuid?: string;
++      }>(uploadPath, {
++        file_type: 1,
++        file_name: 'lanius-card.png',
++        file_data: imagePng.toString('base64'),
++        srv_send_msg: false,
++      });
++      if (!uploaded.file_info) {
++        return {
++          ok: false,
++          degraded: true,
++          detail: 'files upload missing file_info',
++        };
++      }
++
++      const body: Record<string, unknown> = {
++        msg_type: 7,
++        media: { file_info: uploaded.file_info },
++      };
++      this.applyPassiveReplyFields(body, target);
++      const result = await this.openApiPost<{ id?: string }>(messagePath(target), body);
++      return {
++        ok: true,
++        messageId: result.id,
++        detail: uploaded.file_uuid ? `file_uuid:${uploaded.file_uuid}` : undefined,
++      };
++    } catch (error) {
++      return {
++        ok: false,
++        degraded: true,
++        detail: error instanceof Error ? error.message : String(error),
++      };
++    }
++  }
++
++  /**
++   * 写入被动回复字段 `msg_id`/`event_id` 与递增 `msg_seq`。
++   *
++   * @param body - 即将 POST 的消息体
++   * @param target - 发送目标
++   * @returns 无返回值
++   */
++  private applyPassiveReplyFields(body: Record<string, unknown>, target: QqSendTarget): void {
++    if (target.msgId) {
++      body.msg_id = target.msgId;
++      const next = (this.msgSeqByMsgId.get(target.msgId) ?? 0) + 1;
++      this.msgSeqByMsgId.set(target.msgId, next);
++      body.msg_seq = next;
++      return;
++    }
++    if (target.eventId) {
++      body.event_id = target.eventId;
++    }
++  }
++
++  /**
++   * 带鉴权的 OpenAPI POST JSON。
++   *
++   * @param path - 以 `/` 开头的路径
++   * @param body - JSON 请求体
++   * @returns 解析后的响应对象
++   * @throws Error 当 HTTP 或业务码失败
++   */
++  private async openApiPost<T>(path: string, body: unknown): Promise<T> {
++    const token = await getAppAccessToken({
++      appId: this.appId,
++      clientSecret: this.appSecret,
++      fetchImpl: this.fetchImpl,
++      apiBaseUrl: this.apiBaseUrl,
++      cache: this.tokenCache,
++    });
++    const response = await this.fetchImpl(`${this.apiBaseUrl}${path}`, {
++      method: 'POST',
++      headers: {
++        Authorization: `QQBot ${token}`,
++        'Content-Type': 'application/json; charset=utf-8',
++      },
++      body: JSON.stringify(body),
++    });
++    const text = await response.text();
++    let parsed: T & { code?: number; message?: string; msg?: string };
++    try {
++      parsed = (text ? JSON.parse(text) : {}) as T & {
++        code?: number;
++        message?: string;
++        msg?: string;
++      };
++    } catch {
++      throw new Error(`QQ OpenAPI POST ${path} non-json: HTTP ${response.status}`);
++    }
++    // 官方成功响应常带 code:0，仅非 0 视为失败
++    const businessFailed = parsed.code != null && Number(parsed.code) !== 0;
++    if (!response.ok || businessFailed) {
++      throw new Error(
++        `QQ OpenAPI POST ${path} failed: HTTP ${response.status} code=${parsed.code ?? 'n/a'} message=${parsed.message ?? parsed.msg ?? text.slice(0, 200)}`,
++      );
++    }
++    return parsed;
++  }
++}
++
++/**
++ * 按场景拼出发送消息的路径。
++ *
++ * @param target - 发送目标
++ * @returns OpenAPI 路径
++ */
++function messagePath(target: QqSendTarget): string {
++  const id = encodeURIComponent(target.targetId);
++  switch (target.scene) {
++    case 'group':
++      return `/v2/groups/${id}/messages`;
++    case 'c2c':
++      return `/v2/users/${id}/messages`;
++    case 'channel':
++      return `/channels/${id}/messages`;
++    case 'dm':
++      return `/dms/${id}/messages`;
++    default: {
++      const _exhaustive: never = target.scene;
++      return _exhaustive;
++    }
++  }
++}
++
++/**
++ * 按场景拼出富媒体上传路径（仅 group / c2c）。
++ *
++ * @param target - 发送目标（须为 group 或 c2c）
++ * @returns OpenAPI `/files` 路径
++ */
++function filesPath(target: QqSendTarget): string {
++  const id = encodeURIComponent(target.targetId);
++  if (target.scene === 'group') {
++    return `/v2/groups/${id}/files`;
++  }
++  return `/v2/users/${id}/files`;
++}
++
++/**
++ * 移除 http(s) URL，规避群聊「不允许发送 URL」限制。
++ *
++ * @param content - 原始回复文本
++ * @returns 去掉链接后的文本
++ */
++function stripHttpUrls(content: string): string {
++  // 保留 markdown 图片语法 `![alt](url)` 内的 URL（嵌图需要公网链接），
++  // 其余裸链剥除（群场景限制外链）。
++  const imageUrls: string[] = [];
++  const placeholdered = content.replace(
++    /!\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/gi,
++    (_m, url: string) => {
++      imageUrls.push(url);
++      return `![img](__LANIUS_IMG_${imageUrls.length - 1}__)`;
++    },
++  );
++  const stripped = placeholdered.replace(/https?:\/\/\S+/gi, '').replace(/[ \t]+\n/g, '\n');
++  // 还原图片 URL
++  return stripped.replace(/__LANIUS_IMG_(\d+)__/g, (_m, i: string) => imageUrls[Number(i)] ?? '');
++}
++
++/**
++ * 官方 QQ 客户端工厂。
++ *
++ * @param options - 客户端构造选项
++ * @returns 已配置的 `QqOfficialClient`
++ */
++export function createQqOfficialClient(options: QqOfficialClientOptions): QqOfficialClient {
++  return new QqOfficialClient(options);
++}
+diff --git a/packages/qq-official/src/cos-upload.ts b/packages/qq-official/src/cos-upload.ts
+new file mode 100644
+index 0000000..da92eeb
+--- /dev/null
++++ b/packages/qq-official/src/cos-upload.ts
+@@ -0,0 +1,150 @@
++import { createHash, createHmac, randomBytes } from 'node:crypto';
++
++/**
++ * 腾讯云 COS 上传配置（卡片图公网托管）。
++ */
++export type CosUploadConfig = {
++  /** COS SecretId */
++  secretId: string;
++  /** COS SecretKey */
++  secretKey: string;
++  /** 桶名（含 APPID），如 `xxx-1257961979` */
++  bucket: string;
++  /** 地域，如 `ap-shanghai` */
++  region: string;
++  /** 自定义 CDN/域名；缺省用桶默认域名 */
++  domain?: string;
++  /** 对象键前缀，默认 `lanius/cards/` */
++  prefix?: string;
++};
++
++/**
++ * COS 上传结果。
++ */
++export type CosUploadResult = {
++  ok: boolean;
++  /** 公网可访问的对象 URL */
++  url?: string;
++  detail?: string;
++};
++
++/**
++ * 拼接对象公网 URL。
++ *
++ * @param config - COS 配置
++ * @param key - 对象键
++ * @returns 公网 URL
++ */
++function publicUrlFor(config: CosUploadConfig, key: string): string {
++  const host = (config.domain ?? '').trim()
++    ? (config.domain ?? '').trim()
++    : `${config.bucket}.cos.${config.region}.myqcloud.com`;
++  return `https://${host}/${key}`;
++}
++
++/**
++ * 生成 COS XML API 的 Authorization 签名（HMAC-SHA1）。
++ *
++ * 算法：`q-sign-algorithm=sha1&q-ak=<ak>&q-sign-time=...&q-key-time=...&q-header-list=...&q-url-param-list=...&q-signature=...`
++ *
++ * @param config - COS 配置
++ * @param method - HTTP 方法（大写）
++ * @param pathname - 请求路径（以 `/` 开头，含对象键）
++ * @param headers - 参与签名的请求头（host、content-type 等）
++ * @returns Authorization 头值
++ */
++function cosAuthorization(
++  config: CosUploadConfig,
++  method: string,
++  pathname: string,
++  headers: Record<string, string>,
++): string {
++  const now = Math.floor(Date.now() / 1000);
++  const keyTime = `${now - 60};${now + 600}`;
++
++  // 参与签名的 header：统一小写 key、按字典序、键值分别 url 编码
++  const lower: Record<string, string> = {};
++  for (const [k, v] of Object.entries(headers)) {
++    lower[k.toLowerCase()] = v;
++  }
++  const headerKeys = Object.keys(lower).sort();
++  const headerList = headerKeys.join(';');
++  const headerString = headerKeys
++    .map((k) => `${encodeURIComponent(k)}=${encodeURIComponent(lower[k] ?? '')}`)
++    .join('&');
++
++  const httpString = [method.toLowerCase(), pathname, '', headerString, ''].join('\n');
++
++  const stringToSign = [
++    'sha1',
++    keyTime,
++    createHash('sha1').update(httpString).digest('hex'),
++    '',
++  ].join('\n');
++
++  const signKey = createHmac('sha1', config.secretKey).update(keyTime).digest('hex');
++  const signature = createHmac('sha1', signKey).update(stringToSign).digest('hex');
++
++  return (
++    `q-sign-algorithm=sha1&q-ak=${config.secretId}` +
++    `&q-sign-time=${keyTime}&q-key-time=${keyTime}` +
++    `&q-header-list=${headerList}&q-url-param-list=` +
++    `&q-signature=${signature}`
++  );
++}
++
++/**
++ * 上传 PNG 到 COS 并返回公网 URL。
++ *
++ * 使用 COS XML API `PutObject`（HMAC-SHA1 签名，无 SDK 依赖）。
++ * 要求桶为「公有读」或自定义域名已放开读，否则 markdown 无法转存。
++ *
++ * @param config - COS 配置
++ * @param png - PNG 字节
++ * @param fetchImpl - 可注入的 fetch（测试用）
++ * @returns 上传结果（含公网 URL）
++ */
++export async function uploadCardPng(
++  config: CosUploadConfig,
++  png: Buffer,
++  fetchImpl: typeof fetch = fetch,
++): Promise<CosUploadResult> {
++  const prefix = (config.prefix ?? 'lanius/cards/').replace(/^\//, '');
++  const key = `${prefix}${Date.now()}-${randomBytes(6).toString('hex')}.png`;
++  const host = `${config.bucket}.cos.${config.region}.myqcloud.com`;
++  const pathname = `/${key}`;
++
++  const headers: Record<string, string> = {
++    host,
++    'content-type': 'image/png',
++    'content-length': String(png.length),
++  };
++  const authorization = cosAuthorization(config, 'PUT', pathname, headers);
++
++  try {
++    const res = await fetchImpl(`https://${host}${pathname}`, {
++      method: 'PUT',
++      headers: {
++        'content-type': 'image/png',
++        'content-length': String(png.length),
++        authorization,
++      },
++      // Node 22 undici：Buffer 作为 body 可保证 Content-Length 与字节流一致；
++      // 传入 Uint8Array 在部分场景会被错误地按空流处理，导致 70B 空文件。
++      body: png,
++    });
++    if (!res.ok) {
++      const text = await res.text().catch(() => '');
++      return {
++        ok: false,
++        detail: `COS PUT ${res.status}: ${text.slice(0, 200)}`,
++      };
++    }
++    return { ok: true, url: publicUrlFor(config, key) };
++  } catch (error) {
++    return {
++      ok: false,
++      detail: error instanceof Error ? error.message : String(error),
++    };
++  }
++}
+diff --git a/packages/qq-official/src/index.ts b/packages/qq-official/src/index.ts
+index 3496f65..144c857 100644
+--- a/packages/qq-official/src/index.ts
++++ b/packages/qq-official/src/index.ts
+@@ -1,57 +1,54 @@
+-/**
+- * `@lanius/qq-official` — 官方 QQ 验签、发信、菜单与指令面板（仅 bot 使用）。
+- */
+-
+-export {
+-  getAppAccessToken,
+-  type AccessTokenCache,
+-  type GetAppAccessTokenOptions,
+-} from './access-token.js';
+-export {
+-  createQqOfficialClient,
+-  QqOfficialClient,
+-  type QqOfficialClientOptions,
+-  type QqSendResult,
+-  type QqSendTarget,
+-} from './client.js';
+-export {
+-  commandKeyboardButton,
+-  toQqKeyboardPayload,
+-  type QqKeyboardButton,
+-  type QqKeyboardContent,
+-  type QqKeyboardRow,
+-} from './keyboard.js';
+-export {
+-  syncQqCustomMenu,
+-  type QqMenuSendItem,
+-  type SyncQqCustomMenuOptions,
+-  type SyncQqCustomMenuResult,
+-} from './menu.js';
+-export {
+-  qqOpenApiJson,
+-  truncateChars,
+-  truncateWeightedChars,
+-  type QqOpenApiOptions,
+-} from './open-api.js';
+-export {
+-  loadQqPanelIdStore,
+-  saveQqPanelIdStore,
+-  type QqPanelIdStore,
+-} from './panel-id-store.js';
+-export {
+-  ensureQqGroupCommandPanel,
+-  reclaimOrphanPanels,
+-  syncQqCommandPanels,
+-  type QqPanelCommandItem,
+-  type QqPanelScope,
+-  type SyncQqCommandPanelResult,
+-  type SyncQqCommandPanelsOptions,
+-} from './panels.js';
+-export {
+-  expandBotSecretToEd25519Seed,
+-  signQqWebhookValidation,
+-  verifyQqCallback,
+-  type QqCallbackRequest,
+-  type SignQqWebhookValidationOptions,
+-  type VerifyQqCallbackOptions,
+-} from './verify.js';
++/**
++ * `@lanius/qq-official` — 官方 QQ 验签、发信、菜单与指令面板（仅 bot 使用）。
++ */
++
++export {
++  getAppAccessToken,
++  type AccessTokenCache,
++  type GetAppAccessTokenOptions,
++} from './access-token.js';
++export {
++  createQqOfficialClient,
++  QqOfficialClient,
++  type QqOfficialClientOptions,
++  type QqSendResult,
++  type QqSendTarget,
++} from './client.js';
++export {
++  commandKeyboardButton,
++  toQqKeyboardPayload,
++  type QqKeyboardButton,
++  type QqKeyboardContent,
++  type QqKeyboardRow,
++} from './keyboard.js';
++export { uploadCardPng, type CosUploadConfig, type CosUploadResult } from './cos-upload.js';
++export {
++  syncQqCustomMenu,
++  type QqMenuSendItem,
++  type SyncQqCustomMenuOptions,
++  type SyncQqCustomMenuResult,
++} from './menu.js';
++export {
++  qqOpenApiJson,
++  truncateChars,
++  truncateWeightedChars,
++  type QqOpenApiOptions,
++} from './open-api.js';
++export { loadQqPanelIdStore, saveQqPanelIdStore, type QqPanelIdStore } from './panel-id-store.js';
++export {
++  ensureQqGroupCommandPanel,
++  reclaimOrphanPanels,
++  syncQqCommandPanels,
++  type QqPanelCommandItem,
++  type QqPanelScope,
++  type SyncQqCommandPanelResult,
++  type SyncQqCommandPanelsOptions,
++} from './panels.js';
++export {
++  expandBotSecretToEd25519Seed,
++  signQqWebhookValidation,
++  verifyQqCallback,
++  type QqCallbackRequest,
++  type SignQqWebhookValidationOptions,
++  type VerifyQqCallbackOptions,
++} from './verify.js';
+diff --git a/packages/ui/src/components/FissuresModuleCard.vue b/packages/ui/src/components/FissuresModuleCard.vue
+index 8bae21a..ca9b73d 100644
+--- a/packages/ui/src/components/FissuresModuleCard.vue
++++ b/packages/ui/src/components/FissuresModuleCard.vue
+@@ -92,9 +92,7 @@ const items = computed((): FissureDto[] => {
+  *
+  * @returns 卡片副标题用时间
+  */
+-const stamp = computed(() =>
+-  props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
+-);
++const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
+ </script>
+ 
+ <template>
+@@ -115,16 +113,13 @@ const stamp = computed(() =>
+         <div class="fissures__main">
+           <div class="fissures__top">
+             <span class="fissures__era">{{ label(item.eraLabel) }}</span>
+-            <span
+-              class="fissures__path"
+-              :class="`fissures__path--${item.path}`"
+-            >{{ pathTag(item.path) }}</span>
++            <span class="fissures__path" :class="`fissures__path--${item.path}`">{{
++              pathTag(item.path)
++            }}</span>
++            <time class="fissures__remain">{{ formatRemain(item.remainingMs, locale) }}</time>
+           </div>
+-          <p class="fissures__mission">
+-            {{ label(item.missionType) }} · {{ label(item.node) }}
+-          </p>
++          <p class="fissures__mission">{{ label(item.missionType) }} · {{ label(item.node) }}</p>
+         </div>
+-        <time class="fissures__remain">{{ formatRemain(item.remainingMs, locale) }}</time>
+       </li>
+     </ul>
+     <p v-else class="fissures__empty">
+@@ -145,12 +140,12 @@ const stamp = computed(() =>
+ 
+ .fissures__row {
+   /*
+-   * 卡片内禁止换行/省略（截图需完整可见）；
+-   * 容器仍 flex-wrap，按内容宽度自适应每行 1–3 个（basis 1/3 封顶）。
++   * 卡片内禁止换行；三列等宽（basis 1/3），
++   * 超长节点名以省略号截断，避免撑大容器。
+    */
+   box-sizing: border-box;
+   flex: 1 1 calc((100% - 16px) / 3);
+-  min-width: min(100%, max-content);
++  min-width: 0;
+   max-width: 100%;
+   display: flex;
+   flex-wrap: nowrap;
+@@ -232,13 +227,17 @@ const stamp = computed(() =>
+   font-size: 12px;
+   color: var(--lanius-text);
+   white-space: nowrap;
+-  overflow: visible;
+-  text-overflow: clip;
++  /* 节点名过长时截断而非撑大容器 */
++  overflow: hidden;
++  text-overflow: ellipsis;
++  max-width: 100%;
+ }
+ 
+ .fissures__remain {
++  /* 位于第一行（纪元/路径标签）末尾，避免独立列被节点名挤占 */
+   flex: 0 0 auto;
+   margin-left: auto;
++  padding-left: 8px;
+   white-space: nowrap;
+   font-size: 12px;
+   font-weight: 700;
+-- 
+2.51.2.windows.1
+

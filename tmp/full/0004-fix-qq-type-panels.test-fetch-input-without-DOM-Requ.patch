@@ -1,0 +1,44 @@
+From 363f13e9e312ca169a96317b60a4dc45f8d162df Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Sun, 11 Oct 2026 18:11:28 +0800
+Subject: [PATCH 04/45] fix(qq): type panels.test fetch input without DOM
+ RequestInfo
+
+---
+ packages/qq-official/src/panels.test.ts | 6 +++---
+ 1 file changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/packages/qq-official/src/panels.test.ts b/packages/qq-official/src/panels.test.ts
+index cebe219..681c5a5 100644
+--- a/packages/qq-official/src/panels.test.ts
++++ b/packages/qq-official/src/panels.test.ts
+@@ -18,7 +18,7 @@ function mockFetch(
+     respond: () => { ok?: boolean; body: unknown };
+   }>,
+ ): typeof fetch {
+-  const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
++  const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+     const url = String(input);
+     const method = (init?.method ?? 'GET').toUpperCase();
+     if (url.includes('getAppAccessToken')) {
+@@ -82,7 +82,7 @@ describe('syncQqCommandPanels', () => {
+   it('reclaims orphans then creates c2c when quota exceeded', async () => {
+     let posted = 0;
+     const deleted: string[] = [];
+-    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
++    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+       const url = String(input);
+       const method = (init?.method ?? 'GET').toUpperCase();
+       if (url.includes('getAppAccessToken')) {
+@@ -216,7 +216,7 @@ describe('ensureQqGroupCommandPanel', () => {
+ describe('reclaimOrphanPanels', () => {
+   it('keeps one lanius panel per scope and deletes the rest', async () => {
+     const deleted: string[] = [];
+-    const fetchImpl = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
++    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+       const url = String(input);
+       const method = (init?.method ?? 'GET').toUpperCase();
+       if (url.includes('getAppAccessToken')) {
+-- 
+2.51.2.windows.1
+

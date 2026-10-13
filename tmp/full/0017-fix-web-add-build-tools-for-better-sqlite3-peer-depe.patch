@@ -1,0 +1,44 @@
+From d0a10dbd0825fcd6b527c142ab1a4cdeea70f1ae Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Mon, 12 Oct 2026 01:56:42 +0800
+Subject: [PATCH 17/45] fix(web): add build tools for better-sqlite3 peer
+ dependency
+
+---
+ apps/web/Dockerfile   | 4 ++++
+ deploy/Dockerfile.app | 4 ++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/apps/web/Dockerfile b/apps/web/Dockerfile
+index 0d2a7c9..6f86039 100644
+--- a/apps/web/Dockerfile
++++ b/apps/web/Dockerfile
+@@ -8,6 +8,10 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+ WORKDIR /app
+ 
+ FROM base AS build
++# better-sqlite3 原生编译工具链（peer dep 会触发安装）
++RUN apt-get update \
++ && apt-get install -y --no-install-recommends python3 make g++ \
++ && rm -rf /var/lib/apt/lists/*
+ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+ COPY apps/web/package.json apps/web/
+ COPY packages/core/package.json packages/core/
+diff --git a/deploy/Dockerfile.app b/deploy/Dockerfile.app
+index c7bcb9c..c90bcbb 100644
+--- a/deploy/Dockerfile.app
++++ b/deploy/Dockerfile.app
+@@ -32,6 +32,10 @@ RUN pnpm --filter @lanius/server build \
+ 
+ # --- Web build ---
+ FROM base AS build-web
++# better-sqlite3 原生编译工具链（peer dep 会触发安装）
++RUN apt-get update \
++ && apt-get install -y --no-install-recommends python3 make g++ \
++ && rm -rf /var/lib/apt/lists/*
+ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+ COPY apps/web/package.json apps/web/
+ COPY packages/core/package.json packages/core/
+-- 
+2.51.2.windows.1
+

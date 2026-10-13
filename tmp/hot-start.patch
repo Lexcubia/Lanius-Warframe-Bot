@@ -1,0 +1,1783 @@
+﻿From 6bb9dd2aabfd96de51035582054d860d261bec24 Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Tue, 13 Oct 2026 23:06:25 +0800
+Subject: [PATCH] =?UTF-8?q?feat(repo):=20=E7=83=AD=E5=90=AF=E5=8A=A8?=
+ =?UTF-8?q?=E6=94=B9=E9=80=A0=EF=BC=88tsx=20=E7=9B=B4=E8=B7=91=E6=BA=90?=
+ =?UTF-8?q?=E7=A0=81=EF=BC=89+=20=E5=90=AF=E5=8A=A8=E6=9B=B4=E6=96=B0?=
+ =?UTF-8?q?=E6=A3=80=E6=9F=A5=20+=20=E6=9B=B4=E6=96=B0=E8=84=9A=E6=9C=AC?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- api/bot start 鏀逛负 tsx src/index.ts锛堟棤 dist 鏋勫缓锛実it pull 鍗崇敓鏁堬級
+- tsx 绉诲叆 dependencies锛堢敓浜у彲鐢級
+- systemd 鍗曞厓鏀圭敤 npx tsx 鐩磋窇
+- packages/core 鏂板 checkForUpdate锛堝惎鍔ㄦ椂瀵规瘮 git commit锛?- bot 鍚姩鏃舵鏌ユ洿鏂板苟鎵撴棩蹇?- deploy/update.sh 鏇存柊鑴氭湰锛坓it pull + install + build web + restart锛?- 鍒犻櫎鏃?docker 閮ㄧ讲鏂囦欢涓庡簾寮冭剼鏈紙椤圭洰鐦﹁韩锛?---
+ apps/api/package.json               |   4 +-
+ apps/bot/package.json               |   4 +-
+ apps/bot/src/index.ts               |  14 +
+ deploy/Caddyfile.app                |  17 -
+ deploy/Dockerfile.app               | 136 -----
+ deploy/docker-compose.app.yml       |  71 ---
+ deploy/docker-compose.yml           | 108 ----
+ deploy/supervisord.app.conf         |  51 --
+ deploy/systemd/lanius-api.service   |   3 +-
+ deploy/systemd/lanius-bot.service   |   3 +-
+ deploy/update-image.sh              |  56 ---
+ deploy/update.sh                    |  38 ++
+ packages/core/src/index.ts          |  35 +-
+ packages/core/src/update-check.ts   |  82 +++
+ scripts/check-bundle.mjs            |  11 -
+ scripts/prepare-runtime-package.mjs |  77 ---
+ scripts/rewrite-bot-utf8.mjs        | 754 ----------------------------
+ scripts/ssh-lanius.py               | 121 -----
+ 18 files changed, 149 insertions(+), 1436 deletions(-)
+ delete mode 100644 deploy/Caddyfile.app
+ delete mode 100644 deploy/Dockerfile.app
+ delete mode 100644 deploy/docker-compose.app.yml
+ delete mode 100644 deploy/docker-compose.yml
+ delete mode 100644 deploy/supervisord.app.conf
+ delete mode 100755 deploy/update-image.sh
+ create mode 100755 deploy/update.sh
+ create mode 100644 packages/core/src/update-check.ts
+ delete mode 100644 scripts/check-bundle.mjs
+ delete mode 100644 scripts/prepare-runtime-package.mjs
+ delete mode 100644 scripts/rewrite-bot-utf8.mjs
+ delete mode 100644 scripts/ssh-lanius.py
+
+diff --git a/apps/api/package.json b/apps/api/package.json
+index d2dde4c..d5ca25d 100644
+--- a/apps/api/package.json
++++ b/apps/api/package.json
+@@ -6,7 +6,7 @@
+   "description": "Lanius custom API server - sole business entry for QQ, web, and admin clients.",
+   "scripts": {
+     "dev": "tsx watch src/index.ts",
+-    "start": "node dist/index.js",
++    "start": "tsx src/index.ts",
+     "build": "tsup --config tsup.config.ts",
+     "typecheck": "tsc -p tsconfig.json --noEmit",
+     "test": "vitest run",
+@@ -20,6 +20,7 @@
+     "bcryptjs": "^3.0.3",
+     "hono": "^4.6.14",
+     "ioredis": "^6.0.0",
++    "tsx": "^4.19.2",
+     "warframe-worldstate-data": "3.16.10",
+     "yaml": "^2.6.1",
+     "zod": "^3.24.1"
+@@ -28,7 +29,6 @@
+     "@types/bcryptjs": "^3.0.0",
+     "@types/node": "^22.10.2",
+     "tsup": "^8.3.5",
+-    "tsx": "^4.19.2",
+     "typescript": "^5.7.2",
+     "vitest": "^2.1.8"
+   }
+diff --git a/apps/bot/package.json b/apps/bot/package.json
+index 7df04cf..3076379 100644
+--- a/apps/bot/package.json
++++ b/apps/bot/package.json
+@@ -6,7 +6,7 @@
+   "description": "Official QQ adapter 鈥?callbacks, command pipeline, text/image replies via Lanius API.",
+   "scripts": {
+     "dev": "tsx watch src/index.ts",
+-    "start": "node dist/index.js",
++    "start": "tsx src/index.ts",
+     "build": "tsup --config tsup.config.ts",
+     "typecheck": "tsc -p tsconfig.json --noEmit",
+     "test": "vitest run"
+@@ -20,12 +20,12 @@
+     "@lanius/core": "workspace:*",
+     "@lanius/qq-official": "workspace:*",
+     "hono": "^4.6.14",
++    "tsx": "^4.19.2",
+     "zod": "^3.24.1"
+   },
+   "devDependencies": {
+     "@types/node": "^22.10.2",
+     "tsup": "^8.3.5",
+-    "tsx": "^4.19.2",
+     "typescript": "^5.7.2",
+     "vitest": "^2.1.8"
+   }
+diff --git a/apps/bot/src/index.ts b/apps/bot/src/index.ts
+index 0a9aa8b..08623e9 100644
+--- a/apps/bot/src/index.ts
++++ b/apps/bot/src/index.ts
+@@ -1,4 +1,5 @@
+ import { serve } from '@hono/node-server';
++import { checkForUpdate } from '@lanius/core';
+ import { syncQqCommandPanels, syncQqCustomMenu, type AccessTokenCache } from '@lanius/qq-official';
+ import { createLaniusLogger, type Logger } from '@lanius/logger';
+ 
+@@ -29,6 +30,19 @@ function main(): void {
+ 
+   serve({ fetch: app.fetch, hostname: host, port });
+ 
++  // 鍚姩鏃舵鏌ユ洿鏂帮紙涓嶉樆鏂紝澶辫触鍙墦鏃ュ織锛?+  const update = checkForUpdate(repoRoot);
++  if (update.error) {
++    logger.warn({ err: update.error }, 'update check skipped');
++  } else if (update.hasUpdate) {
++    logger.warn(
++      { local: update.localCommit, remote: update.remoteCommit, behind: update.behind },
++      'update available: run deploy/update.sh',
++    );
++  } else {
++    logger.info({ commit: update.localCommit }, 'up to date');
++  }
++
+   // 鍚姩鍚庡悓姝ヨ嚜瀹氫箟鑿滃崟 + 鎸囦护闈㈡澘锛涘け璐ュ彧鎵撴棩蹇楋紝涓嶉樆鏂洖璋冩湇鍔°€?   if (!config.bot.dryRun) {
+     void syncQqUi(config, qq.getAccessTokenCache(), logger);
+diff --git a/deploy/Caddyfile.app b/deploy/Caddyfile.app
+deleted file mode 100644
+index 57f7ae0..0000000
+--- a/deploy/Caddyfile.app
++++ /dev/null
+@@ -1,17 +0,0 @@
+-# 鏃佽矾 Caddy锛氬弽浠ｅ埌涓讳綋瀹瑰櫒 lanius-app锛坈ompose 鏈嶅姟鍚嶏級銆?-{$DOMAIN:localhost} {
+-	encode gzip
+-
+-	handle /qq/* {
+-		reverse_proxy lanius-app:8788
+-	}
+-
+-	handle /api/lanius/* {
+-		uri strip_prefix /api/lanius
+-		reverse_proxy lanius-app:8787
+-	}
+-
+-	handle {
+-		reverse_proxy lanius-app:8790
+-	}
+-}
+diff --git a/deploy/Dockerfile.app b/deploy/Dockerfile.app
+deleted file mode 100644
+index be7a2c2..0000000
+--- a/deploy/Dockerfile.app
++++ /dev/null
+@@ -1,136 +0,0 @@
+-# syntax=docker/dockerfile:1
+-# Lanius 涓讳綋搴旂敤闀滃儚锛歛pi + web + bot + 鍐呭祵 Redis锛堜笉鍚?Caddy锛夈€?-# 鏋勫缓锛歞ocker build -f deploy/Dockerfile.app -t lanius-app .
+-
+-FROM node:22-bookworm-slim AS base
+-ENV PNPM_HOME=/pnpm
+-ENV PATH=$PNPM_HOME:$PATH
+-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+-WORKDIR /app
+-
+-# --- API build ---
+-FROM base AS build-api
+-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+-COPY apps/api/package.json apps/api/
+-COPY packages/core/package.json packages/core/
+-COPY packages/config/package.json packages/config/
+-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+-    pnpm install --frozen-lockfile --filter @lanius/server...
+-COPY apps/api apps/api
+-COPY packages/core packages/core
+-COPY packages/config packages/config
+-COPY config/default config/default
+-COPY scripts/prepare-runtime-package.mjs scripts/prepare-runtime-package.mjs
+-RUN pnpm --filter @lanius/server build \
+- && node scripts/prepare-runtime-package.mjs api /out/api \
+- && cp -r apps/api/dist /out/api/dist \
+- && cp -r config/default /out/runtime-default
+-
+-# --- Web build ---
+-FROM base AS build-web
+-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+-COPY apps/web/package.json apps/web/
+-COPY packages/core/package.json packages/core/
+-COPY packages/api/package.json packages/api/
+-COPY packages/ui/package.json packages/ui/
+-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+-    pnpm install --frozen-lockfile --filter @lanius/web...
+-COPY apps/web apps/web
+-COPY packages/core packages/core
+-COPY packages/api packages/api
+-COPY packages/ui packages/ui
+-ENV LANIUS_API_BASE=http://127.0.0.1:8787
+-RUN pnpm --filter @lanius/web build
+-
+-# --- Bot build ---
+-FROM base AS build-bot
+-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc tsconfig.base.json ./
+-COPY apps/bot/package.json apps/bot/
+-COPY packages/core/package.json packages/core/
+-COPY packages/config/package.json packages/config/
+-COPY packages/api/package.json packages/api/
+-COPY packages/qq-official/package.json packages/qq-official/
+-COPY packages/render/package.json packages/render/
+-COPY packages/ui/package.json packages/ui/
+-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+-    pnpm install --frozen-lockfile --filter @lanius/bot...
+-COPY apps/bot apps/bot
+-COPY packages/core packages/core
+-COPY packages/config packages/config
+-COPY packages/api packages/api
+-COPY packages/qq-official packages/qq-official
+-COPY packages/render packages/render
+-COPY packages/ui packages/ui
+-COPY scripts/prepare-runtime-package.mjs scripts/prepare-runtime-package.mjs
+-RUN pnpm --filter @lanius/render build:card-host \
+- && pnpm --filter @lanius/bot build \
+- && node scripts/prepare-runtime-package.mjs bot /out/bot \
+- && cp -r apps/bot/dist /out/bot/dist \
+- && cp -r packages/render/dist/card-host /out/bot/card-host
+-
+-FROM node:22-bookworm-slim AS runner
+-WORKDIR /app
+-ENV NODE_ENV=production
+-
+-# apt 鍥藉唴闀滃儚 + redis + supervisor + Chromium 绯荤粺搴擄紙bot锛?-# 闀滃儚婧愭浛鎹㈠吋瀹?deb822(debian.sources) 涓庝紶缁?.list 涓ょ鏍煎紡锛涘け璐ュ悗鍥為€€瀹樻柟婧?-RUN set -eux; \
+-    if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
+-      sed -i \
+-        -e 's|https\?://deb.debian.org|http://mirrors.aliyun.com|g' \
+-        -e 's|https\?://security.debian.org|http://mirrors.aliyun.com|g' \
+-        /etc/apt/sources.list.d/debian.sources; \
+-    fi; \
+-    for f in /etc/apt/sources.list /etc/apt/sources.list.d/*.list; do \
+-      [ -f "$f" ] && sed -i \
+-        -e 's|https\?://deb.debian.org|http://mirrors.aliyun.com|g' \
+-        -e 's|https\?://security.debian.org|http://mirrors.aliyun.com|g' \
+-        "$f" || true; \
+-    done; \
+-    apt-get update; \
+-    apt-get install -y --no-install-recommends \
+-      ca-certificates \
+-      redis-server \
+-      supervisor \
+-      fonts-liberation \
+-      fonts-wqy-microhei \
+-      libasound2 \
+-      libatk-bridge2.0-0 \
+-      libatk1.0-0 \
+-      libcups2 \
+-      libdbus-1-3 \
+-      libdrm2 \
+-      libgbm1 \
+-      libgtk-3-0 \
+-      libnspr4 \
+-      libnss3 \
+-      libx11-xcb1 \
+-      libxcomposite1 \
+-      libxdamage1 \
+-      libxfixes3 \
+-      libxkbcommon0 \
+-      libxrandr2 \
+-      xdg-utils; \
+-    rm -rf /var/lib/apt/lists/*; \
+-    mkdir -p /data/redis /var/log/supervisor /ms-playwright /runtime-config/default /runtime-config/local /config; \
+-    # 鍏抽敭鑷锛歴upervisord 蹇呴』瀛樺湪锛屽惁鍒欐瀯寤哄嵆澶辫触锛堥伩鍏嶈繍琛屾湡 Restarting 鎵嶅彂鐜帮級
+-    command -v supervisord >/dev/null 2>&1 || { echo 'FATAL: supervisord not installed' >&2; exit 1; }
+-
+-COPY --from=build-api /out/api /app/api
+-COPY --from=build-api /out/runtime-default /runtime-config/default
+-WORKDIR /app/api
+-RUN npm install --omit=dev
+-
+-COPY --from=build-web /app/apps/web/.output /app/web/.output
+-
+-COPY --from=build-bot /out/bot /app/bot
+-WORKDIR /app/bot
+-RUN npm install --omit=dev
+-
+-COPY deploy/supervisord.app.conf /etc/supervisor/conf.d/lanius.conf
+-
+-WORKDIR /app
+-EXPOSE 8787 8788 8790
+-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
+-  CMD node -e "fetch('http://127.0.0.1:8787/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/lanius.conf"]
+diff --git a/deploy/docker-compose.app.yml b/deploy/docker-compose.app.yml
+deleted file mode 100644
+index ec74d36..0000000
+--- a/deploy/docker-compose.app.yml
++++ /dev/null
+@@ -1,71 +0,0 @@
+-# 銆愬彲閫夈€慏ocker 璺緞锛氫富浣撳崟瀹瑰櫒 lanius-app + 鏃佽矾 Caddy銆?-# 鐢熶骇榛樿璇风敤 Node + systemd锛堣 docs/DEPLOY.md銆乽pdate-node.sh锛夈€?-# 鍦?deploy/ 鐩綍锛?-#   IMAGE_TAG=vX.Y.Z docker compose -f docker-compose.app.yml pull && up -d
+-#
+-# 鏃ュ父鍗囩骇锛堜粎 docker 妯″紡锛夛細update-image.sh锛堜粎 pull锛屼笉 build锛?-
+-name: lanius
+-
+-services:
+-  lanius-app:
+-    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/lanius-app:${IMAGE_TAG:-latest}
+-    build:
+-      context: ..
+-      dockerfile: deploy/Dockerfile.app
+-    restart: unless-stopped
+-    environment:
+-      NODE_ENV: production
+-      PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://localhost}
+-      IMAGE_TAG: ${IMAGE_TAG:-latest}
+-      LANIUS_CONFIG_ROOT: /config
+-      # 鍙€夛細鎸傝浇 docker.sock 鍚?Admin 鍙墽琛?update-image.sh
+-      # DOCKER_HOST: unix:///var/run/docker.sock
+-    volumes:
+-      # 妯″潡鍖栭厤缃細default 鍙锛宭ocal 鍙啓锛圓dmin 鐑洿鏂帮級
+-      - ${LANIUS_CONFIG_DEFAULT:-../config/default}:/config/default:ro
+-      - ${LANIUS_CONFIG_LOCAL:-../config/local}:/config/local:rw
+-      # 鍏煎锛氳嫢浠嶆湁鍗曚綋 secrets锛屾寕杞藉悗棣栨鍚姩浼氭媶鍒嗚繘 local/
+-      - ${LANIUS_CONFIG_FILE:-/opt/lanius/secrets/config.local.yaml}:/config/config.local.yaml:ro
+-      - ${LANIUS_DATA_DIR:-/opt/lanius/data}:/data
+-      - ${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}:/ms-playwright:ro
+-      # 鍙€夛細鍚庡彴閫夌増锛堝彇娑堜笅涓€琛屾敞閲婏級
+-      # - /var/run/docker.sock:/var/run/docker.sock
+-      # - ./update-image.sh:/opt/lanius/repo/deploy/update-image.sh:ro
+-      # - .:/opt/lanius/repo/deploy:rw
+-    expose:
+-      - '8787'
+-      - '8788'
+-      - '8790'
+-    healthcheck:
+-      test:
+-        [
+-          'CMD',
+-          'node',
+-          '-e',
+-          "fetch('http://127.0.0.1:8787/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+-        ]
+-      interval: 15s
+-      timeout: 10s
+-      retries: 6
+-      start_period: 90s
+-
+-  caddy:
+-    image: caddy:2.9-alpine
+-    restart: unless-stopped
+-    ports:
+-      - '80:80'
+-      - '443:443'
+-    environment:
+-      DOMAIN: ${DOMAIN:-localhost}
+-    volumes:
+-      - ./Caddyfile.app:/etc/caddy/Caddyfile:ro
+-      - caddy_data:/data
+-      - caddy_config:/config
+-    depends_on:
+-      lanius-app:
+-        condition: service_started
+-
+-volumes:
+-  caddy_data:
+-  caddy_config:
+diff --git a/deploy/docker-compose.yml b/deploy/docker-compose.yml
+deleted file mode 100644
+index 9af5038..0000000
+--- a/deploy/docker-compose.yml
++++ /dev/null
+@@ -1,108 +0,0 @@
+-# Lanius 鐢熶骇缂栨帓銆傚湪浠撳簱 deploy/ 鐩綍鎵ц锛?-#   GHCR锛欼MAGE_TAG=v0.1.0 docker compose pull && docker compose up -d
+-#   婧愮爜鏋勫缓锛欼MAGE_TAG=v0.1.0 docker compose build && docker compose up -d
+-#
+-# build.context 涓轰粨搴撴牴锛坉eploy 鐨勪笂涓€绾э級銆?-
+-name: lanius
+-
+-services:
+-  caddy:
+-    image: caddy:2.9-alpine
+-    restart: unless-stopped
+-    ports:
+-      - '80:80'
+-      - '443:443'
+-    environment:
+-      DOMAIN: ${DOMAIN:-localhost}
+-    volumes:
+-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+-      - caddy_data:/data
+-      - caddy_config:/config
+-    depends_on:
+-      - web
+-      - bot
+-
+-  api:
+-    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/api:${IMAGE_TAG:-latest}
+-    build:
+-      context: ..
+-      dockerfile: apps/api/Dockerfile
+-    restart: unless-stopped
+-    environment:
+-      NODE_ENV: production
+-      HOST: 0.0.0.0
+-      PORT: '8787'
+-      LANIUS_CONFIG: /config/config.local.yaml
+-      # default+local YAML锛氭敼鏂囦欢鍚庨噸鍚湰鏈嶅姟鍗冲彲鐢熸晥
+-      LANIUS_RUNTIME_CONFIG_ROOT: /runtime-config
+-    volumes:
+-      - ${LANIUS_CONFIG_FILE:-./config.local.yaml}:/config/config.local.yaml:ro
+-      - ${LANIUS_RUNTIME_DEFAULT:-../config/default}:/runtime-config/default:ro
+-      - ${LANIUS_RUNTIME_LOCAL:-../config/local}:/runtime-config/local:ro
+-    expose:
+-      - '8787'
+-    healthcheck:
+-      test:
+-        [
+-          'CMD',
+-          'node',
+-          '-e',
+-          "fetch('http://127.0.0.1:8787/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+-        ]
+-      interval: 30s
+-      timeout: 5s
+-      retries: 3
+-      start_period: 20s
+-
+-  web:
+-    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/web:${IMAGE_TAG:-latest}
+-    build:
+-      context: ..
+-      dockerfile: apps/web/Dockerfile
+-    restart: unless-stopped
+-    environment:
+-      NODE_ENV: production
+-      HOST: 0.0.0.0
+-      PORT: '8790'
+-      NITRO_HOST: 0.0.0.0
+-      NITRO_PORT: '8790'
+-      # 瀹瑰櫒鍐呰蛋 compose 鏈嶅姟鍚嶏紱Nuxt 杩愯鏃惰鐩栫敤 NUXT_ 鍓嶇紑
+-      LANIUS_API_BASE: http://api:8787
+-      NUXT_LANIUS_API_BASE: http://api:8787
+-    expose:
+-      - '8790'
+-    depends_on:
+-      api:
+-        condition: service_healthy
+-
+-  bot:
+-    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/bot:${IMAGE_TAG:-latest}
+-    build:
+-      context: ..
+-      dockerfile: apps/bot/Dockerfile
+-    restart: unless-stopped
+-    environment:
+-      NODE_ENV: production
+-      HOST: 0.0.0.0
+-      PORT: '8788'
+-      LANIUS_CONFIG: /config/config.local.yaml
+-      # 瑕嗙洊 YAML 涓殑鏈満鍦板潃锛屾寚鍚?compose 鍐呯綉 api
+-      LANIUS_API_BASE: http://api:8787
+-      PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://localhost}
+-      # Vue 鍗＄墖瀹夸富棰勬瀯寤虹洰褰曪紙闀滃儚鍐呰矾寰勶紱Playwright 鑺傜偣鎴浘锛?-      LANIUS_CARD_HOST_DIR: /app/card-host
+-      # 娴忚鍣ㄤ簩杩涘埗鏉ヨ嚜瀹夸富鏈洪瑁呯洰褰曪紙deploy/prepare-playwright.sh锛夛紝涓嶅湪闀滃儚鍐呬笅杞?-      PLAYWRIGHT_BROWSERS_PATH: /ms-playwright
+-    volumes:
+-      - ${LANIUS_CONFIG_FILE:-./config.local.yaml}:/config/config.local.yaml:ro
+-      - ${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}:/ms-playwright:ro
+-    expose:
+-      - '8788'
+-    depends_on:
+-      api:
+-        condition: service_healthy
+-
+-volumes:
+-  caddy_data:
+-  caddy_config:
+diff --git a/deploy/supervisord.app.conf b/deploy/supervisord.app.conf
+deleted file mode 100644
+index bae0d49..0000000
+--- a/deploy/supervisord.app.conf
++++ /dev/null
+@@ -1,51 +0,0 @@
+-[supervisord]
+-nodaemon=true
+-user=root
+-logfile=/var/log/supervisor/supervisord.log
+-pidfile=/var/run/supervisord.pid
+-
+-[program:redis]
+-command=/usr/bin/redis-server --bind 127.0.0.1 --port 6379 --save 60 1 --dir /data/redis
+-autostart=true
+-autorestart=true
+-priority=5
+-stdout_logfile=/dev/stdout
+-stdout_logfile_maxbytes=0
+-stderr_logfile=/dev/stderr
+-stderr_logfile_maxbytes=0
+-
+-[program:api]
+-command=/usr/local/bin/node /app/api/dist/index.js
+-directory=/app/api
+-autostart=true
+-autorestart=true
+-priority=20
+-environment=NODE_ENV="production",HOST="0.0.0.0",PORT="8787",LANIUS_CONFIG_ROOT="/config",LANIUS_CONFIG="/config/config.local.yaml",LANIUS_RUNTIME_CONFIG_ROOT="/config"
+-stdout_logfile=/dev/stdout
+-stdout_logfile_maxbytes=0
+-stderr_logfile=/dev/stderr
+-stderr_logfile_maxbytes=0
+-
+-[program:web]
+-command=/usr/local/bin/node /app/web/.output/server/index.mjs
+-directory=/app/web
+-autostart=true
+-autorestart=true
+-priority=30
+-environment=NODE_ENV="production",HOST="0.0.0.0",PORT="8790",NITRO_HOST="0.0.0.0",NITRO_PORT="8790",LANIUS_API_BASE="http://127.0.0.1:8787",NUXT_LANIUS_API_BASE="http://127.0.0.1:8787"
+-stdout_logfile=/dev/stdout
+-stdout_logfile_maxbytes=0
+-stderr_logfile=/dev/stderr
+-stderr_logfile_maxbytes=0
+-
+-[program:bot]
+-command=/usr/local/bin/node /app/bot/dist/index.js
+-directory=/app/bot
+-autostart=true
+-autorestart=true
+-priority=40
+-environment=NODE_ENV="production",HOST="0.0.0.0",PORT="8788",LANIUS_CONFIG_ROOT="/config",LANIUS_CONFIG="/config/config.local.yaml",LANIUS_API_BASE="http://127.0.0.1:8787",LANIUS_CARD_HOST_DIR="/app/bot/card-host",PLAYWRIGHT_BROWSERS_PATH="/ms-playwright"
+-stdout_logfile=/dev/stdout
+-stdout_logfile_maxbytes=0
+-stderr_logfile=/dev/stderr
+-stderr_logfile_maxbytes=0
+diff --git a/deploy/systemd/lanius-api.service b/deploy/systemd/lanius-api.service
+index 65cb1c6..36a5c02 100644
+--- a/deploy/systemd/lanius-api.service
++++ b/deploy/systemd/lanius-api.service
+@@ -17,7 +17,8 @@ WorkingDirectory=__LANIUS_REPO__
+ Environment=NODE_ENV=production
+ # 闈炲瘑閽ワ細閰嶇疆鏍归粯璁ゅ嵆浠撳簱 config/锛涚敓浜ф暟鎹洰褰曞缓璁粷瀵硅矾寰勫啓鍦?config/local/database.yaml
+ Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
+-ExecStart=/usr/bin/env node apps/api/dist/index.js
++# 鐑惎鍔細tsx 鐩磋窇 TS 婧愮爜锛堟棤 dist 鏋勫缓锛実it pull 鍚庨噸鍚嵆鐢熸晥锛?+ExecStart=/usr/bin/env npx tsx apps/api/src/index.ts
+ Restart=on-failure
+ RestartSec=5
+ TimeoutStopSec=30
+diff --git a/deploy/systemd/lanius-bot.service b/deploy/systemd/lanius-bot.service
+index d46886d..bb20007 100644
+--- a/deploy/systemd/lanius-bot.service
++++ b/deploy/systemd/lanius-bot.service
+@@ -20,7 +20,8 @@ Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
+ Environment=PLAYWRIGHT_BROWSERS_PATH=__LANIUS_PLAYWRIGHT__
+ # 鏃犲浘褰€佸彈闄愮敤鎴锋椂濡傚惎鍔ㄥけ璐ュ彲璁句负 1锛堣 packages/render ensure-browser锛? # Environment=LANIUS_PLAYWRIGHT_NO_SANDBOX=1
+-ExecStart=/usr/bin/env node apps/bot/dist/index.js
++# 鐑惎鍔細tsx 鐩磋窇 TS 婧愮爜锛堟棤 dist 鏋勫缓锛実it pull 鍚庨噸鍚嵆鐢熸晥锛?+ExecStart=/usr/bin/env npx tsx apps/bot/src/index.ts
+ Restart=on-failure
+ RestartSec=5
+ TimeoutStopSec=30
+diff --git a/deploy/update-image.sh b/deploy/update-image.sh
+deleted file mode 100755
+index 40b5822..0000000
+--- a/deploy/update-image.sh
++++ /dev/null
+@@ -1,56 +0,0 @@
+-#!/usr/bin/env bash
+-# 銆愬彲閫?Docker 璺緞銆戞寜 tag pull 鎹㈢増骞?up锛堢姝?build锛夈€?-# 鐢熶骇榛樿璇风敤 update-node.sh銆備粎褰?github.deployMode=docker 鎴?-# deploy-release runtime=docker 鏃朵娇鐢ㄦ湰鑴氭湰銆?-set -euo pipefail
+-
+-TAG="${1:-${IMAGE_TAG:-}}"
+-if [[ -z "${TAG}" ]]; then
+-  echo "usage: $0 <vX.Y.Z>" >&2
+-  exit 1
+-fi
+-
+-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+-cd "${SCRIPT_DIR}"
+-
+-COMPOSE_FILE="${COMPOSE_FILE:-docker-compose.app.yml}"
+-export IMAGE_TAG="${TAG}"
+-
+-# 鍐欏叆 .env 涓殑 IMAGE_TAG锛堣嫢瀛樺湪 .env锛?-if [[ -f .env ]]; then
+-  if grep -q '^IMAGE_TAG=' .env; then
+-    sed -i.bak "s|^IMAGE_TAG=.*|IMAGE_TAG=${TAG}|" .env && rm -f .env.bak
+-  else
+-    echo "IMAGE_TAG=${TAG}" >> .env
+-  fi
+-fi
+-
+-echo "pulling IMAGE_TAG=${TAG} with ${COMPOSE_FILE}"
+-docker compose -f "${COMPOSE_FILE}" pull
+-docker compose -f "${COMPOSE_FILE}" up -d --no-deps --remove-orphans
+-docker compose -f "${COMPOSE_FILE}" ps
+-
+-# 绛夊緟 lanius-app 鍋ュ悍锛堟渶澶?5 鍒嗛挓锛?-echo "waiting for lanius-app to become healthy..."
+-for i in $(seq 1 30); do
+-  if docker inspect --format='{{.State.Health.Status}}' lanius-lanius-app-1 2>/dev/null | grep -q healthy; then
+-    echo "lanius-app is healthy"
+-    break
+-  fi
+-  if ! docker ps --format='{{.Names}}' | grep -q lanius-lanius-app-1; then
+-    echo "lanius-app container is not running"
+-    docker logs lanius-lanius-app-1 --tail 100
+-    exit 1
+-  fi
+-  sleep 10
+-done
+-
+-if ! docker inspect --format='{{.State.Health.Status}}' lanius-lanius-app-1 2>/dev/null | grep -q healthy; then
+-  echo "lanius-app did not become healthy within 5 minutes"
+-  docker logs lanius-lanius-app-1 --tail 100
+-  exit 1
+-fi
+-
+-docker compose -f "${COMPOSE_FILE}" up -d --no-deps caddy
+-docker compose -f "${COMPOSE_FILE}" ps
+-echo "done"
+diff --git a/deploy/update.sh b/deploy/update.sh
+new file mode 100755
+index 0000000..881da8b
+--- /dev/null
++++ b/deploy/update.sh
+@@ -0,0 +1,38 @@
++#!/usr/bin/env bash
++# Lanius 鏇存柊鑴氭湰锛堢儹鍚姩妯″紡锛?+# 鍦ㄦ湇鍔″櫒涓婁互 root 鎴栨湁 sudo 鐨勭敤鎴锋墽琛岋細bash /opt/lanius/repo/deploy/update.sh
++#
++# 娴佺▼锛歡it pull 鈫?pnpm install锛堜緷璧栨湁鍙樺寲鏃讹級鈫?閲嶅缓 web锛圢uxt 蹇呴』鏋勫缓锛夆啋 閲嶅惎 lanius.target
++# api/bot 涓?tsx 鐩磋窇婧愮爜锛屾棤闇€鏋勫缓锛泈eb 涓?Nuxt锛屽繀椤?build 鍑?.output銆?+
++set -euo pipefail
++
++REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
++BRANCH="${LANIUS_UPDATE_BRANCH:-develop}"
++
++echo "[lanius-update] repo=$REPO_ROOT branch=$BRANCH"
++
++cd "$REPO_ROOT"
++
++# 1. 鎷夊彇鏈€鏂颁唬鐮?+echo "[lanius-update] git fetch + reset to origin/$BRANCH"
++git fetch origin "$BRANCH"
++git reset --hard "origin/$BRANCH"
++
++# 2. 渚濊禆锛坙ockfile 鍙樺寲鎵嶉噸瑁咃紝鐪佹椂闂达級
++if git diff --name-only HEAD@{1} HEAD 2>/dev/null | grep -q 'pnpm-lock.yaml'; then
++  echo "[lanius-update] lockfile changed, pnpm install"
++  pnpm install --frozen-lockfile
++else
++  echo "[lanius-update] lockfile unchanged, skip install"
++fi
++
++# 3. 閲嶅缓 web锛圢uxt 蹇呴』鏋勫缓锛沘pi/bot 璧?tsx 婧愮爜鏃犻渶鏋勫缓锛?+echo "[lanius-update] build web (nuxt)"
++pnpm --filter @lanius/web build
++
++# 4. 閲嶅惎鏈嶅姟
++echo "[lanius-update] restart lanius.target"
++systemctl restart lanius.target
++
++echo "[lanius-update] done"
+diff --git a/packages/core/src/index.ts b/packages/core/src/index.ts
+index 3ed22f5..1caa7c1 100644
+--- a/packages/core/src/index.ts
++++ b/packages/core/src/index.ts
+@@ -3,20 +3,9 @@
+  * Apps must consume these DTOs instead of upstream Warframe JSON shapes.
+  */
+ 
+-export {
+-  DEFAULT_REALM,
+-  MVP_REALMS,
+-  RealmSchema,
+-  isRealmAvailable,
+-  type Realm,
+-} from './realm.js';
++export { DEFAULT_REALM, MVP_REALMS, RealmSchema, isRealmAvailable, type Realm } from './realm.js';
+ 
+-export {
+-  DEFAULT_LOCALE,
+-  LocaleSchema,
+-  SUPPORTED_LOCALES,
+-  type Locale,
+-} from './locale.js';
++export { DEFAULT_LOCALE, LocaleSchema, SUPPORTED_LOCALES, type Locale } from './locale.js';
+ 
+ export { pickLocalized } from './localized.js';
+ 
+@@ -46,17 +35,9 @@ export {
+   type HealthDto,
+ } from './dto/health.js';
+ 
+-export {
+-  MetaDtoSchema,
+-  ReplyModeSchema,
+-  type MetaDto,
+-  type ReplyMode,
+-} from './dto/meta.js';
++export { MetaDtoSchema, ReplyModeSchema, type MetaDto, type ReplyMode } from './dto/meta.js';
+ 
+-export {
+-  CatalogItemDtoSchema,
+-  type CatalogItemDto,
+-} from './dto/item.js';
++export { CatalogItemDtoSchema, type CatalogItemDto } from './dto/item.js';
+ 
+ export {
+   FissureDtoSchema,
+@@ -101,11 +82,9 @@ export {
+   type CommandParamDef,
+ } from './commands/catalog.js';
+ 
+-export {
+-  GATED_MODULE_IDS,
+-  ModuleIdSchema,
+-  type ModuleId,
+-} from './modules.js';
++export { GATED_MODULE_IDS, ModuleIdSchema, type ModuleId } from './modules.js';
++
++export { checkForUpdate, type UpdateCheckResult } from './update-check.js';
+ 
+ export {
+   MarketItemDtoSchema,
+diff --git a/packages/core/src/update-check.ts b/packages/core/src/update-check.ts
+new file mode 100644
+index 0000000..bda9e9e
+--- /dev/null
++++ b/packages/core/src/update-check.ts
+@@ -0,0 +1,82 @@
++import { execSync } from 'node:child_process';
++
++/**
++ * 鍚姩鏃舵洿鏂版鏌ョ粨鏋溿€?+ */
++export type UpdateCheckResult = {
++  /** 鏄惁鏈夊彲鐢ㄦ洿鏂?*/
++  hasUpdate: boolean;
++  /** 鏈湴褰撳墠 commit锛堢煭锛?*/
++  localCommit: string;
++  /** 杩滅▼鏈€鏂?commit锛堢煭锛夛紱妫€鏌ュけ璐ユ椂涓虹┖ */
++  remoteCommit: string;
++  /** 钀藉悗杩滅▼鐨勬彁浜ゆ暟 */
++  behind: number;
++  /** 妫€鏌ュけ璐ュ師鍥狅紙鏃犳洿鏂版垨澶辫触鏃朵负 undefined锛?*/
++  error?: string;
++};
++
++/**
++ * 鍚姩鏃舵鏌?git 浠撳簱鏄惁鏈夎繙绋嬫洿鏂帮紙涓嶆媺鍙栵紝浠呭姣旓級銆?+ * 閫氳繃 `git fetch` + `git rev-list` 瀹炵幇锛涢潪 git 浠撳簱鎴栫綉缁滃け璐ユ椂闈欓粯闄嶇骇銆?+ *
++ * @param repoRoot - 浠撳簱鏍圭洰褰曠粷瀵硅矾寰?+ * @param branch - 璺熻釜鍒嗘敮锛堥粯璁?develop锛?+ * @returns 鏇存柊妫€鏌ョ粨鏋?+ */
++export function checkForUpdate(repoRoot: string, branch = 'develop'): UpdateCheckResult {
++  const none: UpdateCheckResult = {
++    hasUpdate: false,
++    localCommit: '',
++    remoteCommit: '',
++    behind: 0,
++  };
++
++  try {
++    const localCommit = execSync('git rev-parse --short HEAD', {
++      cwd: repoRoot,
++      stdio: ['ignore', 'pipe', 'ignore'],
++    })
++      .toString()
++      .trim();
++
++    // fetch 杩滅▼鏈€鏂帮紙闈欓粯锛夛紝澶辫触涓嶅奖鍝嶅惎鍔?+    try {
++      execSync(`git fetch origin ${branch}`, {
++        cwd: repoRoot,
++        stdio: ['ignore', 'pipe', 'ignore'],
++        timeout: 15000,
++      });
++    } catch {
++      return { ...none, localCommit, error: 'fetch_failed' };
++    }
++
++    const remoteCommit = execSync(`git rev-parse --short origin/${branch}`, {
++      cwd: repoRoot,
++      stdio: ['ignore', 'pipe', 'ignore'],
++    })
++      .toString()
++      .trim();
++
++    const behind = Number(
++      execSync(`git rev-list --count HEAD..origin/${branch}`, {
++        cwd: repoRoot,
++        stdio: ['ignore', 'pipe', 'ignore'],
++      })
++        .toString()
++        .trim(),
++    );
++
++    return {
++      hasUpdate: behind > 0,
++      localCommit,
++      remoteCommit,
++      behind,
++    };
++  } catch (error) {
++    return {
++      ...none,
++      error: error instanceof Error ? error.message : String(error),
++    };
++  }
++}
+diff --git a/scripts/check-bundle.mjs b/scripts/check-bundle.mjs
+deleted file mode 100644
+index 91cdda6..0000000
+--- a/scripts/check-bundle.mjs
++++ /dev/null
+@@ -1,11 +0,0 @@
+-import { readFileSync } from 'node:fs';
+-
+-const api = readFileSync('apps/api/dist/index.js', 'utf8');
+-console.log('api bytes', api.length);
+-console.log('api imports @lanius/core', api.includes('from "@lanius/core"') || api.includes("from '@lanius/core'"));
+-console.log('api imports warframe-worldstate-data', api.includes('warframe-worldstate-data'));
+-
+-const bot = readFileSync('apps/bot/dist/index.js', 'utf8');
+-console.log('bot bytes', bot.length);
+-console.log('bot imports @lanius/', /from ["']@lanius\//.test(bot));
+-console.log('bot imports @resvg', bot.includes('@resvg'));
+diff --git a/scripts/prepare-runtime-package.mjs b/scripts/prepare-runtime-package.mjs
+deleted file mode 100644
+index 0c74cb1..0000000
+--- a/scripts/prepare-runtime-package.mjs
++++ /dev/null
+@@ -1,77 +0,0 @@
+-/**
+- * 涓?Docker runner 闃舵鐢熸垚鍙嫭绔嬪畨瑁呯殑 package.json锛堝閮?npm 渚濊禆锛夈€?- * 鐢ㄦ硶锛歚node scripts/prepare-runtime-package.mjs api|bot <outDir>`
+- */
+-/* global process, console */
+-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+-import { dirname, resolve } from 'node:path';
+-import { fileURLToPath } from 'node:url';
+-
+-const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+-
+-/**
+- * Bot 鍦ㄦ墦鍖?`@lanius/render` 鍚庝粛闇€鐨勮繍琛屾椂渚濊禆锛堝師鐢?/ 瀛椾綋 / Chromium 鎴浘锛夈€?- */
+-const BOT_RUNTIME_EXTRAS = {
+-  '@resvg/resvg-js': '^2.6.2',
+-  satori: '^0.12.1',
+-  '@fontsource/ibm-plex-sans': '^5.2.5',
+-  '@fontsource/noto-sans-sc': '^5.2.5',
+-  '@fontsource/rajdhani': '^5.2.5',
+-  playwright: '^1.51.0',
+-  // tsup external 鐨?CJS 渚濊禆锛堟潵鑷?@lanius/config锛夛紝杩愯鏃堕渶瀛樺湪浜?node_modules
+-  yaml: '^2.6.1',
+-};
+-
+-/**
+- * 鐢熸垚 runner 鐢?package.json锛堝幓鎺?`@lanius/*`锛屽繀瑕佹椂琛ラ綈 bot 澶栭儴渚濊禆锛夈€?- *
+- * @param {string} appName - `api` 鎴?`bot`
+- * @param {string} outDir - 杈撳嚭鐩綍锛堝皢鍐欏叆 package.json锛?- * @returns {void}
+- */
+-function prepareRuntimePackage(appName, outDir) {
+-  if (appName !== 'api' && appName !== 'bot') {
+-    throw new Error(`unsupported app: ${appName}`);
+-  }
+-
+-  const sourcePath = resolve(root, 'apps', appName, 'package.json');
+-  const source = JSON.parse(readFileSync(sourcePath, 'utf8'));
+-  /** @type {Record<string, string>} */
+-  const dependencies = { ...(source.dependencies ?? {}) };
+-
+-  for (const key of Object.keys(dependencies)) {
+-    if (key.startsWith('@lanius/')) {
+-      delete dependencies[key];
+-    }
+-  }
+-
+-  if (appName === 'bot') {
+-    Object.assign(dependencies, BOT_RUNTIME_EXTRAS);
+-  }
+-
+-  const runtimePackage = {
+-    name: source.name,
+-    version: source.version,
+-    private: true,
+-    type: 'module',
+-    dependencies,
+-  };
+-
+-  mkdirSync(outDir, { recursive: true });
+-  writeFileSync(
+-    resolve(outDir, 'package.json'),
+-    `${JSON.stringify(runtimePackage, null, 2)}\n`,
+-    'utf8',
+-  );
+-}
+-
+-const appName = process.argv[2];
+-const outDir = process.argv[3];
+-if (!appName || !outDir) {
+-  console.error('usage: node scripts/prepare-runtime-package.mjs api|bot <outDir>');
+-  process.exit(1);
+-}
+-
+-prepareRuntimePackage(appName, resolve(outDir));
+-console.log(`wrote runtime package.json for ${appName} -> ${outDir}`);
+diff --git a/scripts/rewrite-bot-utf8.mjs b/scripts/rewrite-bot-utf8.mjs
+deleted file mode 100644
+index d8db283..0000000
+--- a/scripts/rewrite-bot-utf8.mjs
++++ /dev/null
+@@ -1,754 +0,0 @@
+-import { writeFileSync } from 'node:fs';
+-
+-/**
+- * Rewrite bot sources with UTF-8 Chinese via Unicode escapes (ASCII-safe).
+- */
+-
+-writeFileSync(
+-  'apps/bot/src/commands/parse-command.ts',
+-  [
+-    '/**',
+-    ' * MVP \u5207\u7247\u652f\u6301\u7684 Bot \u547d\u4ee4\u610f\u56fe\u3002',
+-    ' */',
+-    'export type BotIntent =',
+-    "  | { type: 'worldstate' }",
+-    "  | { type: 'invasions' }",
+-    "  | { type: 'nightwave' }",
+-    "  | { type: 'help' }",
+-    "  | { type: 'mode'; mode: 'text' | 'image' }",
+-    "  | { type: 'unknown'; raw: string };",
+-    '',
+-    '/**',
+-    ' * \u5c06\u539f\u59cb\u804a\u5929\u6d88\u606f\u89e3\u6790\u4e3a Bot \u547d\u4ee4\u7684\u7ed3\u679c\u3002',
+-    ' */',
+-    'export type ParsedCommand = {',
+-    '  matched: boolean;',
+-    '  intent?: BotIntent;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u5c06\u804a\u5929\u6d88\u606f\u89e3\u6790\u4e3a Lanius Bot \u547d\u4ee4\u610f\u56fe\u3002',
+-    ' *',
+-    ' * @param text - \u539f\u59cb\u6d88\u606f\u5185\u5bb9\uff08\u53ef\u80fd\u542b @bot \u566a\u97f3\uff09',
+-    ' * @param prefix - \u914d\u7f6e\u7684\u547d\u4ee4\u524d\u7f00\uff08\u5982 `wf`\uff09',
+-    ' * @returns \u662f\u5426\u5339\u914d\u524d\u7f00\uff0c\u4ee5\u53ca\u89e3\u6790\u51fa\u7684\u610f\u56fe',
+-    ' */',
+-    'export function parseCommand(text: string, prefix: string): ParsedCommand {',
+-    '  const normalized = text',
+-    "    .replace(/@\\S+/g, ' ')",
+-    "    .replace(/\\s+/g, ' ')",
+-    '    .trim()',
+-    '    .toLowerCase();',
+-    '',
+-    '  const prefixToken = prefix.trim().toLowerCase();',
+-    '  if (!normalized.startsWith(prefixToken)) {',
+-    '    return { matched: false };',
+-    '  }',
+-    '',
+-    '  const rest = normalized.slice(prefixToken.length).trim();',
+-    "  if (rest.length === 0 || rest === '\u5e2e\u52a9' || rest === 'help') {",
+-    "    return { matched: true, intent: { type: 'help' } };",
+-    '  }',
+-    '',
+-    "  if (rest === '\u4e16\u754c\u72b6\u6001' || rest === 'worldstate' || rest === 'ws') {",
+-    "    return { matched: true, intent: { type: 'worldstate' } };",
+-    '  }',
+-    '',
+-    "  if (rest === '\u5165\u4fb5' || rest === 'invasions') {",
+-    "    return { matched: true, intent: { type: 'invasions' } };",
+-    '  }',
+-    '',
+-    "  if (rest === '\u591c\u6d6a' || rest === 'nightwave' || rest === 'nw') {",
+-    "    return { matched: true, intent: { type: 'nightwave' } };",
+-    '  }',
+-    '',
+-    '  const modeMatch =',
+-    "    rest.match(/^\u6a21\u5f0f\\s+(\u6587\u672c|\u56fe\u7247)$/) ??",
+-    "    rest.match(/^mode\\s+(text|image)$/);",
+-    '  if (modeMatch) {',
+-    "    const token = modeMatch[1] ?? '';",
+-    "    const mode = token === '\u56fe\u7247' || token === 'image' ? 'image' : 'text';",
+-    "    return { matched: true, intent: { type: 'mode', mode } };",
+-    '  }',
+-    '',
+-    "  return { matched: true, intent: { type: 'unknown', raw: rest } };",
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'apps/bot/src/formatters/worldstate-text.ts',
+-  [
+-    "import type { Locale, WorldstateDto } from '@lanius/core';",
+-    '',
+-    '/**',
+-    ' * \u5c06 worldstate DTO \u683c\u5f0f\u5316\u4e3a\u9002\u5408 QQ \u7684\u77ed\u6587\u672c\u56de\u590d\u3002',
+-    ' *',
+-    ' * @param worldstate - \u6765\u81ea Lanius API \u7684\u89c4\u8303\u5316\u4e16\u754c\u72b6\u6001',
+-    ' * @param locale - \u56de\u590d locale',
+-    ' * @param options - \u53ef\u9009\u9648\u65e7\u6807\u8bb0\u4e0e\u516c\u5f00\u7ad9\u6df1\u94fe',
+-    ' * @returns \u53ef\u4f9b\u5b98\u65b9 QQ sendText \u53d1\u9001\u7684\u7eaf\u6587\u672c',
+-    ' */',
+-    'export function formatWorldstateText(',
+-    '  worldstate: WorldstateDto,',
+-    '  locale: Locale,',
+-    '  options: { stale?: boolean; siteUrl?: string } = {},',
+-    '): string {',
+-    "  const zh = locale !== 'en';",
+-    '  const bullet = String.fromCharCode(0xb7);',
+-    '  const lines: string[] = [];',
+-    '  lines.push(zh ? `\u3010Lanius ${bullet} \u4e16\u754c\u72b6\u6001\u3011` : `[Lanius ${bullet} World State]`);',
+-    '  if (options.stale) {',
+-    "    lines.push(zh ? '\uff08\u6570\u636e\u53ef\u80fd\u5ef6\u8fdf\uff09' : '(data may be delayed)');",
+-    '  }',
+-    '',
+-    '  lines.push(',
+-    '    zh',
+-    '      ? `\u5165\u4fb5 ${worldstate.invasions.length} \u6761\uff1a`',
+-    '      : `Invasions ${worldstate.invasions.length}:`,',
+-    '  );',
+-    '  for (const row of worldstate.invasions.slice(0, 5)) {',
+-    "    const pct = row.completionPct !== undefined ? ` ${row.completionPct}%` : '';",
+-    '    lines.push(`${bullet} ${row.node}${pct} (${row.attackingFaction}/${row.defendingFaction})`);',
+-    '  }',
+-    '  if (worldstate.invasions.length === 0) {',
+-    '    lines.push(zh ? `${bullet} \u6682\u65e0\u6d3b\u8dc3\u5165\u4fb5` : `${bullet} none active`);',
+-    '  }',
+-    '',
+-    '  if (worldstate.nightwave) {',
+-    '    lines.push(',
+-    '      zh',
+-    "        ? `\u591c\u6d6a \u8d5b\u5b63${worldstate.nightwave.season ?? '\u2014'} / \u9636\u6bb5${worldstate.nightwave.phase ?? '\u2014'}`",
+-    "        : `Nightwave S${worldstate.nightwave.season ?? '\u2014'} / P${worldstate.nightwave.phase ?? '\u2014'}`,",
+-    '    );',
+-    '    for (const challenge of worldstate.nightwave.activeChallenges.slice(0, 3)) {',
+-    '      const title = challenge.title',
+-    '        ? zh',
+-    '          ? challenge.title.zh',
+-    '          : challenge.title.en',
+-    '        : challenge.id;',
+-    '      lines.push(`${bullet} ${title}`);',
+-    '    }',
+-    '  } else {',
+-    "    lines.push(zh ? '\u591c\u6d6a\uff1a\u6682\u65e0\u6570\u636e' : 'Nightwave: n/a');",
+-    '  }',
+-    '',
+-    '  if (options.siteUrl) {',
+-    '    lines.push(`${options.siteUrl}`);',
+-    '  }',
+-    '',
+-    "  return lines.join('\\n');",
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'apps/bot/src/pipeline/handle-command.ts',
+-  [
+-    "import { createLaniusApiClient } from '@lanius/api';",
+-    "import { renderWorldstateCard } from '@lanius/render';",
+-    "import type { Locale } from '@lanius/core';",
+-    "import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';",
+-    '',
+-    "import type { BotConfig } from '../config.js';",
+-    "import type { BotIntent } from '../commands/parse-command.js';",
+-    "import { formatWorldstateText } from '../formatters/worldstate-text.js';",
+-    '',
+-    '/**',
+-    ' * \u4f1a\u8bdd\u7ea7\u53ef\u53d8\u504f\u597d\uff08MVP \u8fdb\u7a0b\u5185\u5185\u5b58\uff09\u3002',
+-    ' */',
+-    'export type SessionPrefs = {',
+-    "  replyMode: 'text' | 'image';",
+-    '  locale: Locale;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u547d\u4ee4\u5904\u7406\u7ba1\u9053\u7684\u4f9d\u8d56\u3002',
+-    ' */',
+-    'export type HandleCommandDeps = {',
+-    '  config: BotConfig;',
+-    '  qq: QqOfficialClient;',
+-    '  prefs: SessionPrefs;',
+-    '  apiClient?: ReturnType<typeof createLaniusApiClient>;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u5904\u7406\u5df2\u89e3\u6790\u7684 Bot \u610f\u56fe\uff1a\u8c03\u7528 Lanius API\uff0c\u683c\u5f0f\u5316\u6587\u672c/\u56fe\u7247\uff0c\u7ecf QQ \u4e0b\u884c\u3002',
+-    ' *',
+-    ' * @param intent - \u5df2\u89e3\u6790\u7684\u547d\u4ee4\u610f\u56fe',
+-    ' * @param target - \u5b98\u65b9 QQ \u53d1\u9001\u76ee\u6807',
+-    ' * @param deps - \u914d\u7f6e\u3001QQ \u5ba2\u6237\u7aef\u3001\u4f1a\u8bdd\u504f\u597d\u3001\u53ef\u9009 API \u5ba2\u6237\u7aef',
+-    ' * @returns \u4f9b\u65e5\u5fd7/\u6d4b\u8bd5\u4f7f\u7528\u7684\u7ed3\u679c\u6458\u8981\u5b57\u7b26\u4e32',
+-    ' */',
+-    'export async function handleCommand(',
+-    '  intent: BotIntent,',
+-    '  target: QqSendTarget,',
+-    '  deps: HandleCommandDeps,',
+-    '): Promise<string> {',
+-    '  const locale = deps.prefs.locale;',
+-    '  const api =',
+-    '    deps.apiClient ??',
+-    '    createLaniusApiClient({ baseUrl: deps.config.bot.apiBaseUrl });',
+-    '',
+-    "  if (intent.type === 'mode') {",
+-    '    deps.prefs.replyMode = intent.mode;',
+-    '    const msg =',
+-    "      locale === 'en'",
+-    '        ? `Reply mode set to ${intent.mode}.`',
+-    "        : `\u5df2\u5207\u6362\u4e3a${intent.mode === 'image' ? '\u56fe\u7247' : '\u6587\u672c'}\u6a21\u5f0f\u3002`;",
+-    '    await deps.qq.sendText(target, msg);',
+-    '    return msg;',
+-    '  }',
+-    '',
+-    "  if (intent.type === 'help' || intent.type === 'unknown') {",
+-    '    const help = await api.getMeta().catch(() => null);',
+-    '    const lines =',
+-    "      locale === 'en'",
+-    '        ? [',
+-    "            'Lanius commands:',",
+-    '            `${deps.config.bot.commandPrefix} worldstate`,',
+-    '            `${deps.config.bot.commandPrefix} invasions`,',
+-    '            `${deps.config.bot.commandPrefix} nightwave`,',
+-    '            `${deps.config.bot.commandPrefix} mode text|image`,',
+-    '            `${deps.config.bot.commandPrefix} help`,',
+-    '          ]',
+-    '        : [',
+-    "            'Lanius \u547d\u4ee4\uff1a',",
+-    '            `${deps.config.bot.commandPrefix} \u4e16\u754c\u72b6\u6001`,',
+-    '            `${deps.config.bot.commandPrefix} \u5165\u4fb5`,',
+-    '            `${deps.config.bot.commandPrefix} \u591c\u6d6a`,',
+-    '            `${deps.config.bot.commandPrefix} \u6a21\u5f0f \u6587\u672c|\u56fe\u7247`,',
+-    '            `${deps.config.bot.commandPrefix} \u5e2e\u52a9`,',
+-    '          ];',
+-    "    if (intent.type === 'unknown') {",
+-    '      lines.unshift(',
+-    "        locale === 'en' ? `Unknown: ${intent.raw}` : `\u672a\u77e5\u547d\u4ee4\uff1a${intent.raw}`,",
+-    '      );',
+-    '    }',
+-    '    if (help && help.ok) {',
+-    '      lines.push(`API ${help.data.version}`);',
+-    '    }',
+-    "    const text = lines.join('\\n');",
+-    '    await deps.qq.sendText(target, text);',
+-    '    return text;',
+-    '  }',
+-    '',
+-    '  const envelope = await api.getWorldstate({',
+-    '    realm: deps.config.defaults.realm,',
+-    '    locale,',
+-    '  });',
+-    '',
+-    '  if (!envelope.ok) {',
+-    '    const fail =',
+-    "      locale === 'en'",
+-    '        ? `Query failed: ${envelope.error.message}`',
+-    '        : `\u67e5\u8be2\u5931\u8d25\uff1a${envelope.error.message}`;',
+-    '    await deps.qq.sendText(target, fail);',
+-    '    return fail;',
+-    '  }',
+-    '',
+-    '  const siteUrl = deps.config.bot.publicSiteBaseUrl',
+-    "    ? `${deps.config.bot.publicSiteBaseUrl.replace(/\\/$/, '')}/${locale}/worldstate`",
+-    '    : undefined;',
+-    '',
+-    '  const text = formatWorldstateText(envelope.data, locale, {',
+-    '    stale: envelope.meta.stale,',
+-    '    siteUrl,',
+-    '  });',
+-    '',
+-    '  // MVP\uff1a\u5165\u4fb5/\u591c\u6d6a\u610f\u56fe\u4ecd\u590d\u7528\u5b8c\u6574 worldstate \u5361\u7247\u4e0e\u6587\u672c\u3002',
+-    '  void intent;',
+-    '',
+-    "  if (deps.prefs.replyMode === 'image') {",
+-    '    try {',
+-    '      const png = await withTimeout(',
+-    '        renderWorldstateCard({',
+-    '          worldstate: envelope.data,',
+-    '          locale,',
+-    '          stale: envelope.meta.stale,',
+-    '        }),',
+-    '        deps.config.bot.image.renderTimeoutMs,',
+-    '      );',
+-    '      const sent = await deps.qq.sendImage(target, png);',
+-    '      if (sent.ok) {',
+-    "        return 'image';",
+-    '      }',
+-    '      // \u4e0a\u4f20/\u53d1\u9001\u5931\u8d25\u65f6\u964d\u7ea7\u4e3a\u6587\u672c\u3002',
+-    '      await deps.qq.sendText(',
+-    '        target,',
+-    "        `${text}\\n${locale === 'en' ? '(image send failed; text fallback)' : '\uff08\u56fe\u7247\u53d1\u9001\u5931\u8d25\uff0c\u5df2\u964d\u7ea7\u6587\u672c\uff09'}`,",
+-    '      );',
+-    "      return 'image-fallback-send';",
+-    '    } catch {',
+-    '      await deps.qq.sendText(',
+-    '        target,',
+-    "        `${text}\\n${locale === 'en' ? '(image render failed; text fallback)' : '\uff08\u56fe\u7247\u6e32\u67d3\u5931\u8d25\uff0c\u5df2\u964d\u7ea7\u6587\u672c\uff09'}`,",
+-    '      );',
+-    "      return 'image-fallback-render';",
+-    '    }',
+-    '  }',
+-    '',
+-    '  await deps.qq.sendText(target, text);',
+-    "  return 'text';",
+-    '}',
+-    '',
+-    '/**',
+-    ' * \u4e3a Promise \u589e\u52a0\u8d85\u65f6\u7ade\u901f\u3002',
+-    ' *',
+-    ' * @param promise - \u9700\u8981\u9650\u65f6\u7684\u5f02\u6b65\u5de5\u4f5c',
+-    ' * @param timeoutMs - \u8d85\u65f6\u6beb\u79d2\u6570',
+-    ' * @returns \u5728\u8d85\u65f6\u524d\u5b8c\u6210\u65f6\u8fd4\u56de promise \u7ed3\u679c',
+-    ' * @throws Error \u8d85\u65f6\u5148\u5230\u8fbe\u65f6\u629b\u51fa',
+-    ' */',
+-    'async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {',
+-    '  let timer: ReturnType<typeof setTimeout> | undefined;',
+-    '  try {',
+-    '    return await Promise.race([',
+-    '      promise,',
+-    '      new Promise<T>((_, reject) => {',
+-    "        timer = setTimeout(() => reject(new Error('render timeout')), timeoutMs);",
+-    '      }),',
+-    '    ]);',
+-    '  } finally {',
+-    '    if (timer) {',
+-    '      clearTimeout(timer);',
+-    '    }',
+-    '  }',
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'apps/bot/src/config.ts',
+-  [
+-    "import { readFileSync } from 'node:fs';",
+-    "import { isAbsolute, resolve } from 'node:path';",
+-    '',
+-    "import { z } from 'zod';",
+-    "import { parse as parseYaml } from 'yaml';",
+-    '',
+-    '/**',
+-    ' * Bot \u76f8\u5173 YAML \u914d\u7f6e\u7684 Zod schema\u3002',
+-    ' */',
+-    'export const BotConfigSchema = z.object({',
+-    '  qq: z.object({',
+-    "    appId: z.string().default('YOUR_QQ_APP_ID'),",
+-    "    appSecret: z.string().default('YOUR_QQ_APP_SECRET'),",
+-    "    callbackPath: z.string().default('/qq/callback'),",
+-    '  }),',
+-    '  bot: z',
+-    '    .object({',
+-    "      host: z.string().default('127.0.0.1'),",
+-    '      port: z.number().int().positive().default(8788),',
+-    "      apiBaseUrl: z.string().url().default('http://127.0.0.1:8787'),",
+-    "      commandPrefix: z.string().default('wf'),",
+-    "      defaultReplyMode: z.enum(['text', 'image']).default('text'),",
+-    '      dryRun: z.boolean().default(true),',
+-    '      publicSiteBaseUrl: z.string().url().optional(),',
+-    '      image: z',
+-    '        .object({',
+-    '          maxPerUserPerMinute: z.number().int().positive().default(5),',
+-    '          renderTimeoutMs: z.number().int().positive().default(4000),',
+-    '        })',
+-    '        .default({}),',
+-    '    })',
+-    '    .default({}),',
+-    '  defaults: z',
+-    '    .object({',
+-    "      realm: z.enum(['international', 'china']).default('international'),",
+-    "      locale: z.enum(['zh', 'en']).default('zh'),",
+-    '    })',
+-    '    .default({}),',
+-    '});',
+-    '',
+-    '/**',
+-    ' * \u89e3\u6790\u540e\u7684 Bot \u914d\u7f6e\u3002',
+-    ' */',
+-    'export type BotConfig = z.infer<typeof BotConfigSchema>;',
+-    '',
+-    '/**',
+-    ' * \u4ece YAML \u52a0\u8f7d Bot \u914d\u7f6e\uff08\u4f18\u5148 `config.local.yaml`\uff09\u3002',
+-    ' *',
+-    ' * @param cwd - \u7528\u4e8e\u89e3\u6790\u76f8\u5bf9\u8def\u5f84\u7684\u5de5\u4f5c\u76ee\u5f55',
+-    ' * @returns \u901a\u8fc7\u6821\u9a8c\u7684 Bot \u914d\u7f6e',
+-    ' */',
+-    'export function loadBotConfig(cwd: string = process.cwd()): BotConfig {',
+-    '  const override = process.env.LANIUS_CONFIG;',
+-    '  const candidates = override',
+-    '    ? [isAbsolute(override) ? override : resolve(cwd, override)]',
+-    "    : [resolve(cwd, 'config.local.yaml'), resolve(cwd, 'config.example.yaml')];",
+-    '',
+-    '  for (const path of candidates) {',
+-    '    try {',
+-    "      const raw = parseYaml(readFileSync(path, 'utf8'));",
+-    '      return BotConfigSchema.parse(raw ?? {});',
+-    '    } catch {',
+-    '      // \u5c1d\u8bd5\u4e0b\u4e00\u4e2a\u5019\u9009\u8def\u5f84',
+-    '    }',
+-    '  }',
+-    '',
+-    '  return BotConfigSchema.parse({});',
+-    '}',
+-    '',
+-    '/**',
+-    ' * \u5f53\u8fdb\u7a0b cwd \u4e3a `apps/bot` \u65f6\u89e3\u6790 monorepo \u6839\u76ee\u5f55\u3002',
+-    ' *',
+-    ' * @param cwd - \u5f53\u524d\u5de5\u4f5c\u76ee\u5f55',
+-    ' * @returns \u4ed3\u5e93\u6839\u76ee\u5f55\u7edd\u5bf9\u8def\u5f84',
+-    ' */',
+-    'export function resolveRepoRoot(cwd: string = process.cwd()): string {',
+-    "  if (cwd.replace(/\\\\/g, '/').endsWith('/apps/bot')) {",
+-    "    return resolve(cwd, '../..');",
+-    '  }',
+-    '  return cwd;',
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'apps/bot/src/create-app.ts',
+-  [
+-    "import { createQqOfficialClient, verifyQqCallback } from '@lanius/qq-official';",
+-    "import { Hono } from 'hono';",
+-    "import type { Logger } from 'pino';",
+-    '',
+-    "import type { BotConfig } from './config.js';",
+-    "import { parseCommand } from './commands/parse-command.js';",
+-    "import { handleCommand, type SessionPrefs } from './pipeline/handle-command.js';",
+-    '',
+-    '/**',
+-    ' * \u6784\u5efa Bot HTTP \u5e94\u7528\uff08\u5065\u5eb7\u68c0\u67e5 + \u5b98\u65b9 QQ \u56de\u8c03\uff09\u3002',
+-    ' *',
+-    ' * @param config - \u5df2\u52a0\u8f7d\u7684 Bot \u914d\u7f6e',
+-    ' * @param logger - \u7ed3\u6784\u5316\u65e5\u5fd7\u5b9e\u4f8b',
+-    ' * @returns \u53ef\u5bf9\u5916\u670d\u52a1\u7684 Hono \u5e94\u7528',
+-    ' */',
+-    'export function createBotApp(config: BotConfig, logger: Logger) {',
+-    '  const app = new Hono();',
+-    '  const qq = createQqOfficialClient({',
+-    '    appId: config.qq.appId,',
+-    '    appSecret: config.qq.appSecret,',
+-    '    dryRun: config.bot.dryRun,',
+-    '  });',
+-    '  const prefs: SessionPrefs = {',
+-    '    replyMode: config.bot.defaultReplyMode,',
+-    '    locale: config.defaults.locale,',
+-    '  };',
+-    '',
+-    "  app.get('/health', (c) =>",
+-    "    c.json({ ok: true, service: 'lanius-bot', dryRun: config.bot.dryRun }),",
+-    '  );',
+-    '',
+-    '  app.post(config.qq.callbackPath, async (c) => {',
+-    '    const rawBody = await c.req.text();',
+-    '    const headers: Record<string, string | undefined> = {};',
+-    '    c.req.raw.headers.forEach((value, key) => {',
+-    '      headers[key] = value;',
+-    '    });',
+-    '',
+-    '    // \u5e73\u53f0 URL \u6821\u9a8c / challenge \u53ef\u80fd\u4e0d\u5e26\u7b7e\u540d\u3002',
+-    '    try {',
+-    '      const payload = JSON.parse(rawBody) as {',
+-    '        d?: { content?: string; channel_id?: string };',
+-    '        op?: number;',
+-    '        type?: string;',
+-    '      };',
+-    "      if (payload.op === 13 || payload.type === 'url_verification') {",
+-    '        return c.json(payload);',
+-    '      }',
+-    '    } catch {',
+-    '      // \u666e\u901a\u4e8b\u4ef6\u7ee7\u7eed\u8d70\u7b7e\u540d\u6821\u9a8c',
+-    '    }',
+-    '',
+-    '    const verified = verifyQqCallback(',
+-    '      { rawBody, headers },',
+-    '      { appSecret: config.qq.appSecret },',
+-    '    );',
+-    '    if (!verified && !config.bot.dryRun) {',
+-    "      logger.warn('qq callback signature rejected');",
+-    '      return c.json({ ok: false }, 401);',
+-    '    }',
+-    '',
+-    "    let content = '';",
+-    "    let channelId = 'unknown';",
+-    '    try {',
+-    '      const payload = JSON.parse(rawBody) as {',
+-    '        d?: { content?: string; channel_id?: string; group_openid?: string };',
+-    '      };',
+-    "      content = payload.d?.content ?? '';",
+-    "      channelId = payload.d?.channel_id ?? payload.d?.group_openid ?? 'unknown';",
+-    '    } catch {',
+-    "      return c.json({ ok: false, error: 'invalid_json' }, 400);",
+-    '    }',
+-    '',
+-    '    const parsed = parseCommand(content, config.bot.commandPrefix);',
+-    '    if (!parsed.matched || !parsed.intent) {',
+-    '      return c.json({ ok: true, ignored: true });',
+-    '    }',
+-    '',
+-    '    const outcome = await handleCommand(parsed.intent, { channelId }, {',
+-    '      config,',
+-    '      qq,',
+-    '      prefs,',
+-    '    });',
+-    "    logger.info({ channelId, outcome, intent: parsed.intent.type }, 'command handled');",
+-    '    return c.json({ ok: true, outcome });',
+-    '  });',
+-    '',
+-    '  return app;',
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'apps/bot/src/index.ts',
+-  [
+-    "import { serve } from '@hono/node-server';",
+-    "import pino from 'pino';",
+-    '',
+-    "import { loadBotConfig, resolveRepoRoot } from './config.js';",
+-    "import { createBotApp } from './create-app.js';",
+-    '',
+-    '/**',
+-    ' * \u542f\u52a8\u5b98\u65b9 QQ Bot HTTP \u8fdb\u7a0b\u3002',
+-    ' *',
+-    ' * @returns \u65e0\u8fd4\u56de\u503c\uff1b\u8fdb\u7a0b\u6301\u7eed\u76d1\u542c\u76f4\u81f3\u9000\u51fa',
+-    ' */',
+-    'function main(): void {',
+-    '  const repoRoot = resolveRepoRoot();',
+-    '  const config = loadBotConfig(repoRoot);',
+-    "  const logger = pino({ name: 'lanius-bot', level: 'info' });",
+-    '  const app = createBotApp(config, logger);',
+-    '',
+-    '  const host = process.env.HOST ?? config.bot.host;',
+-    '  const port = Number(process.env.PORT ?? config.bot.port);',
+-    '',
+-    '  logger.info(',
+-    "    { host, port, apiBaseUrl: config.bot.apiBaseUrl, dryRun: config.bot.dryRun },",
+-    "    'starting lanius-bot',",
+-    '  );',
+-    '',
+-    '  serve({ fetch: app.fetch, hostname: host, port });',
+-    '}',
+-    '',
+-    'main();',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'packages/qq-official/src/verify.ts',
+-  [
+-    "import { createHmac, timingSafeEqual } from 'node:crypto';",
+-    '',
+-    '/**',
+-    ' * \u5b98\u65b9 QQ \u56de\u8c03\u9a8c\u7b7e\u6240\u9700\u7684\u6700\u5c0f\u8bf7\u6c42\u5f62\u72b6\u3002',
+-    ' */',
+-    'export type QqCallbackRequest = {',
+-    '  headers: Record<string, string | string[] | undefined>;',
+-    '  rawBody: string;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u6821\u9a8c\u817e\u8baf\u5b98\u65b9 QQ \u673a\u5668\u4eba\u56de\u8c03\u7b7e\u540d\u7684\u9009\u9879\u3002',
+-    ' */',
+-    'export type VerifyQqCallbackOptions = {',
+-    '  appSecret: string;',
+-    '  /** \u643a\u5e26\u7b7e\u540d\u7684 header \u540d\uff08\u5e73\u53f0\u76f8\u5173\uff1b\u6d4b\u8bd5\u53ef\u6ce8\u5165\uff09\u3002 */',
+-    '  signatureHeader?: string;',
+-    '  /** \u643a\u5e26\u53c2\u4e0e\u7b7e\u540d\u7684\u65f6\u95f4\u6233 header \u540d\u3002 */',
+-    '  timestampHeader?: string;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u4f7f\u7528 HMAC-SHA256 \u6821\u9a8c\u5b98\u65b9 QQ \u56de\u8c03\u7b7e\u540d\u3002',
+-    ' * header \u540d\u53ef\u6ce8\u5165\uff0c\u4fbf\u4e8e\u5e73\u53f0\u6587\u6863\u53d8\u66f4\u65f6\u5c40\u90e8\u8c03\u6574\u3002',
+-    ' *',
+-    ' * @param request - \u5165\u7ad9 HTTP \u56de\u8c03\u7684\u539f\u59cb body \u4e0e headers',
+-    ' * @param options - appSecret \u4ee5\u53ca\u53ef\u9009\u7684 header \u540d\u8986\u76d6',
+-    ' * @returns \u7b7e\u540d\u5339\u914d\u65f6\u4e3a `true`\uff0c\u5426\u5219\u4e3a `false`',
+-    ' */',
+-    'export function verifyQqCallback(',
+-    '  request: QqCallbackRequest,',
+-    '  options: VerifyQqCallbackOptions,',
+-    '): boolean {',
+-    "  const signatureHeader = options.signatureHeader ?? 'x-signature-ed25519';",
+-    "  const timestampHeader = options.timestampHeader ?? 'x-signature-timestamp';",
+-    '  const signature = headerValue(request.headers, signatureHeader);',
+-    '  const timestamp = headerValue(request.headers, timestampHeader);',
+-    '',
+-    '  if (!signature || !timestamp || !options.appSecret) {',
+-    '    return false;',
+-    '  }',
+-    '',
+-    '  // MVP\uff1aHMAC-SHA256(secret, timestamp + rawBody) \u5341\u516d\u8fdb\u5236\u6bd4\u5bf9\u3002',
+-    "  const expected = createHmac('sha256', options.appSecret)",
+-    '    .update(`${timestamp}${request.rawBody}`)',
+-    "    .digest('hex');",
+-    '',
+-    '  try {',
+-    "    const left = Buffer.from(expected, 'utf8');",
+-    "    const right = Buffer.from(signature, 'utf8');",
+-    '    if (left.length !== right.length) {',
+-    '      return false;',
+-    '    }',
+-    '    return timingSafeEqual(left, right);',
+-    '  } catch {',
+-    '    return false;',
+-    '  }',
+-    '}',
+-    '',
+-    '/**',
+-    ' * \u4e0d\u533a\u5206\u5927\u5c0f\u5199\u5730\u8bfb\u53d6\u5355\u4e2a header \u503c\u3002',
+-    ' *',
+-    ' * @param headers - \u5165\u7ad9 header \u6620\u5c04',
+-    ' * @param name - \u8981\u89e3\u6790\u7684 header \u540d',
+-    ' * @returns \u7b2c\u4e00\u4e2a\u5b57\u7b26\u4e32\u503c\uff1b\u7f3a\u5931\u65f6\u4e3a `undefined`',
+-    ' */',
+-    'function headerValue(',
+-    '  headers: Record<string, string | string[] | undefined>,',
+-    '  name: string,',
+-    '): string | undefined {',
+-    '  const direct = headers[name] ?? headers[name.toLowerCase()];',
+-    '  if (Array.isArray(direct)) {',
+-    '    return direct[0];',
+-    '  }',
+-    '  return direct;',
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-writeFileSync(
+-  'packages/qq-official/src/client.ts',
+-  [
+-    '/**',
+-    ' * \u5b98\u65b9 QQ \u4e0b\u884c\u6d88\u606f\u7684\u76ee\u6807\u901a\u9053\u63cf\u8ff0\u3002',
+-    ' */',
+-    'export type QqSendTarget = {',
+-    '  /** \u5f00\u653e\u5e73\u53f0 channel / group / user \u7b49\u4e0d\u900f\u660e id\u3002 */',
+-    '  channelId: string;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u4e0b\u884c\u53d1\u9001\u8f85\u52a9\u65b9\u6cd5\u7684\u8fd4\u56de\u7ed3\u679c\u3002',
+-    ' */',
+-    'export type QqSendResult = {',
+-    '  ok: boolean;',
+-    '  messageId?: string;',
+-    '  degraded?: boolean;',
+-    '  detail?: string;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u5b98\u65b9 QQ \u4e0b\u884c\u5ba2\u6237\u7aef\u7684\u4f9d\u8d56\u9009\u9879\u3002',
+-    ' */',
+-    'export type QqOfficialClientOptions = {',
+-    '  appId: string;',
+-    '  appSecret: string;',
+-    '  /** \u53ef\u6ce8\u5165\u7684 fetch\uff0c\u4fbf\u4e8e\u6d4b\u8bd5\u6216\u66ff\u6362\u4f20\u8f93\u5c42\u3002 */',
+-    '  fetchImpl?: typeof fetch;',
+-    '  /**',
+-    '   * \u4e3a true \u65f6\u8df3\u8fc7\u771f\u5b9e\u7f51\u7edc\u8c03\u7528\uff0c\u4ec5\u672c\u5730\u786e\u8ba4\u3002',
+-    '   * \u5728\u5e73\u53f0\u51ed\u636e\u5c1a\u672a\u63a5\u901a\u65f6\u7528\u4e8e\u672c\u5730\u5f00\u53d1\u3002',
+-    '   */',
+-    '  dryRun?: boolean;',
+-    '};',
+-    '',
+-    '/**',
+-    ' * \u5b98\u65b9 QQ \u6587\u672c/\u56fe\u7247\u56de\u590d\u7684\u8584\u5c01\u88c5\u5ba2\u6237\u7aef\u3002',
+-    ' * \u4e0d\u542b\u547d\u4ee4\u4e1a\u52a1\u903b\u8f91\uff0c\u4e5f\u4e0d\u8c03\u7528 Lanius \u67e5\u8be2 API\u3002',
+-    ' */',
+-    'export class QqOfficialClient {',
+-    '  private readonly appId: string;',
+-    '  private readonly appSecret: string;',
+-    '  private readonly fetchImpl: typeof fetch;',
+-    '  private readonly dryRun: boolean;',
+-    '',
+-    '  /**',
+-    '   * \u521b\u5efa\u5b98\u65b9 QQ \u4e0b\u884c\u5ba2\u6237\u7aef\u3002',
+-    '   *',
+-    '   * @param options - \u5e94\u7528\u51ed\u636e\u3001fetch \u5b9e\u73b0\u4e0e dry-run \u5f00\u5173',
+-    '   */',
+-    '  constructor(options: QqOfficialClientOptions) {',
+-    '    this.appId = options.appId;',
+-    '    this.appSecret = options.appSecret;',
+-    '    this.fetchImpl = options.fetchImpl ?? fetch;',
+-    '    this.dryRun = options.dryRun ?? false;',
+-    '  }',
+-    '',
+-    '  /**',
+-    '   * \u5411\u76ee\u6807\u53d1\u9001\u7eaf\u6587\u672c\u56de\u590d\u3002',
+-    '   *',
+-    '   * @param target - \u9891\u9053/\u4f1a\u8bdd\u76ee\u6807',
+-    '   * @param content - UTF-8 \u6587\u672c\uff08\u5fc5\u8981\u65f6\u7531 bot \u4fa7\u5df2\u622a\u65ad\uff09',
+-    '   * @returns \u53d1\u9001\u786e\u8ba4\uff1bdry-run \u65f6\u4e0d\u53d1\u8d77\u7f51\u7edc I/O',
+-    '   */',
+-    '  async sendText(target: QqSendTarget, content: string): Promise<QqSendResult> {',
+-    '    if (this.dryRun) {',
+-    '      return { ok: true, messageId: `dry-text-${target.channelId}`, detail: content.slice(0, 80) };',
+-    '    }',
+-    '',
+-    '    // \u771f\u5b9e OpenAPI \u63a5\u7ebf\u5f85\u51ed\u636e\u4e0e\u7aef\u70b9\u6587\u6863\u9501\u5b9a\u540e\u518d\u8865\u3002',
+-    '    void this.appId;',
+-    '    void this.appSecret;',
+-    '    void this.fetchImpl;',
+-    '    return {',
+-    '      ok: false,',
+-    "      detail: 'Official QQ sendText endpoint is not wired yet; enable dryRun for local tests',",
+-    '    };',
+-    '  }',
+-    '',
+-    '  /**',
+-    '   * \u4e0a\u4f20\u56fe\u7247\u7f13\u51b2\u5e76\u4f5c\u4e3a\u5a92\u4f53\u6d88\u606f\u53d1\u9001\u3002',
+-    '   *',
+-    '   * @param target - \u9891\u9053/\u4f1a\u8bdd\u76ee\u6807',
+-    '   * @param imagePng - \u6765\u81ea `@lanius/render` \u7684 PNG \u5b57\u8282',
+-    '   * @returns \u53d1\u9001\u786e\u8ba4\uff1bdry-run \u65f6\u4e0d\u5b9e\u9645\u4e0a\u4f20',
+-    '   */',
+-    '  async sendImage(target: QqSendTarget, imagePng: Buffer): Promise<QqSendResult> {',
+-    '    if (this.dryRun) {',
+-    '      return {',
+-    '        ok: true,',
+-    '        messageId: `dry-image-${target.channelId}`,',
+-    '        detail: `png:${imagePng.length}`,',
+-    '      };',
+-    '    }',
+-    '',
+-    '    void this.appId;',
+-    '    void this.appSecret;',
+-    '    void this.fetchImpl;',
+-    '    return {',
+-    '      ok: false,',
+-    "      detail: 'Official QQ sendImage endpoint is not wired yet; enable dryRun for local tests',",
+-    '    };',
+-    '  }',
+-    '}',
+-    '',
+-    '/**',
+-    ' * \u5b98\u65b9 QQ \u5ba2\u6237\u7aef\u5de5\u5382\u3002',
+-    ' *',
+-    ' * @param options - \u5ba2\u6237\u7aef\u6784\u9020\u9009\u9879',
+-    ' * @returns \u5df2\u914d\u7f6e\u7684 `QqOfficialClient`',
+-    ' */',
+-    'export function createQqOfficialClient(options: QqOfficialClientOptions): QqOfficialClient {',
+-    '  return new QqOfficialClient(options);',
+-    '}',
+-    '',
+-  ].join('\n'),
+-  'utf8',
+-);
+-
+-console.log('rewrote bot/qq sources with UTF-8 Chinese');
+diff --git a/scripts/ssh-lanius.py b/scripts/ssh-lanius.py
+deleted file mode 100644
+index d1cbe2a..0000000
+--- a/scripts/ssh-lanius.py
++++ /dev/null
+@@ -1,121 +0,0 @@
+-#!/usr/bin/env python3
+-"""閫氳繃 ~/.ssh/lanius.env 杩炴帴鐢熶骇鏈烘墽琛屽懡浠?/ 涓婁紶鏂囦欢锛堝瘑鐮佷笉杩涗粨搴擄級銆?""
+-
+-from __future__ import annotations
+-
+-import argparse
+-import os
+-import sys
+-from pathlib import Path
+-
+-import paramiko
+-
+-
+-def load_env(path: Path) -> dict[str, str]:
+-    """璇诲彇 KEY=VALUE 鐜鏂囦欢銆?""
+-    data: dict[str, str] = {}
+-    # utf-8-sig锛氬吋瀹?PowerShell 鍐欏嚭鐨?BOM
+-    for line in path.read_text(encoding="utf-8-sig").splitlines():
+-        line = line.strip()
+-        if not line or line.startswith("#") or "=" not in line:
+-            continue
+-        key, value = line.split("=", 1)
+-        data[key.strip()] = value.strip()
+-    return data
+-
+-
+-def connect() -> paramiko.SSHClient:
+-    """浣跨敤 lanius.env 寤虹珛 SSH 杩炴帴锛堜紭鍏堝瘑閽ワ紝澶辫触鍒欏瘑鐮侊級銆?""
+-    env_path = Path.home() / ".ssh" / "lanius.env"
+-    if not env_path.is_file():
+-        raise SystemExit(f"missing {env_path}")
+-    cfg = load_env(env_path)
+-    host = cfg["LANIUS_SSH_HOST"]
+-    port = int(cfg.get("LANIUS_SSH_PORT", "22"))
+-    user = cfg.get("LANIUS_SSH_USER", "root")
+-    password = cfg.get("LANIUS_SSH_PASSWORD", "")
+-    key_path = Path.home() / ".ssh" / "id_ed25519_lanius"
+-
+-    client = paramiko.SSHClient()
+-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+-    try:
+-        if key_path.is_file():
+-            client.connect(
+-                hostname=host,
+-                port=port,
+-                username=user,
+-                key_filename=str(key_path),
+-                timeout=30,
+-                allow_agent=False,
+-                look_for_keys=False,
+-            )
+-            return client
+-    except Exception:
+-        client.close()
+-        client = paramiko.SSHClient()
+-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+-
+-    client.connect(
+-        hostname=host,
+-        port=port,
+-        username=user,
+-        password=password,
+-        timeout=30,
+-        allow_agent=False,
+-        look_for_keys=False,
+-    )
+-    return client
+-
+-
+-def run(client: paramiko.SSHClient, command: str, timeout: int = 3600) -> int:
+-    """鎵ц杩滅▼鍛戒护骞舵祦寮忔墦鍗拌緭鍑恒€?""
+-    print(f"$ {command}", flush=True)
+-    stdin, stdout, stderr = client.exec_command(command, timeout=timeout)
+-    while True:
+-        line = stdout.readline()
+-        if not line:
+-            break
+-        sys.stdout.write(line)
+-        sys.stdout.flush()
+-    err = stderr.read().decode("utf-8", errors="replace")
+-    if err:
+-        sys.stderr.write(err)
+-        sys.stderr.flush()
+-    return stdout.channel.recv_exit_status()
+-
+-
+-def main() -> None:
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument("command", nargs="?", help="杩滅▼ shell 鍛戒护")
+-    parser.add_argument("--upload", nargs=2, metavar=("LOCAL", "REMOTE"), help="SFTP 涓婁紶")
+-    parser.add_argument("--install-key", action="store_true", help="瀹夎鏈満 ed25519 鍏挜")
+-    args = parser.parse_args()
+-
+-    client = connect()
+-    try:
+-        if args.install_key:
+-            pub = (Path.home() / ".ssh" / "id_ed25519_lanius.pub").read_text(encoding="utf-8").strip()
+-            script = (
+-                "mkdir -p ~/.ssh && chmod 700 ~/.ssh && "
+-                f"grep -qxF '{pub}' ~/.ssh/authorized_keys 2>/dev/null || "
+-                f"echo '{pub}' >> ~/.ssh/authorized_keys && "
+-                "chmod 600 ~/.ssh/authorized_keys && echo key-ok"
+-            )
+-            code = run(client, script, timeout=60)
+-            raise SystemExit(code)
+-
+-        if args.upload:
+-            local, remote = args.upload
+-            sftp = client.open_sftp()
+-            sftp.put(local, remote)
+-            sftp.close()
+-            print(f"uploaded {local} -> {remote}", flush=True)
+-
+-        if args.command:
+-            raise SystemExit(run(client, args.command))
+-    finally:
+-        client.close()
+-
+-
+-if __name__ == "__main__":
+-    main()
+-- 
+2.51.2.windows.1
+

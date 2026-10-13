@@ -1,9 +1,6 @@
 import { serve } from '@hono/node-server';
-import {
-  assembleApiConfig,
-  getConfigDriver,
-  type AssembledApiConfig,
-} from '@lanius/config';
+import { checkForUpdate } from '@lanius/core';
+import { assembleApiConfig, getConfigDriver, type AssembledApiConfig } from '@lanius/config';
 import { isAbsolute, resolve } from 'node:path';
 
 import { setLabelOverrides } from './adapters/worldstate/label-overrides.js';
@@ -45,10 +42,20 @@ async function main(): Promise<void> {
   let config: AssembledApiConfig = assembleApiConfig(configDriver);
 
   const logger = createLogger();
-  logger.info(
-    { configRoot: configDriver.configRoot },
-    'config driver ready',
-  );
+  logger.info({ configRoot: configDriver.configRoot }, 'config driver ready');
+
+  // 启动时检查更新（不阻断，失败只打日志）
+  const update = checkForUpdate(repoRoot);
+  if (update.error) {
+    logger.warn({ err: update.error }, 'update check skipped');
+  } else if (update.hasUpdate) {
+    logger.warn(
+      { local: update.localCommit, remote: update.remoteCommit, behind: update.behind },
+      'update available: run deploy/update.sh',
+    );
+  } else {
+    logger.info({ commit: update.localCommit }, 'up to date');
+  }
 
   setLabelOverrides(configDriver.get('labels'));
   let site = configDriver.get('site');

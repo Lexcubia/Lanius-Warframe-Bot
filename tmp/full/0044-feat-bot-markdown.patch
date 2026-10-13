@@ -1,0 +1,478 @@
+From 13c6bb4857aec54a1b5409c07be718cd942eb90a Mon Sep 17 00:00:00 2001
+From: Lexcubia <lexcubia@gmail.com>
+Date: Tue, 13 Oct 2026 21:08:33 +0800
+Subject: [PATCH 44/45] =?UTF-8?q?feat(bot):=20=E5=8D=A1=E7=89=87=E5=9B=9E?=
+ =?UTF-8?q?=E5=A4=8D=E7=BB=9F=E4=B8=80=E4=B8=BA=E5=8D=95=E6=9D=A1=20markdo?=
+ =?UTF-8?q?wn=20=E5=B5=8C=E5=9B=BE=E5=B9=B6=E6=8E=A5=E5=85=A5=E5=B8=AE?=
+ =?UTF-8?q?=E5=8A=A9=E5=BF=AB=E6=8D=B7=E9=94=AE=E7=9B=98?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- 统一入口 replyCard：markdownImage 开 + COS 时发单条嵌图（图+块引用提示+键盘），文本模式发单条 markdown 文本，纯图模式单条 msg_type=7，不再分条发送
+- 帮助指令接入 markdown 嵌图，新增 build-help-keyboard 提供常用查询快捷按钮
+- 裂隙保留快捷筛选键盘，统一走 replyCard
+- 修复 stripHttpUrls 占位时丢失图片尺寸标注（#Wpx #Hpx）的 bug
+- COS 对象 key 去掉 .png 后缀，仿 QQ 图床无后缀形式
+- 删除废弃的 fissureShortcutMarkdownHint、replyTextOrImage
+---
+ apps/bot/src/pipeline/handle-command.ts | 199 ++++++++----------------
+ apps/bot/src/qq/build-help-keyboard.ts  |  68 ++++++++
+ 2 files changed, 137 insertions(+), 130 deletions(-)
+ create mode 100644 apps/bot/src/qq/build-help-keyboard.ts
+
+diff --git a/apps/bot/src/pipeline/handle-command.ts b/apps/bot/src/pipeline/handle-command.ts
+index fab3261..ece4d5e 100644
+--- a/apps/bot/src/pipeline/handle-command.ts
++++ b/apps/bot/src/pipeline/handle-command.ts
+@@ -21,7 +21,7 @@ import {
+   type WorldstateDto,
+ } from '@lanius/core';
+ import type { Logger } from '@lanius/logger';
+-import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
++import type { QqKeyboardContent, QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
+ import { parseQqSendFailure, uploadCardPng } from '@lanius/qq-official';
+ 
+ import type { BotConfig } from '../config.js';
+@@ -39,10 +39,8 @@ import {
+   formatNightwaveText,
+   formatWorldstateText,
+ } from '../formatters/worldstate-text.js';
+-import {
+-  buildFissureShortcutKeyboard,
+-  fissureShortcutMarkdownHint,
+-} from '../qq/build-fissure-keyboard.js';
++import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
++import { buildHelpShortcutKeyboard } from '../qq/build-help-keyboard.js';
+ 
+ /**
+  * 会话级可变偏好（MVP 进程内内存）。
+@@ -122,13 +120,19 @@ export async function handleCommand(
+     const text = formatHelpText(help, locale, {
+       unknownRaw: intent.type === 'unknown' ? intent.raw : undefined,
+     });
+-    return replyTextOrImage({
++    return replyCard({
+       deps,
+       target,
+       text,
+       preferImage: deps.prefs.replyMode === 'image',
+       render: () => renderHelpCard({ help, locale }),
+       label: 'help',
++      keyboard: buildHelpShortcutKeyboard({
++        locale,
++        enter: target.scene === 'c2c',
++        botAppId: deps.config.qq.appId,
++      }),
++      hint: locale === 'en' ? 'Tap a button below to run a query.' : '点击下方按钮快速查询。',
+     });
+   }
+ 
+@@ -138,7 +142,7 @@ export async function handleCommand(
+       return sendFail(deps, target, locale, envelope.error.message);
+     }
+     const text = formatMarketText(envelope.data, locale);
+-    return replyTextOrImage({
++    return replyCard({
+       deps,
+       target,
+       text,
+@@ -154,7 +158,7 @@ export async function handleCommand(
+       return sendFail(deps, target, locale, envelope.error.message);
+     }
+     const text = formatRivenText(envelope.data, locale);
+-    return replyTextOrImage({
++    return replyCard({
+       deps,
+       target,
+       text,
+@@ -176,7 +180,7 @@ export async function handleCommand(
+     const text = formatVoidTraderText(envelope.data, locale, {
+       stale: envelope.meta.stale,
+     });
+-    return replyTextOrImage({
++    return replyCard({
+       deps,
+       target,
+       text,
+@@ -199,7 +203,7 @@ export async function handleCommand(
+     const text = formatVarziaText(envelope.data, locale, {
+       stale: envelope.meta.stale,
+     });
+-    return replyTextOrImage({
++    return replyCard({
+       deps,
+       target,
+       text,
+@@ -221,7 +225,7 @@ export async function handleCommand(
+       return sendFail(deps, target, locale, envelope.error.message);
+     }
+     const text = formatRotationText(envelope.data, locale);
+-    return replyTextOrImage({
++    return replyCard({
+       deps,
+       target,
+       text,
+@@ -282,18 +286,25 @@ export async function handleCommand(
+     stale: envelope.meta.stale,
+   };
+ 
+-  // 裂隙：Markdown + 底部指令按钮，便于 QQ 内一键筛选
++  // 裂隙：Markdown 嵌图 + 底部快捷筛选按钮，单条发送，便于 QQ 内一键筛选
+   if (moduleKind === 'fissures') {
+-    return replyFissuresWithShortcuts({
++    return replyCard({
+       deps,
+       target,
+       text,
+       preferImage: deps.prefs.replyMode === 'image',
+       render: () => renderFissuresCard(renderInput),
++      label: 'fissures',
++      keyboard: buildFissureShortcutKeyboard({
++        locale,
++        enter: target.scene === 'c2c',
++        botAppId: deps.config.qq.appId,
++      }),
++      hint: locale === 'en' ? 'Tap a button below to filter.' : '点击下方按钮快速筛选。',
+     });
+   }
+ 
+-  return replyTextOrImage({
++  return replyCard({
+     deps,
+     target,
+     text,
+@@ -424,40 +435,44 @@ async function handleSubscribe(
+ }
+ 
+ /**
+- * 裂隙回复：优先 Markdown + 快捷指令按钮；图片模式先出图再附带按钮条。
++ * 统一的卡片回复入口：所有模块单条发送，不再分条。
++ *
++ * 发送策略（按优先级）：
++ * 1. `markdownImage` 开 + 已配 COS + 图片模式 → 渲染 PNG 上传 COS，发**单条 Markdown 嵌图**（图 + 可选块引用提示 + 可选键盘）。
++ * 2. 文本模式 → **单条 Markdown 文本**（标题加粗，可挂键盘）。
++ * 3. `markdownImage` 关 + 图片模式 → **单条纯图**（`msg_type=7`，不发第二条）。
++ * 4. 失败按链降级：嵌图 → Markdown 文本 → 纯文本。
+  *
+- * @param options - 发送选项
++ * @param options - 发送选项（`keyboard`/`hint` 仅裂隙等需要快捷按钮的模块传入）
+  * @returns 结果摘要
+  */
+-async function replyFissuresWithShortcuts(options: {
++async function replyCard(options: {
+   deps: HandleCommandDeps;
+   target: QqSendTarget;
+   text: string;
+   preferImage: boolean;
+   render: () => Promise<Buffer>;
++  label: string;
++  keyboard?: QqKeyboardContent;
++  hint?: string;
+ }): Promise<string> {
+-  const { deps, target, text, preferImage, render } = options;
+-  const locale = deps.prefs.locale;
+-  const keyboard = buildFissureShortcutKeyboard({
+-    locale,
+-    enter: target.scene === 'c2c',
+-    botAppId: deps.config.qq.appId,
+-  });
+-  const mdBody = toFissureMarkdown(text);
++  const { deps, target, text, preferImage, render, label, keyboard, hint } = options;
++  const mdBody = toCardMarkdown(text);
+ 
++  // 文本模式：单条 Markdown 文本（可挂键盘）。
+   if (!preferImage) {
+     const sent = await deps.qq.sendMarkdown(target, mdBody, keyboard);
+     if (sent.ok) {
+-      return 'markdown-fissures';
++      return 'markdown-text';
+     }
+-    logSendFailure(deps.logger, 'fissures_markdown', sent.detail);
++    logSendFailure(deps.logger, `${label}_markdown`, sent.detail);
+     const fallback = await deps.qq.sendText(target, text);
+     if (!fallback.ok) {
+-      logSendFailure(deps.logger, 'fissures_text_fallback', fallback.detail);
++      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
+       return `send-failed:${fallback.detail ?? sent.detail ?? 'unknown'}`;
+     }
+     logDegrade(deps.logger, 'info', {
+-      path: 'fissures',
++      path: label,
+       step: 'markdown_to_text',
+       detail: sent.detail ?? 'markdown send failed',
+     });
+@@ -466,44 +481,37 @@ async function replyFissuresWithShortcuts(options: {
+ 
+   try {
+     const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+-    // 优先：Markdown 嵌图单条（需开关开启 + 已配 COS）。
++    // 单条 Markdown 嵌图（需开关开启 + 已配 COS）。COS 提供公网 URL，QQ 转存为 ugcimg，尺寸标注由 stripHttpUrls 保留。
+     const cos = deps.config.bot.cos;
+     if (deps.config.bot.markdownImage !== false && cos) {
+       const uploaded = await uploadCardPng(cos, png);
+       if (uploaded.ok && uploaded.url) {
+         const size = pngImageSize(png) ?? { width: 640, height: 534 };
+-        const md = fissureImageMarkdown(locale, uploaded.url, size);
++        const md = cardImageMarkdown(uploaded.url, size, hint);
++        console.log(`[lanius-bot] ${label} markdown payload >>> ${md} <<<`);
+         const sent = await deps.qq.sendMarkdown(target, md, keyboard);
+         if (sent.ok) {
+-          return 'markdown-image+keyboard';
++          return keyboard ? 'markdown-image+keyboard' : 'markdown-image';
+         }
+-        // 嵌图 markdown 失败则落到下方两条路径。
++        // 嵌图 markdown 失败则降级到纯图。
+       } else {
+         logDegrade(deps.logger, 'warn', {
+-          path: 'fissures',
++          path: label,
+           step: 'cos_upload',
+           detail: uploaded.detail ?? 'unknown',
+         });
+       }
+     }
+-    // 回退：QQ 富媒体不支持挂按钮，发图片 + 一条 Markdown 按钮提示。
++    // 纯图单条（msg_type=7，不发第二条）。
+     const img = await deps.qq.sendImage(target, png);
+     if (img.ok) {
+-      const tip = await deps.qq.sendMarkdown(target, fissureShortcutMarkdownHint(locale), keyboard);
+-      if (!tip.ok) {
+-        logSendFailure(deps.logger, 'fissures_keyboard_tip', tip.detail);
+-      }
+-      return tip.ok ? 'image+markdown-fissures' : 'image';
++      return 'image';
+     }
+-    logSendFailure(deps.logger, 'fissures_image', img.detail);
+-    const fallback = await deps.qq.sendMarkdown(
+-      target,
+-      `${mdBody}\n\n${locale === 'en' ? '_(image send failed; text fallback)_' : '_（图片发送失败，已降级文本）_'}`,
+-      keyboard,
+-    );
++    logSendFailure(deps.logger, `${label}_image`, img.detail);
++    const fallback = await deps.qq.sendMarkdown(target, mdBody, keyboard);
+     if (fallback.ok) {
+       logDegrade(deps.logger, 'info', {
+-        path: 'fissures',
++        path: label,
+         step: 'image_to_markdown',
+         detail: img.detail ?? 'image send failed',
+       });
+@@ -516,15 +524,11 @@ async function replyFissuresWithShortcuts(options: {
+   } catch (error) {
+     const detail = error instanceof Error ? error.message : String(error);
+     logDegrade(deps.logger, 'error', {
+-      path: 'fissures',
++      path: label,
+       step: 'render',
+       detail,
+     });
+-    const fallback = await deps.qq.sendMarkdown(
+-      target,
+-      `${mdBody}\n\n${locale === 'en' ? '_(image render failed; text fallback)_' : '_（图片渲染失败，已降级文本）_'}`,
+-      keyboard,
+-    );
++    const fallback = await deps.qq.sendMarkdown(target, mdBody, keyboard);
+     if (fallback.ok) {
+       return `image-fallback-render:${detail.slice(0, 160)}`;
+     }
+@@ -535,12 +539,12 @@ async function replyFissuresWithShortcuts(options: {
+   }
+ }
+ /**
+- * 将裂隙纯文本转为简 Markdown（保留换行，标题行加粗）。
++ * 将卡片纯文本转为简 Markdown（保留换行，标题行加粗）。
+  *
+- * @param text - formatFissuresText 产出
++ * @param text - 各 format*Text 产出
+  * @returns Markdown content
+  */
+-function toFissureMarkdown(text: string): string {
++function toCardMarkdown(text: string): string {
+   const lines = text.split('\n');
+   const head = lines[0];
+   if (!head) {
+@@ -551,25 +555,25 @@ function toFissureMarkdown(text: string): string {
+ }
+ 
+ /**
+- * 裂隙 Markdown 嵌图消息体（图片 + 底部快捷键盘的单条消息）。
++ * 卡片 Markdown 嵌图消息体（图片 + 可选块引用提示的单条消息）。
+  *
+- * 语法：QQ 自定义 Markdown 支持 `![alt #Wpx #Hpx](url)` 内嵌公网图片。
++ * 语法：QQ 自定义 Markdown 支持 `![img #Wpx #Hpx](url)` 内嵌公网图片。
+  *
+- * @param locale - 语言
+  * @param imageUrl - 卡片图公网 URL（COS）
+  * @param size - PNG 宽高（`#Wpx #Hpx`）
++ * @param hint - 可选块引用提示文案（如裂隙的筛选引导）；省略则不追加
+  * @returns Markdown content
+  */
+-function fissureImageMarkdown(
+-  locale: Locale,
++function cardImageMarkdown(
+   imageUrl: string,
+   size: { width: number; height: number },
++  hint?: string,
+ ): string {
+-  const title = locale === 'en' ? 'Void Fissures' : '虚空裂隙';
+-  // 官方嵌图语法 `![text #Wpx #Hpx](url)`，标注使用图片原始尺寸。
++  // 官方嵌图语法 `![img #Wpx #Hpx](url)`，尺寸为图片原始像素。
++  // 开头 `[](%7B%22version%22%3A2%7D)` 是 markdown v2 声明头（URL 编码的 {"version":2}），缺了它 QQ 会丢弃尺寸标注。
+   const dim = ` #${size.width}px #${size.height}px`;
+-  const hint = locale === 'en' ? 'Tap a button below to filter.' : '点击下方按钮快速筛选。';
+-  return `**${title}**\n\n![text${dim}](${imageUrl})\n\n${hint}`;
++  const base = `[](%7B%22version%22%3A2%7D)![img${dim}](${imageUrl})`;
++  return hint ? `${base}\n> ${hint}` : base;
+ }
+ 
+ /**
+@@ -591,71 +595,6 @@ function pngImageSize(png: Buffer): { width: number; height: number } | null {
+   return { width, height };
+ }
+ 
+-/**
+- * 按偏好发送文本或图片（失败降级文本）。
+- *
+- * @param options - 发送选项
+- * @returns 结果摘要
+- */
+-async function replyTextOrImage(options: {
+-  deps: HandleCommandDeps;
+-  target: QqSendTarget;
+-  text: string;
+-  preferImage: boolean;
+-  render: () => Promise<Buffer>;
+-  label: string;
+-}): Promise<string> {
+-  const { deps, target, text, preferImage, render, label } = options;
+-  const locale = deps.prefs.locale;
+-
+-  if (!preferImage) {
+-    const sent = await deps.qq.sendText(target, text);
+-    if (!sent.ok) {
+-      logSendFailure(deps.logger, label, sent.detail);
+-      return `send-failed:${sent.detail ?? 'unknown'}`;
+-    }
+-    return 'text';
+-  }
+-
+-  try {
+-    const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+-    const sent = await deps.qq.sendImage(target, png);
+-    if (sent.ok) {
+-      return 'image';
+-    }
+-    logSendFailure(deps.logger, `${label}_image`, sent.detail);
+-    const fallback = await deps.qq.sendText(
+-      target,
+-      `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
+-    );
+-    if (!fallback.ok) {
+-      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
+-      return `send-failed:${fallback.detail ?? 'unknown'}`;
+-    }
+-    logDegrade(deps.logger, 'info', {
+-      path: label,
+-      step: 'image_to_text',
+-      detail: sent.detail ?? 'image send failed',
+-    });
+-    return 'image-fallback-send';
+-  } catch (error) {
+-    const detail = error instanceof Error ? error.message : String(error);
+-    logDegrade(deps.logger, 'error', {
+-      path: label,
+-      step: 'render',
+-      detail,
+-    });
+-    const fallback = await deps.qq.sendText(
+-      target,
+-      `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
+-    );
+-    if (!fallback.ok) {
+-      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
+-      return `send-failed:${fallback.detail ?? 'unknown'}`;
+-    }
+-    return `image-fallback-render:${detail.slice(0, 160)}`;
+-  }
+-}
+ /**
+  * 发送查询失败文本。
+  *
+diff --git a/apps/bot/src/qq/build-help-keyboard.ts b/apps/bot/src/qq/build-help-keyboard.ts
+new file mode 100644
+index 0000000..0bcac93
+--- /dev/null
++++ b/apps/bot/src/qq/build-help-keyboard.ts
+@@ -0,0 +1,68 @@
++import type { QqKeyboardContent } from '@lanius/qq-official';
++import { commandKeyboardButton } from '@lanius/qq-official';
++
++/**
++ * 帮助回复底部快捷按钮的构建选项。
++ */
++export type BuildHelpKeyboardOptions = {
++  /** 界面语言（影响按钮标签与指令词） */
++  locale: 'zh' | 'en';
++  /** 是否点击后直接发送（单聊更可靠） */
++  enter: boolean;
++  /** 机器人 AppID（写入 keyboard.bot_appid） */
++  botAppId: string;
++};
++
++/**
++ * 构造帮助回复底部的常用查询快捷键盘。
++ *
++ * @param options - 语言、enter 与 AppID
++ * @returns QQ keyboard content
++ */
++export function buildHelpShortcutKeyboard(options: BuildHelpKeyboardOptions): QqKeyboardContent {
++  const zh = options.locale !== 'en';
++  const enter = options.enter;
++
++  const rowA = zh
++    ? [
++        { id: 'h-ws', label: '世界状态', command: '世界状态' },
++        { id: 'h-fissures', label: '裂隙', command: '裂隙' },
++        { id: 'h-invasions', label: '入侵', command: '入侵' },
++        { id: 'h-nightwave', label: '电波', command: '电波' },
++      ]
++    : [
++        { id: 'h-ws', label: 'Worldstate', command: 'worldstate' },
++        { id: 'h-fissures', label: 'Fissures', command: 'fissures' },
++        { id: 'h-invasions', label: 'Invasions', command: 'invasions' },
++        { id: 'h-nightwave', label: 'Nightwave', command: 'nightwave' },
++      ];
++
++  const rowB = zh
++    ? [
++        { id: 'h-baro', label: '虚空商人', command: '虚空商人' },
++        { id: 'h-varzia', label: '瓦奇娅', command: '瓦奇娅' },
++        { id: 'h-tenet', label: '信条', command: '信条' },
++        { id: 'h-coda', label: '终幕', command: '终幕' },
++      ]
++    : [
++        { id: 'h-baro', label: 'Baro', command: 'baro' },
++        { id: 'h-varzia', label: 'Varzia', command: 'varzia' },
++        { id: 'h-tenet', label: 'Tenet', command: 'tenet' },
++        { id: 'h-coda', label: 'Coda', command: 'coda' },
++      ];
++
++  const toBtn = (item: { id: string; label: string; command: string }) =>
++    commandKeyboardButton({
++      id: item.id,
++      label: item.label,
++      command: item.command,
++      enter,
++      reply: false,
++      style: 1,
++    });
++
++  return {
++    botAppId: options.botAppId,
++    rows: [{ buttons: rowA.map(toBtn) }, { buttons: rowB.map(toBtn) }],
++  };
++}
+-- 
+2.51.2.windows.1
+

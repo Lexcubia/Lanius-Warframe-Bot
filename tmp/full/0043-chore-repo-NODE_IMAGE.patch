@@ -1,0 +1,29 @@
+From 9434998d0098140136eeffb9ec79a0d6413e3b11 Mon Sep 17 00:00:00 2001
+From: Cursor Agent <cursoragent@cursor.com>
+Date: Tue, 13 Oct 2026 11:46:49 +0000
+Subject: [PATCH 43/45] =?UTF-8?q?chore(repo):=20=E7=A7=BB=E9=99=A4?=
+ =?UTF-8?q?=E6=9C=AA=E7=94=A8=20NODE=5FIMAGE=20=E5=8F=98=E9=87=8F?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ deploy/apply-node-release.sh | 2 --
+ 1 file changed, 2 deletions(-)
+
+diff --git a/deploy/apply-node-release.sh b/deploy/apply-node-release.sh
+index 54cf311..a1c4b0b 100755
+--- a/deploy/apply-node-release.sh
++++ b/deploy/apply-node-release.sh
+@@ -57,8 +57,6 @@ fi
+ cd "${REPO_ROOT}"
+ chmod +x deploy/*.sh 2>/dev/null || true
+ 
+-NODE_IMAGE="${LANIUS_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"
+-
+ # 首次：需要完整 Node（含 npm）。残缺 node 也会重装。
+ # 机房常连不上 NodeSource/GitHub：默认从 npmmirror 拉官方 linux-x64 包。
+ need_full_node=0
+-- 
+2.51.2.windows.1
+
