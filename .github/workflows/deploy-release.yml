@@ -66,12 +66,35 @@ jobs:
           echo "runtime=${{ steps.meta.outputs.runtime }}" >> "$GITHUB_OUTPUT"
           echo "Using REF=${REF} RUNTIME=${{ steps.meta.outputs.runtime }} SHA=$(git rev-parse --short HEAD)"
 
-      - name: Pack source tarball
+      - name: Setup Node and pnpm (prebuild on runner)
+        if: steps.ver.outputs.runtime == 'node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        if: steps.ver.outputs.runtime == 'node'
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.0 --activate
+
+      - name: Install and build on Actions
+        if: steps.ver.outputs.runtime == 'node'
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @lanius/render build:card-host
+          pnpm build
+          pnpm --filter @lanius/web build
+          test -f apps/api/dist/index.js
+          test -f apps/bot/dist/index.js
+          test -f apps/web/.output/server/index.mjs
+
+      - name: Pack source + dist tarball
         if: steps.ver.outputs.runtime == 'node'
         run: |
           REF='${{ steps.ver.outputs.ref }}'
           mkdir -p .deploy-pack
-          # 打当前 checkout 树（release 分支），避免仅 checkout 旧 tag 时缺部署脚本
+          # 含 dist / .output / card-host；不含 node_modules（现网再 pnpm install）
           tar \
             --exclude='./.git' \
             --exclude='./.deploy-pack' \
@@ -79,7 +102,6 @@ jobs:
             --exclude='./apps/*/node_modules' \
             --exclude='./packages/*/node_modules' \
             --exclude='./apps/web/.nuxt' \
-            --exclude='./apps/web/.output' \
             --exclude='./config/local' \
             --exclude='./data' \
             -czf ".deploy-pack/lanius-${REF}.tgz" .
@@ -144,6 +166,8 @@ jobs:
             export LANIUS_TARBALL="/opt/lanius/releases/lanius-${REF}.tgz"
             export LANIUS_PLAYWRIGHT_DIR="${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}"
             export NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.com}"
+            # tarball 已在 Actions 预构建 dist/.output
+            export LANIUS_SKIP_BUILD=1
             bash "${REPO_ROOT}/deploy/apply-node-release.sh" "${REF}"
             journalctl -u lanius-api -u lanius-bot -u lanius-web -n 80 --no-pager 2>&1 || true
             curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \

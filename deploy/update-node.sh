@@ -8,6 +8,7 @@
 # 环境变量（均可选）：
 #   LANIUS_REPO          仓库根（默认本脚本上一级）
 #   LANIUS_SKIP_GIT=1    跳过 git fetch/checkout（树已由 tarball/scp 对齐）
+#   LANIUS_SKIP_BUILD=1  跳过 pnpm build（tarball 已含 dist / .output）
 #   LANIUS_SKIP_PLAYWRIGHT=1  跳过 Playwright 检查/安装
 #   LANIUS_SYSTEMCTL=0   不调用 systemctl（仅构建，便于排障）
 #   LANIUS_HEALTH_URL    健康检查 URL（默认 http://127.0.0.1:8787/v1/health）
@@ -74,10 +75,14 @@ if [[ "${LANIUS_SKIP_PLAYWRIGHT:-0}" != "1" ]]; then
   fi
 fi
 
-# API/Bot dist + card-host；Web 单独 Nuxt build（根 package.json build 不含 web）
-pnpm --filter @lanius/render build:card-host
-pnpm build
-pnpm --filter @lanius/web build
+if [[ "${LANIUS_SKIP_BUILD:-0}" == "1" ]]; then
+  echo "[lanius] LANIUS_SKIP_BUILD=1 — 使用 tarball 内已有 dist/.output"
+else
+  # API/Bot dist + card-host；Web 单独 Nuxt build（根 package.json build 不含 web）
+  pnpm --filter @lanius/render build:card-host
+  pnpm build
+  pnpm --filter @lanius/web build
+fi
 
 if [[ ! -f apps/api/dist/index.js ]]; then
   echo "[lanius] missing apps/api/dist/index.js" >&2

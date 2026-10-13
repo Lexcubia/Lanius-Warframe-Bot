@@ -57,8 +57,6 @@ fi
 cd "${REPO_ROOT}"
 chmod +x deploy/*.sh 2>/dev/null || true
 
-NODE_IMAGE="${LANIUS_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"
-
 # 首次：需要完整 Node（含 npm）。残缺 node 也会重装。
 # 机房常连不上 NodeSource/GitHub：默认从 npmmirror 拉官方 linux-x64 包。
 need_full_node=0
@@ -107,42 +105,12 @@ export NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.co
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_DIR}"
 export PLAYWRIGHT_DOWNLOAD_HOST="${PLAYWRIGHT_DOWNLOAD_HOST:-https://npmmirror.com/mirrors/playwright}"
 
-# 构建：优先宿主机 pnpm；失败则 Docker Node 镜像构建（机房友好镜像）
+# 安装依赖并（可选）构建。默认 LANIUS_SKIP_BUILD=1：使用 Actions 预构建产物。
 export LANIUS_REPO="${REPO_ROOT}"
 export LANIUS_SKIP_GIT=1
 export LANIUS_SYSTEMCTL=0
-build_ok=0
-if command -v pnpm >/dev/null 2>&1; then
-  if bash "${REPO_ROOT}/deploy/update-node.sh" "${TAG}"; then
-    build_ok=1
-  else
-    echo "[lanius] host pnpm build failed; trying Docker Node image…"
-  fi
-fi
-if [[ "${build_ok}" != "1" ]]; then
-  if ! command -v docker >/dev/null 2>&1; then
-    echo "[lanius] host build failed and docker unavailable" >&2
-    exit 1
-  fi
-  docker pull "${NODE_IMAGE}"
-  docker run --rm \
-    -v "${REPO_ROOT}:/app" \
-    -v "${PLAYWRIGHT_DIR}:/ms-playwright" \
-    -w /app \
-    -e NPM_CONFIG_REGISTRY \
-    -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
-    -e PLAYWRIGHT_DOWNLOAD_HOST \
-    -e LANIUS_SKIP_GIT=1 \
-    -e LANIUS_SYSTEMCTL=0 \
-    -e LANIUS_SKIP_PLAYWRIGHT="${LANIUS_SKIP_PLAYWRIGHT:-0}" \
-    "${NODE_IMAGE}" \
-    bash -lc '
-      set -euo pipefail
-      corepack enable
-      corepack prepare pnpm@9.15.0 --activate
-      bash deploy/update-node.sh "'"${TAG}"'"
-    '
-fi
+export LANIUS_SKIP_BUILD="${LANIUS_SKIP_BUILD:-1}"
+bash "${REPO_ROOT}/deploy/update-node.sh" "${TAG}"
 
 # 安装 systemd（首次）
 if [[ "$(id -u)" -eq 0 ]]; then
