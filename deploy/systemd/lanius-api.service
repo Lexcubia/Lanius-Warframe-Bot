@@ -1,0 +1,32 @@
+# Lanius API（@lanius/server）systemd 单元。
+# 安装：见 deploy/install-node-services.sh 或 docs/DEPLOY.md
+# 占位符 __LANIUS_REPO__ 由安装脚本替换为仓库根绝对路径。
+
+[Unit]
+Description=Lanius API (@lanius/server)
+Documentation=https://github.com/Lexcubia/Lanius-Warframe-Bot
+After=network-online.target redis-server.service
+Wants=network-online.target
+PartOf=lanius.target
+
+[Service]
+Type=simple
+User=lanius
+Group=lanius
+WorkingDirectory=__LANIUS_REPO__
+Environment=NODE_ENV=production
+# 非密钥：配置根默认即仓库 config/；生产数据目录建议绝对路径写在 config/local/database.yaml
+Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
+ExecStart=/usr/bin/env node apps/api/dist/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+# 日志进 journald：journalctl -u lanius-api -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lanius-api
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target lanius.target

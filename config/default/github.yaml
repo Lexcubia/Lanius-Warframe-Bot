@@ -3,4 +3,7 @@ owner: 'Lexcubia'
 repo: 'Lanius-Warframe-Bot'
 # token: 可选 PAT，写在 local
 deployDir: '/opt/lanius/repo/deploy'
+repoRoot: '/opt/lanius/repo'
+# 生产默认 Node（update-node.sh）；可选 docker（update-image.sh）
+deployMode: 'node'
 composeFile: 'docker-compose.app.yml'

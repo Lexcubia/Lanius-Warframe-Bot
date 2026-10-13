@@ -20,8 +20,8 @@
              （Nuxt / Vue 宿主）
 ```
 
-**生产推荐：** 主体单容器 `lanius-app`（api + web + bot + 内嵌 Redis）+ **旁路 Caddy**（HTTPS，不进主体镜像）。见 `deploy/docker-compose.app.yml`。  
-开发/遗留可继续使用拆分 compose（`deploy/docker-compose.yml`）。  
+**生产默认：** 宿主机 **Node 三进程**（API `dist` + Bot `dist` + Web Nitro `.output`）+ **systemd** + 旁路 Caddy（`deploy/Caddyfile.node`）。见 [DEPLOY.md](./DEPLOY.md)。  
+Docker 单容器 `lanius-app`（`deploy/docker-compose.app.yml`）为**可选**路径，不再作为默认上线方式。  
 后期 Tauri 客户端仍只调 Lanius API，**不**替代 QQ、**不**直连上游。
 
 ## 2. 目标 Monorepo 布局
@@ -54,7 +54,7 @@ lanius-warframe-bot/
 API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/market/items` · `/v1/riven` · `/v1/void-trader` · `/v1/varzia` · `/v1/rotations/{tenet|coda}` · `/v1/subscriptions` · `/v1/push/{tick|ack}` · `/v1/admin/*`（含 **config** / **releases**）。  
 配置：`@lanius/config` 驱动，`config/default` ⊕ `config/local`；Admin 可改并热加载。  
 推送：可查询模块 → SQLite 订阅 → Bot `push/tick`；频率 `on_change|hourly|daily|weekly`。  
-发版：CI 推 GHCR；长期分支 `release` / Admin 选版 → **pull 换版**（不 rebuild）。  
+发版：tag 后可选推 GHCR；长期分支 `release` / Admin 选版 → 默认 **`update-node.sh`（git + build + systemd）**；Docker pull 为可选。  
 指令前导：`commandPrefix` + `commandPrefixPolicy`；接 Agent 时建议 `required`。  
 Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/admin`（公开导航不展示）。  
 **禁止**在未立项时脚手架 Tauri。  
@@ -62,13 +62,13 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
 
 ### 2.1 Web 公开路由（`apps/web`）
 
-| 路由 | 职责 | 主要 API |
-| ---- | ---- | -------- |
-| `/` | **首页看板**：全模块可折叠 + 速跳；市场/紫卡内联搜索 | 世界状态（周期）/ 裂隙 / **入侵** / **午夜电波** / 商人 / 轮换 / 市场 / 紫卡 / 帮助 / 订阅（彼此独立面板） |
-| `/tools` | 工具占位（待开发） | — |
-| `/about` | 关于 | — |
-| `/worldstate` 等 | 旧模块深链页（仍可用，不进主导航）；世界状态页仅周期 | 同前 |
-| `/admin` | 运营控制台（不进公开 nav） | `/v1/admin/*` · 订阅 PATCH |
+| 路由             | 职责                                                 | 主要 API                                                                                                   |
+| ---------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `/`              | **首页看板**：全模块可折叠 + 速跳；市场/紫卡内联搜索 | 世界状态（周期）/ 裂隙 / **入侵** / **午夜电波** / 商人 / 轮换 / 市场 / 紫卡 / 帮助 / 订阅（彼此独立面板） |
+| `/tools`         | 工具占位（待开发）                                   | —                                                                                                          |
+| `/about`         | 关于                                                 | —                                                                                                          |
+| `/worldstate` 等 | 旧模块深链页（仍可用，不进主导航）；世界状态页仅周期 | 同前                                                                                                       |
+| `/admin`         | 运营控制台（不进公开 nav）                           | `/v1/admin/*` · 订阅 PATCH                                                                                 |
 
 主导航：**首页 / 工具 / 关于 / 帮助 / 订阅**（左侧悬浮轨，可收起）。查询类模块集中在首页看板。视觉参考 wf.wiki 轻工具站气质的动漫风（暖底、软阴影、速跳条）。
 
@@ -76,16 +76,16 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
 
 ## 3. 依赖规则
 
-| 包 / 应用             | 可依赖                                                 | 禁止                                         |
-| --------------------- | ------------------------------------------------------ | -------------------------------------------- |
-| `packages/core`       | 无业务应用依赖                                         | 依赖 api/bot/web                             |
-| `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`              | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
-| `packages/ui`         | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app`       | React；假设 `window` 必存在且无适配           |
-| `apps/api` (`@lanius/server`) | `core`；上游 HTTP 客户端                        | 依赖 bot/web；把 QQ SDK 塞进 API             |
-| `apps/bot`            | `@lanius/api`；`qq-official`；可选 `render`            | 直连 WF 上游；依赖 Nuxt/Web                   |
-| `apps/web`            | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）       | 直连上游；依赖 bot 进程；默认 axios           |
-| `qq-official`         | 仅 bot                                                 | 被 api/web 引用                              |
-| `packages/render`     | bot（MVP）；可选 server 管理预览                       | 公开站直接渲染 QQ 卡片                       |
+| 包 / 应用                      | 可依赖                                             | 禁止                                              |
+| ------------------------------ | -------------------------------------------------- | ------------------------------------------------- |
+| `packages/core`                | 无业务应用依赖                                     | 依赖 api/bot/web                                  |
+| `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`                 | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
+| `packages/ui`                  | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app` | React；假设 `window` 必存在且无适配               |
+| `apps/api` (`@lanius/server`)  | `core`；上游 HTTP 客户端                           | 依赖 bot/web；把 QQ SDK 塞进 API                  |
+| `apps/bot`                     | `@lanius/api`；`qq-official`；可选 `render`        | 直连 WF 上游；依赖 Nuxt/Web                       |
+| `apps/web`                     | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）   | 直连上游；依赖 bot 进程；默认 axios               |
+| `qq-official`                  | 仅 bot                                             | 被 api/web 引用                                   |
+| `packages/render`              | bot（MVP）；可选 server 管理预览                   | 公开站直接渲染 QQ 卡片                            |
 
 ## 4. Tauri 可插拔（现期）
 
@@ -96,24 +96,24 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
 
 ## 5. 横切约定
 
-| 项       | 约定                                       | MVP                      |
-| -------- | ------------------------------------------ | ------------------------ |
-| `realm`  | `international` \| `china`                 | 仅实现 international     |
-| `locale` | `zh` \| `en`（`@nuxtjs/i18n`）             | 中英骨架                 |
-| Web UI   | Nuxt UI + Tailwind；Lanius 主题            | 避免默认紫系 AI 审美     |
-| HTTP     | `fetch` via `packages/api`                 | 不默认 axios             |
-| 密钥     | `config.local.yaml` 和/或 DB               | 不以 env 为主存储        |
+| 项       | 约定                                                                                                      | MVP                                |
+| -------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `realm`  | `international` \| `china`                                                                                | 仅实现 international               |
+| `locale` | `zh` \| `en`（`@nuxtjs/i18n`）                                                                            | 中英骨架                           |
+| Web UI   | Nuxt UI + Tailwind；Lanius 主题                                                                           | 避免默认紫系 AI 审美               |
+| HTTP     | `fetch` via `packages/api`                                                                                | 不默认 axios                       |
+| 密钥     | `config.local.yaml` 和/或 DB                                                                              | 不以 env 为主存储                  |
 | **缓存** | **业务 TTL / 上游快照 / 跨进程共享 → Redis**（或同等外部缓存）；进程内 `Map` 仅作本地降级或不可共享的短态 | 编排引入 Redis；API 缓存抽象可插拔 |
-| QQ 回复  | `text` \| `image`                          | 均需支持；图片可降级文本 |
-| Git      | 日常 → `develop`；发布 → `main` + `vX.Y.Z` | 二者禁直推 commit        |
+| QQ 回复  | `text` \| `image`                                                                                         | 均需支持；图片可降级文本           |
+| Git      | 日常 → `develop`；发布 → `main` + `vX.Y.Z`                                                                | 二者禁直推 commit                  |
 
 ### 5.1 缓存边界
 
-| 放入 Redis（或外部缓存） | 可留进程内 |
-| ------------------------ | ---------- |
-| worldstate / WFM 市场 / 紫卡等上游规范化结果 | 单次请求内的临时变量 |
-| 管理配置热读缓存（DB 为源） | QQ `access_token` 极短槽（多实例时也应迁 Redis） |
-| 调用审计的聚合计数、限流计数 | 纯本地调试开关 |
+| 放入 Redis（或外部缓存）                     | 可留进程内                                       |
+| -------------------------------------------- | ------------------------------------------------ |
+| worldstate / WFM 市场 / 紫卡等上游规范化结果 | 单次请求内的临时变量                             |
+| 管理配置热读缓存（DB 为源）                  | QQ `access_token` 极短槽（多实例时也应迁 Redis） |
+| 调用审计的聚合计数、限流计数                 | 纯本地调试开关                                   |
 
 现有 `apps/api` 的 `TtlCache`（内存 Map）视为过渡实现，重整时改为 `CacheStore` 接口 + Redis 适配；Redis 不可用时允许短暂内存降级并在 `/v1/health` 标 `cache=degraded`。
 

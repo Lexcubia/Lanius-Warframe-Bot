@@ -1,0 +1,34 @@
+# Lanius QQ Bot（官方开放平台适配）systemd 单元。
+# 占位符 __LANIUS_REPO__ / __LANIUS_PLAYWRIGHT__ 由安装脚本替换。
+
+[Unit]
+Description=Lanius QQ Bot (@lanius/bot)
+Documentation=https://github.com/Lexcubia/Lanius-Warframe-Bot
+After=network-online.target lanius-api.service
+Wants=network-online.target
+Requires=lanius-api.service
+PartOf=lanius.target
+
+[Service]
+Type=simple
+User=lanius
+Group=lanius
+WorkingDirectory=__LANIUS_REPO__
+Environment=NODE_ENV=production
+Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
+# Playwright Chromium 目录（prepare-playwright.sh / browsers:install）
+Environment=PLAYWRIGHT_BROWSERS_PATH=__LANIUS_PLAYWRIGHT__
+# 无图形、受限用户时如启动失败可设为 1（见 packages/render ensure-browser）
+# Environment=LANIUS_PLAYWRIGHT_NO_SANDBOX=1
+ExecStart=/usr/bin/env node apps/bot/dist/index.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lanius-bot
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target lanius.target

@@ -1,5 +1,6 @@
-# 长期分支 `release`：SSH 自动部署（仅 docker compose pull + up，禁止 build）。
-# 合入前请确保对应 tag 镜像已在 GHCR。
+# 长期分支 `release`：SSH 自动部署（默认 Node：git + pnpm build + systemd）。
+# 可选：仓库 secrets `DEPLOY_RUNTIME=docker` 时回退到 update-image.sh（GHCR pull）。
+# 合入前请确保目标 tag 已存在（Node 路径在机上 checkout 该 tag 并构建）。
 
 name: Deploy release branch
 
@@ -9,58 +10,83 @@ on:
       - release
   workflow_dispatch:
     inputs:
-      image_tag:
-        description: '覆盖 IMAGE_TAG（如 v0.2.0）；默认读仓库 package.json version 加 v 前缀'
+      release_ref:
+        description: 'checkout 的 tag/分支（如 v0.3.1）；默认读仓库 package.json version 加 v 前缀'
         required: false
         type: string
+      runtime:
+        description: 'node（默认）或 docker（可选镜像路径）'
+        required: false
+        type: choice
+        options:
+          - node
+          - docker
+        default: node
 
 permissions:
   contents: read
 
 jobs:
   deploy:
-    name: deploy-release-pull
+    name: deploy-release
     if: github.repository == 'Lexcubia/Lanius-Warframe-Bot'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     environment: production
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve IMAGE_TAG
+      - name: Resolve release ref
         id: meta
         run: |
-          TAG='${{ inputs.image_tag }}'
-          if [ -z "$TAG" ]; then
+          REF='${{ inputs.release_ref }}'
+          if [ -z "$REF" ]; then
             VER="$(node -p "require('./package.json').version")"
-            TAG="v${VER}"
+            REF="v${VER}"
           fi
-          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          RUNTIME='${{ inputs.runtime }}'
+          if [ -z "$RUNTIME" ]; then
+            RUNTIME='node'
+          fi
+          # secrets 可覆盖默认 runtime（workflow_dispatch 优先）
+          echo "ref=${REF}" >> "$GITHUB_OUTPUT"
+          echo "runtime=${RUNTIME}" >> "$GITHUB_OUTPUT"
 
-      - name: Deploy over SSH (pull only)
+      - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          DEPLOY_RUNTIME: ${{ steps.meta.outputs.runtime }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_PORT }}
-          command_timeout: 25m
+          command_timeout: 40m
+          envs: DEPLOY_RUNTIME
           script: |
             set -euo pipefail
             DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
             REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
-            TAG='${{ steps.meta.outputs.tag }}'
+            REF='${{ steps.meta.outputs.ref }}'
+            RUNTIME="${DEPLOY_RUNTIME:-node}"
             cd "${REPO_ROOT}"
+            # 同步长期 release 指针（便于对照）；实际构建以 REF/tag 为准
             git fetch origin release --force || true
-            git reset --hard || true
-            git clean -fd || true
-            git checkout -B release FETCH_HEAD 2>/dev/null || git checkout release 2>/dev/null || true
-            git reset --hard FETCH_HEAD 2>/dev/null || true
+            git fetch --tags --force origin || true
             cd "${DEPLOY_DIR}"
-            export IMAGE_TAG="${TAG}"
-            export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
-            export COMPOSE_FILE=docker-compose.app.yml
-            bash ./update-image.sh "${TAG}"
-            docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
+            if [ "${RUNTIME}" = "docker" ]; then
+              echo "[lanius] optional docker path: update-image.sh ${REF}"
+              export IMAGE_TAG="${REF}"
+              export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
+              export COMPOSE_FILE=docker-compose.app.yml
+              bash ./update-image.sh "${REF}"
+              docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
+            else
+              echo "[lanius] node path: update-node.sh ${REF}"
+              export LANIUS_REPO="${REPO_ROOT}"
+              bash ./update-node.sh "${REF}"
+              journalctl -u lanius-api -u lanius-bot -u lanius-web -n 80 --no-pager 2>&1 || true
+            fi
             curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
+              curl -fsS "http://127.0.0.1:8787/v1/health" || \
               curl -fsS "http://127.0.0.1/api/lanius/v1/health"
