@@ -134,18 +134,15 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   list-style: none;
   margin: 0;
   padding: 0;
+  /* 单列纵向：给足行宽，保证纪元/任务/节点/时间完整显示不省略 */
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
 }
 
 .fissures__row {
-  /*
-   * 卡片内禁止换行；三列等宽（basis 1/3），
-   * 超长节点名以省略号截断，避免撑大容器。
-   */
   box-sizing: border-box;
-  flex: 1 1 calc((100% - 16px) / 3);
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   display: flex;
@@ -153,7 +150,6 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  white-space: nowrap;
   background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
@@ -189,24 +185,16 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  /* 防止长纪元/路径标签把剩余时间挤出容器 */
-  overflow: hidden;
 }
 
 .fissures__era {
   font-size: 13px;
   font-weight: 700;
   color: var(--lanius-brand);
-  /* 过长时优先收缩纪元标签，保证剩余时间完整可见 */
-  flex: 0 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fissures__path {
-  /* 路径标签固定宽度，不收缩、不换行 */
-  flex: 0 0 auto;
   white-space: nowrap;
   font-size: 10px;
   font-weight: 700;
@@ -237,11 +225,8 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   margin: 2px 0 0;
   font-size: 12px;
   color: var(--lanius-text);
+  /* 节点名完整显示：单行优先，不截断 */
   white-space: nowrap;
-  /* 节点名过长时截断而非撑大容器 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
 }
 
 .fissures__remain {
