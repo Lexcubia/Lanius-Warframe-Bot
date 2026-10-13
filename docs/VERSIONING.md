@@ -26,14 +26,15 @@ feature/*  fix/*  docs/*  …
             |
           main       ← 归档 / 已发布快照
             |
-       tag vX.Y.Z    ← Actions：测试 + 推 GHCR（不 SSH）
+       tag vX.Y.Z    ← Actions：可选推 GHCR（不 SSH）
             |
-         release     ← 长期「上线指针」分支；push 触发 pull 换版部署
+         release     ← 长期「上线指针」；push → Node：git + build + systemd
 ```
 
 - **日常功能**合入 `develop`，**不**因每个 PR 打 tag，**不**自动部署。
-- **发布归档**：`develop` → `main`；Actions 按 CHANGELOG 打 **`vX.Y.Z`** 并 `release.yml` **仅推 GHCR**。
-- **上线 / 回退**：更新长期分支 **`release`**（或 Admin 选版 / `deploy/update-image.sh`）→ `docker compose pull && up -d`，**禁止**部署路径 `build`。
+- **发布归档**：`develop` → `main`；Actions 按 CHANGELOG 打 **`vX.Y.Z`**；`release.yml` **可选**推 GHCR（镜像交付降级为可选产物）。
+- **上线 / 回退（默认）**：更新长期分支 **`release`**（或 Admin 选版 / `deploy/update-node.sh`）→ 宿主机 checkout tag → `pnpm build` → systemd 重启。
+- **可选 Docker 路径**：`github.deployMode: docker` 或 deploy workflow 选 `docker` → `update-image.sh`（pull，不 rebuild）。
 - Hotfix：从 tag / `main` 拉 `fix/...` → 合回 `main` 与 `develop`；需要上线时再推进 `release`。
 
 ## CHANGELOG
@@ -49,8 +50,8 @@ feature/*  fix/*  docs/*  …
 1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
 2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
 3. PR：`develop` → `main`（或经 `release/x.y.z`）。
-4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（**仅**构建推 GHCR，无预检）。
-5. 确认 GHCR 镜像就绪后，将 `release` 分支快进到目标提交（或 Admin / `update-image.sh`）完成上线。
+4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（可选推 GHCR，无预检）。
+5. 将 `release` 分支快进到目标提交（或 Admin / `update-node.sh vX.Y.Z`）完成 **Node** 上线；仅当仍用镜像时才需等 GHCR 就绪并走 `update-image.sh`。
 6. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
 
 ## 质量关卡

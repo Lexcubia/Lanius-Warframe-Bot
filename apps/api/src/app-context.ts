@@ -1,6 +1,6 @@
 import type { ConfigDriver } from '@lanius/config';
 import type { SiteDto } from '@lanius/core';
-import type { Logger } from 'pino';
+import type { Logger } from '@lanius/logger';
 
 import type { CacheStore } from './cache/types.js';
 import type { AppConfig } from './config/schema.js';

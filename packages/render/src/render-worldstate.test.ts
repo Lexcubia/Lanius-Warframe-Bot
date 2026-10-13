@@ -5,8 +5,15 @@ import {
   renderFissuresCard,
   renderInvasionsCard,
   renderNightwaveCard,
+  renderVarziaCard,
+  renderVoidTraderCard,
+  renderWeaponRotationCard,
   renderWorldstateCard,
 } from './render-worldstate.js';
+
+/** 1×1 透明 PNG data URL：测图标等待路径，不依赖外网 CDN */
+const TINY_ICON =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
 
 const sampleWorldstate = {
   realm: 'international' as const,
@@ -92,6 +99,18 @@ const sampleWorldstate = {
       defendingFaction: { zh: 'Corpus', en: 'Corpus' },
       completionPct: 42,
       expired: false,
+      attackerReward: {
+        uniqueName: '/Lotus/Types/Items/MiscItems/ResourceNickname',
+        name: { zh: '纳米孢子', en: 'Nano Spores' },
+        iconUrl: TINY_ICON,
+        quantity: 1500,
+      },
+      defenderReward: {
+        uniqueName: '/Lotus/Types/Items/MiscItems/ResourceNickname2',
+        name: { zh: '合金板', en: 'Alloy Plate' },
+        iconUrl: TINY_ICON,
+        quantity: 1,
+      },
     },
   ],
   nightwave: {
@@ -156,6 +175,116 @@ describe('module card renders', () => {
       const png = await renderNightwaveCard({
         locale: 'zh',
         worldstate: sampleWorldstate,
+      });
+      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    },
+    60_000,
+  );
+
+  it(
+    'renders void trader PNG',
+    async () => {
+      const png = await renderVoidTraderCard({
+        locale: 'zh',
+        voidTrader: {
+          character: { zh: '虚空商人', en: 'Void Trader' },
+          node: { zh: 'Larunda（水星）', en: 'Larunda (Mercury)' },
+          active: true,
+          activation: '2026-10-10T10:00:00.000Z',
+          expiry: '2026-10-12T10:00:00.000Z',
+          remainingMs: 86_400_000,
+          inventory: [
+            {
+              uniqueName: '/Lotus/StoreItems/Types/Items/MiscItems/Foo',
+              name: { zh: '测试商品', en: 'Test Wares' },
+              iconUrl: TINY_ICON,
+              ducats: 375,
+              credits: 150_000,
+            },
+          ],
+          fetchedAt: '2026-10-10T12:00:00.000Z',
+        },
+      });
+      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+      expect(png.length).toBeGreaterThan(1000);
+    },
+    60_000,
+  );
+
+  it(
+    'renders varzia PNG',
+    async () => {
+      const png = await renderVarziaCard({
+        locale: 'zh',
+        varzia: {
+          character: { zh: '瓦奇娅', en: 'Varzia' },
+          active: true,
+          remainingMs: 3_600_000,
+          inventory: [
+            {
+              uniqueName: '/Lotus/StoreItems/Types/Recipes/Warframe/Foo',
+              name: { zh: '测试Prime', en: 'Test Prime' },
+              iconUrl: TINY_ICON,
+            },
+          ],
+          fetchedAt: '2026-10-10T12:00:00.000Z',
+        },
+      });
+      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    },
+    60_000,
+  );
+
+  it(
+    'renders tenet rotation PNG',
+    async () => {
+      const png = await renderWeaponRotationCard({
+        locale: 'zh',
+        rotation: {
+          kind: 'tenet',
+          offerings: [
+            {
+              uniqueName: '/Lotus/Weapons/Corpus/LongGuns/TenetFluxRifle',
+              name: { zh: '信条通量步枪', en: 'Tenet Flux Rifle' },
+              iconUrl: TINY_ICON,
+              element: 'magnetic',
+              elementLabel: { zh: '磁力', en: 'Magnetic' },
+              bonusPct: 42.5,
+            },
+          ],
+          periodStart: '2026-10-01T00:00:00.000Z',
+          periodEnd: '2026-10-08T00:00:00.000Z',
+          remainingMs: 172_800_000,
+          fetchedAt: '2026-10-10T12:00:00.000Z',
+        },
+      });
+      expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    },
+    60_000,
+  );
+
+  it(
+    'renders coda rotation PNG',
+    async () => {
+      const png = await renderWeaponRotationCard({
+        locale: 'zh',
+        rotation: {
+          kind: 'coda',
+          offerings: [
+            {
+              uniqueName: '/Lotus/Weapons/Infested/Kitgun/CodaCatabolyst',
+              name: { zh: '终幕催化者', en: 'Coda Catabolyst' },
+              iconUrl: TINY_ICON,
+              element: 'toxin',
+              elementLabel: { zh: '毒素', en: 'Toxin' },
+              bonusPct: 55,
+            },
+          ],
+          periodStart: '2026-10-01T00:00:00.000Z',
+          periodEnd: '2026-10-08T00:00:00.000Z',
+          remainingMs: 172_800_000,
+          fetchedAt: '2026-10-10T12:00:00.000Z',
+        },
       });
       expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     },

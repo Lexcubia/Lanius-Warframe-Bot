@@ -14,7 +14,7 @@
 ## CI（开源）
 
 - PR（含 fork）与推送到 `develop`/`main`：只跑测试，**不使用任何部署 secrets**。
-- 推送本仓库 tag `vX.Y.Z`：构建镜像并部署（维护者流程；贡献者无需配置）。
+- 推送本仓库 tag `vX.Y.Z`：可选推 GHCR；实际上线靠长期分支 `release` → Node `update-node.sh`（维护者流程；贡献者无需配置）。
 
 ## 分支
 

@@ -76,9 +76,7 @@ export async function listGithubReleases(
  * @param github - 配置
  * @returns 摘要列表
  */
-async function listGithubTags(
-  github: ModuleConfigMap['github'],
-): Promise<GithubReleaseSummary[]> {
+async function listGithubTags(github: ModuleConfigMap['github']): Promise<GithubReleaseSummary[]> {
   const url = `https://api.github.com/repos/${github.owner}/${github.repo}/tags?per_page=30`;
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github+json',
@@ -112,15 +110,17 @@ export function getCurrentReleaseInfo(): CurrentReleaseInfo {
   return {
     imageTag: process.env.IMAGE_TAG?.trim() || null,
     packageVersion: readRootPackageVersion(),
-    gitSha: process.env.GIT_SHA?.trim() || null,
+    gitSha: process.env.GIT_SHA?.trim() || readGitHeadSha(),
   };
 }
 
 /**
- * 尝试应用镜像 tag：调用 update-image.sh（需 docker / sock）。
+ * 尝试应用发布 tag。
+ * 默认 `deployMode=node`：执行 `update-node.sh`（git + build + systemd）。
+ * 可选 `docker`：执行 `update-image.sh`（GHCR pull，不 rebuild）。
  *
- * @param github - github 模块（含 deployDir）
- * @param tag - 如 v0.2.0
+ * @param github - github 模块（含 deployDir / deployMode）
+ * @param tag - 如 v0.3.1
  * @returns 执行结果
  */
 export async function applyReleaseTag(
@@ -131,30 +131,50 @@ export async function applyReleaseTag(
   mode: 'executed' | 'manual';
   detail: string;
 }> {
-  const script = resolve(github.deployDir, 'update-image.sh');
+  const deployMode = github.deployMode ?? 'node';
+  if (deployMode === 'docker') {
+    return applyDockerReleaseTag(github, tag);
+  }
+  return applyNodeReleaseTag(github, tag);
+}
+
+/**
+ * Node 生产换版：调用 update-node.sh。
+ *
+ * @param github - github 模块配置
+ * @param tag - SemVer tag（如 v0.3.1）
+ * @returns 执行或手动指引
+ */
+async function applyNodeReleaseTag(
+  github: ModuleConfigMap['github'],
+  tag: string,
+): Promise<{
+  ok: boolean;
+  mode: 'executed' | 'manual';
+  detail: string;
+}> {
+  const script = resolve(github.deployDir, 'update-node.sh');
+  const manual =
+    `手动：cd ${github.deployDir} && bash update-node.sh ${tag}` +
+    `（或 LANIUS_REPO=${github.repoRoot} bash update-node.sh ${tag}）`;
   if (!existsSync(script)) {
     return {
       ok: false,
       mode: 'manual',
-      detail: `缺少 ${script}。请在宿主机执行：IMAGE_TAG=${tag} docker compose -f ${github.composeFile} pull && up -d`,
+      detail: `缺少 ${script}。${manual}`,
     };
   }
 
-  // 无 docker.sock 时脚本会失败，返回手动指令
   try {
-    const { stdout, stderr } = await execFileAsync(
-      'bash',
-      [script, tag],
-      {
-        cwd: github.deployDir,
-        env: {
-          ...process.env,
-          IMAGE_TAG: tag,
-          COMPOSE_FILE: github.composeFile,
-        },
-        timeout: 10 * 60 * 1000,
+    const { stdout, stderr } = await execFileAsync('bash', [script, tag], {
+      cwd: github.deployDir,
+      env: {
+        ...process.env,
+        LANIUS_REPO: github.repoRoot,
       },
-    );
+      // pnpm build + Nuxt 可能较久
+      timeout: 25 * 60 * 1000,
+    });
     return {
       ok: true,
       mode: 'executed',
@@ -165,7 +185,57 @@ export async function applyReleaseTag(
     return {
       ok: false,
       mode: 'manual',
-      detail: `${message}\n手动：cd ${github.deployDir} && IMAGE_TAG=${tag} bash update-image.sh ${tag}`,
+      detail: `${message}\n${manual}`,
+    };
+  }
+}
+
+/**
+ * Docker 可选路径：调用 update-image.sh（需 docker / sock）。
+ *
+ * @param github - github 模块配置
+ * @param tag - 镜像 tag
+ * @returns 执行或手动指引
+ */
+async function applyDockerReleaseTag(
+  github: ModuleConfigMap['github'],
+  tag: string,
+): Promise<{
+  ok: boolean;
+  mode: 'executed' | 'manual';
+  detail: string;
+}> {
+  const script = resolve(github.deployDir, 'update-image.sh');
+  const manual = `手动：cd ${github.deployDir} && IMAGE_TAG=${tag} bash update-image.sh ${tag}`;
+  if (!existsSync(script)) {
+    return {
+      ok: false,
+      mode: 'manual',
+      detail: `缺少 ${script}。${manual}`,
+    };
+  }
+
+  try {
+    const { stdout, stderr } = await execFileAsync('bash', [script, tag], {
+      cwd: github.deployDir,
+      env: {
+        ...process.env,
+        IMAGE_TAG: tag,
+        COMPOSE_FILE: github.composeFile,
+      },
+      timeout: 10 * 60 * 1000,
+    });
+    return {
+      ok: true,
+      mode: 'executed',
+      detail: `${stdout}\n${stderr}`.trim().slice(0, 4000),
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      ok: false,
+      mode: 'manual',
+      detail: `${message}\n${manual}`,
     };
   }
 }
@@ -185,6 +255,36 @@ function readRootPackageVersion(): string | null {
       if (!existsSync(path)) continue;
       const pkg = JSON.parse(readFileSync(path, 'utf8')) as { version?: string };
       if (pkg.version) return pkg.version;
+    } catch {
+      // next
+    }
+  }
+  return null;
+}
+
+/**
+ * 尝试读取当前 git HEAD（Node 生产有 checkout 时可用）。
+ *
+ * @returns 短 SHA 或 null
+ */
+function readGitHeadSha(): string | null {
+  const candidates = [
+    resolve(process.cwd(), '.git/HEAD'),
+    resolve(process.cwd(), '../../.git/HEAD'),
+  ];
+  for (const headPath of candidates) {
+    try {
+      if (!existsSync(headPath)) continue;
+      const head = readFileSync(headPath, 'utf8').trim();
+      if (head.startsWith('ref:')) {
+        const ref = head.slice(4).trim();
+        const refPath = resolve(headPath, '..', ref);
+        if (existsSync(refPath)) {
+          return readFileSync(refPath, 'utf8').trim().slice(0, 12);
+        }
+      } else if (/^[0-9a-f]{7,40}$/i.test(head)) {
+        return head.slice(0, 12);
+      }
     } catch {
       // next
     }

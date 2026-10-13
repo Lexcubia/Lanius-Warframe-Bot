@@ -1,8 +1,9 @@
-# 生产推荐：主体单容器 lanius-app + 旁路 Caddy（HTTPS）。
+# 【可选】Docker 路径：主体单容器 lanius-app + 旁路 Caddy。
+# 生产默认请用 Node + systemd（见 docs/DEPLOY.md、update-node.sh）。
 # 在 deploy/ 目录：
 #   IMAGE_TAG=vX.Y.Z docker compose -f docker-compose.app.yml pull && up -d
 #
-# 日常升级：release 分支 Actions 或 Admin 选版 → update-image.sh（仅 pull，不 build）
+# 日常升级（仅 docker 模式）：update-image.sh（仅 pull，不 build）
 
 name: lanius
 

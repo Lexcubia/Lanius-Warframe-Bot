@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-13
+
+### Added
+
+- 共享包 `@lanius/logger`：统一结构化日志与敏感路径脱敏（API / Bot）。
+- QQ 图片模式模块卡：信条 / 终幕 / 瓦奇娅 / 虚空商人（`packages/ui` + `packages/render`）。
+- Node 生产部署资产：`deploy/systemd/*`、`deploy/update-node.sh`、`deploy/Caddyfile.node`、`deploy/install-node-services.sh`。
+
+### Changed
+
+- **生产默认运行时改为 Node + systemd**（API `dist` / Bot `dist` / Web Nitro `.output`）；长期分支 `release` 部署执行 `update-node.sh`（git checkout + pnpm build + systemd）。
+- 旧 GHCR `update-image.sh` / 单容器 `lanius-app` 降级为可选；Admin「版本」默认 `github.deployMode: node`。
+- QQ Webhook：先 ACK 再异步发信；群面板支持 `force` 重绑；取消远端开发/生产双环境方案（不落地）。
+
+### Fixed
+
+- 指令面板说明按开放平台**加权 ≤30** 截断并提供专用短文案，缓解同步 `30013`（#34）。
+- Markdown 嵌图占位保留 alt 中的 `#Wpx #Hpx` 尺寸标注（#34）。
+- 群聊命令静默：入群强制面板 rebind、退群清缓存、发信失败结构化日志（#35）。
+- 入侵等 CDN 图标截白图：截图等待改为可执行 async IIFE；图标 `loading="eager"`（#36）。
+
 ## [0.3.0] - 2026-10-12
 
 ### Added

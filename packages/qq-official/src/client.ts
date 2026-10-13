@@ -1,9 +1,6 @@
 import type { AccessTokenCache } from './access-token.js';
 import { getAppAccessToken } from './access-token.js';
-import {
-  toQqKeyboardPayload,
-  type QqKeyboardContent,
-} from './keyboard.js';
+import { toQqKeyboardPayload, type QqKeyboardContent } from './keyboard.js';
 
 /**
  * 官方 QQ 下行消息的目标通道描述。
@@ -72,10 +69,7 @@ export class QqOfficialClient {
     this.appSecret = options.appSecret;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.dryRun = options.dryRun ?? false;
-    this.apiBaseUrl = (options.apiBaseUrl ?? 'https://api.bot.qq.com').replace(
-      /\/$/,
-      '',
-    );
+    this.apiBaseUrl = (options.apiBaseUrl ?? 'https://api.bot.qq.com').replace(/\/$/, '');
   }
 
   /**
@@ -245,10 +239,7 @@ export class QqOfficialClient {
         media: { file_info: uploaded.file_info },
       };
       this.applyPassiveReplyFields(body, target);
-      const result = await this.openApiPost<{ id?: string }>(
-        messagePath(target),
-        body,
-      );
+      const result = await this.openApiPost<{ id?: string }>(messagePath(target), body);
       return {
         ok: true,
         messageId: result.id,
@@ -270,10 +261,7 @@ export class QqOfficialClient {
    * @param target - 发送目标
    * @returns 无返回值
    */
-  private applyPassiveReplyFields(
-    body: Record<string, unknown>,
-    target: QqSendTarget,
-  ): void {
+  private applyPassiveReplyFields(body: Record<string, unknown>, target: QqSendTarget): void {
     if (target.msgId) {
       body.msg_id = target.msgId;
       const next = (this.msgSeqByMsgId.get(target.msgId) ?? 0) + 1;
@@ -377,7 +365,19 @@ function filesPath(target: QqSendTarget): string {
  * @returns 去掉链接后的文本
  */
 function stripHttpUrls(content: string): string {
-  return content.replace(/https?:\/\/\S+/gi, '').replace(/[ \t]+\n/g, '\n');
+  // 保留 markdown 图片语法 `![alt](url)` 内的 URL（嵌图需要公网链接），
+  // 其余裸链剥除（群场景限制外链）。占位时必须保留原始 alt（含 `#Wpx #Hpx` 尺寸标注）。
+  const imageUrls: string[] = [];
+  const placeholdered = content.replace(
+    /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/gi,
+    (_m, alt: string, url: string) => {
+      imageUrls.push(url);
+      return `![${alt}](__LANIUS_IMG_${imageUrls.length - 1}__)`;
+    },
+  );
+  const stripped = placeholdered.replace(/https?:\/\/\S+/gi, '').replace(/[ \t]+\n/g, '\n');
+  // 还原图片 URL
+  return stripped.replace(/__LANIUS_IMG_(\d+)__/g, (_m, i: string) => imageUrls[Number(i)] ?? '');
 }
 
 /**
@@ -386,8 +386,6 @@ function stripHttpUrls(content: string): string {
  * @param options - 客户端构造选项
  * @returns 已配置的 `QqOfficialClient`
  */
-export function createQqOfficialClient(
-  options: QqOfficialClientOptions,
-): QqOfficialClient {
+export function createQqOfficialClient(options: QqOfficialClientOptions): QqOfficialClient {
   return new QqOfficialClient(options);
 }

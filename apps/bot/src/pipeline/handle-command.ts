@@ -6,6 +6,9 @@ import {
   renderMarketCard,
   renderNightwaveCard,
   renderRivenCard,
+  renderVarziaCard,
+  renderVoidTraderCard,
+  renderWeaponRotationCard,
   renderWorldstateCard,
 } from '@lanius/render';
 import {
@@ -17,15 +20,14 @@ import {
   type Locale,
   type WorldstateDto,
 } from '@lanius/core';
+import type { Logger } from '@lanius/logger';
 import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
+import { parseQqSendFailure, uploadCardPng } from '@lanius/qq-official';
 
 import type { BotConfig } from '../config.js';
 import type { BotIntent } from '../commands/parse-command.js';
 import { formatHelpText } from '../formatters/help-text.js';
-import {
-  formatMarketText,
-  formatRivenText,
-} from '../formatters/market-text.js';
+import { formatMarketText, formatRivenText } from '../formatters/market-text.js';
 import {
   formatRotationText,
   formatVarziaText,
@@ -60,8 +62,9 @@ export type HandleCommandDeps = {
   apiClient?: ReturnType<typeof createLaniusApiClient>;
   scene?: 'group' | 'c2c';
   userId?: string;
+  /** 可选结构化日志；缺省时降级路径不打业务日志。 */
+  logger?: Logger;
 };
-
 /**
  * 处理已解析的 Bot 意图。
  *
@@ -84,8 +87,7 @@ export async function handleCommand(
     });
   const gateCtx = {
     scene:
-      deps.scene ??
-      (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
+      deps.scene ?? (target.scene === 'group' || target.scene === 'c2c' ? target.scene : 'c2c'),
     targetId: target.targetId,
     userId: deps.userId ?? '',
   };
@@ -174,8 +176,19 @@ export async function handleCommand(
     const text = formatVoidTraderText(envelope.data, locale, {
       stale: envelope.meta.stale,
     });
-    const sent = await deps.qq.sendText(target, text);
-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderVoidTraderCard({
+          voidTrader: envelope.data,
+          locale,
+          stale: envelope.meta.stale,
+        }),
+      label: 'voidTrader',
+    });
   }
 
   if (intent.type === 'varzia') {
@@ -186,8 +199,19 @@ export async function handleCommand(
     const text = formatVarziaText(envelope.data, locale, {
       stale: envelope.meta.stale,
     });
-    const sent = await deps.qq.sendText(target, text);
-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderVarziaCard({
+          varzia: envelope.data,
+          locale,
+          stale: envelope.meta.stale,
+        }),
+      label: 'varzia',
+    });
   }
 
   if (intent.type === 'tenetRotation' || intent.type === 'codaRotation') {
@@ -197,8 +221,18 @@ export async function handleCommand(
       return sendFail(deps, target, locale, envelope.error.message);
     }
     const text = formatRotationText(envelope.data, locale);
-    const sent = await deps.qq.sendText(target, text);
-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWeaponRotationCard({
+          rotation: envelope.data,
+          locale,
+        }),
+      label: kind === 'tenet' ? 'tenetRotation' : 'codaRotation',
+    });
   }
 
   const envelope = await api.getWorldstate(publicQuery);
@@ -281,10 +315,7 @@ export async function handleCommand(
  * @param locale - 语言
  * @returns 摘要串；无条件时为空串
  */
-function summarizeFissureFilter(
-  filter: FissureQueryFilter,
-  locale: Locale,
-): string {
+function summarizeFissureFilter(filter: FissureQueryFilter, locale: Locale): string {
   const zh = locale !== 'en';
   const eraLabel: Record<string, { zh: string; en: string }> = {
     lith: { zh: '古纪', en: 'Lith' },
@@ -345,10 +376,7 @@ async function handleSubscribe(
         ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
         : [
             zh ? '当前订阅：' : 'Subscriptions:',
-            ...rows.map(
-              (row) =>
-                `· ${row.moduleId} (${row.frequency})`,
-            ),
+            ...rows.map((row) => `· ${row.moduleId} (${row.frequency})`),
             zh
               ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
               : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
@@ -359,12 +387,7 @@ async function handleSubscribe(
 
   if (intent.action === 'off') {
     if (!intent.moduleId) {
-      return sendFail(
-        deps,
-        target,
-        locale,
-        zh ? '请指定要退订的模块' : 'module required',
-      );
+      return sendFail(deps, target, locale, zh ? '请指定要退订的模块' : 'module required');
     }
     const envelope = await api.disableSubscription({
       scene,
@@ -374,20 +397,13 @@ async function handleSubscribe(
     if (!envelope.ok) {
       return sendFail(deps, target, locale, envelope.error.message);
     }
-    const msg = zh
-      ? `已退订：${intent.moduleId}`
-      : `Unsubscribed: ${intent.moduleId}`;
+    const msg = zh ? `已退订：${intent.moduleId}` : `Unsubscribed: ${intent.moduleId}`;
     const sent = await deps.qq.sendText(target, msg);
     return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
   }
 
   if (!intent.moduleId) {
-    return sendFail(
-      deps,
-      target,
-      locale,
-      zh ? '请指定要订阅的模块' : 'module required',
-    );
+    return sendFail(deps, target, locale, zh ? '请指定要订阅的模块' : 'module required');
   }
   const frequency = intent.frequency ?? 'on_change';
   const envelope = await api.upsertSubscription({
@@ -434,31 +450,63 @@ async function replyFissuresWithShortcuts(options: {
     if (sent.ok) {
       return 'markdown-fissures';
     }
+    logSendFailure(deps.logger, 'fissures_markdown', sent.detail);
     const fallback = await deps.qq.sendText(target, text);
     if (!fallback.ok) {
+      logSendFailure(deps.logger, 'fissures_text_fallback', fallback.detail);
       return `send-failed:${fallback.detail ?? sent.detail ?? 'unknown'}`;
     }
+    logDegrade(deps.logger, 'info', {
+      path: 'fissures',
+      step: 'markdown_to_text',
+      detail: sent.detail ?? 'markdown send failed',
+    });
     return 'markdown-fallback-text';
   }
 
   try {
     const png = await withTimeout(render(), deps.config.bot.image.renderTimeoutMs);
+    // 优先：Markdown 嵌图单条（需开关开启 + 已配 COS）。
+    const cos = deps.config.bot.cos;
+    if (deps.config.bot.markdownImage !== false && cos) {
+      const uploaded = await uploadCardPng(cos, png);
+      if (uploaded.ok && uploaded.url) {
+        const size = pngImageSize(png) ?? { width: 640, height: 534 };
+        const md = fissureImageMarkdown(locale, uploaded.url, size);
+        const sent = await deps.qq.sendMarkdown(target, md, keyboard);
+        if (sent.ok) {
+          return 'markdown-image+keyboard';
+        }
+        // 嵌图 markdown 失败则落到下方两条路径。
+      } else {
+        logDegrade(deps.logger, 'warn', {
+          path: 'fissures',
+          step: 'cos_upload',
+          detail: uploaded.detail ?? 'unknown',
+        });
+      }
+    }
+    // 回退：QQ 富媒体不支持挂按钮，发图片 + 一条 Markdown 按钮提示。
     const img = await deps.qq.sendImage(target, png);
     if (img.ok) {
-      // 图片消息无法挂按钮：再发一条短 Markdown 承载 keyboard
-      const tip = await deps.qq.sendMarkdown(
-        target,
-        fissureShortcutMarkdownHint(locale),
-        keyboard,
-      );
+      const tip = await deps.qq.sendMarkdown(target, fissureShortcutMarkdownHint(locale), keyboard);
+      if (!tip.ok) {
+        logSendFailure(deps.logger, 'fissures_keyboard_tip', tip.detail);
+      }
       return tip.ok ? 'image+markdown-fissures' : 'image';
     }
+    logSendFailure(deps.logger, 'fissures_image', img.detail);
     const fallback = await deps.qq.sendMarkdown(
       target,
       `${mdBody}\n\n${locale === 'en' ? '_(image send failed; text fallback)_' : '_（图片发送失败，已降级文本）_'}`,
       keyboard,
     );
     if (fallback.ok) {
+      logDegrade(deps.logger, 'info', {
+        path: 'fissures',
+        step: 'image_to_markdown',
+        detail: img.detail ?? 'image send failed',
+      });
       return 'image-fallback-markdown';
     }
     const plain = await deps.qq.sendText(target, text);
@@ -467,7 +515,11 @@ async function replyFissuresWithShortcuts(options: {
       : `send-failed:${plain.detail ?? img.detail ?? 'unknown'}`;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    console.error(`[lanius-bot] image render failed (fissures): ${detail}`);
+    logDegrade(deps.logger, 'error', {
+      path: 'fissures',
+      step: 'render',
+      detail,
+    });
     const fallback = await deps.qq.sendMarkdown(
       target,
       `${mdBody}\n\n${locale === 'en' ? '_(image render failed; text fallback)_' : '_（图片渲染失败，已降级文本）_'}`,
@@ -482,7 +534,6 @@ async function replyFissuresWithShortcuts(options: {
       : `send-failed:${plain.detail ?? detail}`;
   }
 }
-
 /**
  * 将裂隙纯文本转为简 Markdown（保留换行，标题行加粗）。
  *
@@ -497,6 +548,47 @@ function toFissureMarkdown(text: string): string {
   }
   const rest = lines.slice(1);
   return [`**${head.replace(/^\*+|\*+$/g, '').trim()}**`, ...rest].join('\n');
+}
+
+/**
+ * 裂隙 Markdown 嵌图消息体（图片 + 底部快捷键盘的单条消息）。
+ *
+ * 语法：QQ 自定义 Markdown 支持 `![alt #Wpx #Hpx](url)` 内嵌公网图片。
+ *
+ * @param locale - 语言
+ * @param imageUrl - 卡片图公网 URL（COS）
+ * @param size - PNG 宽高（`#Wpx #Hpx`）
+ * @returns Markdown content
+ */
+function fissureImageMarkdown(
+  locale: Locale,
+  imageUrl: string,
+  size: { width: number; height: number },
+): string {
+  const title = locale === 'en' ? 'Void Fissures' : '虚空裂隙';
+  // 官方嵌图语法 `![text #Wpx #Hpx](url)`，标注使用图片原始尺寸。
+  const dim = ` #${size.width}px #${size.height}px`;
+  const hint = locale === 'en' ? 'Tap a button below to filter.' : '点击下方按钮快速筛选。';
+  return `**${title}**\n\n![text${dim}](${imageUrl})\n\n${hint}`;
+}
+
+/**
+ * 读取 PNG 头部 IHDR 的宽高（不依赖完整解码）。
+ *
+ * @param png - PNG 字节
+ * @returns 宽高；非法或读取失败返回 `null`
+ */
+function pngImageSize(png: Buffer): { width: number; height: number } | null {
+  // PNG: 8 字节签名 + IHDR(长度4+类型4+宽4+高4)。宽高于偏移 16/20。
+  if (png.length < 24 || png.readUInt32BE(12) !== 0x49484452) {
+    return null;
+  }
+  const width = png.readUInt32BE(16);
+  const height = png.readUInt32BE(20);
+  if (width <= 0 || height <= 0) {
+    return null;
+  }
+  return { width, height };
 }
 
 /**
@@ -519,6 +611,7 @@ async function replyTextOrImage(options: {
   if (!preferImage) {
     const sent = await deps.qq.sendText(target, text);
     if (!sent.ok) {
+      logSendFailure(deps.logger, label, sent.detail);
       return `send-failed:${sent.detail ?? 'unknown'}`;
     }
     return 'text';
@@ -530,28 +623,39 @@ async function replyTextOrImage(options: {
     if (sent.ok) {
       return 'image';
     }
+    logSendFailure(deps.logger, `${label}_image`, sent.detail);
     const fallback = await deps.qq.sendText(
       target,
       `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
     );
     if (!fallback.ok) {
+      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
       return `send-failed:${fallback.detail ?? 'unknown'}`;
     }
+    logDegrade(deps.logger, 'info', {
+      path: label,
+      step: 'image_to_text',
+      detail: sent.detail ?? 'image send failed',
+    });
     return 'image-fallback-send';
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    console.error(`[lanius-bot] image render failed (${label}): ${detail}`);
+    logDegrade(deps.logger, 'error', {
+      path: label,
+      step: 'render',
+      detail,
+    });
     const fallback = await deps.qq.sendText(
       target,
       `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
     );
     if (!fallback.ok) {
+      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
       return `send-failed:${fallback.detail ?? 'unknown'}`;
     }
     return `image-fallback-render:${detail.slice(0, 160)}`;
   }
 }
-
 /**
  * 发送查询失败文本。
  *
@@ -567,8 +671,7 @@ async function sendFail(
   locale: Locale,
   message: string,
 ): Promise<string> {
-  const fail =
-    locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
+  const fail = locale === 'en' ? `Query failed: ${message}` : `查询失败：${message}`;
   const sent = await deps.qq.sendText(target, fail);
   if (!sent.ok) {
     return `send-failed:${sent.detail ?? 'unknown'}`;
@@ -598,4 +701,52 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
       clearTimeout(timer);
     }
   }
+}
+
+/**
+ * 记录发信失败（含 QQ 错误码分类字段）。
+ *
+ * @param logger - 可选日志器
+ * @param path - 业务路径标签（如 `help` / `fissures_image`）
+ * @param detail - 客户端失败详情
+ * @returns 无返回值
+ */
+function logSendFailure(
+  logger: Logger | undefined,
+  path: string,
+  detail: string | undefined,
+): void {
+  if (!logger) {
+    return;
+  }
+  const failure = parseQqSendFailure(detail);
+  logger.warn(
+    {
+      path,
+      qqCode: failure.code,
+      passiveWindowExceeded: failure.passiveWindowExceeded,
+      rateLimited: failure.rateLimited,
+      detail: failure.summary,
+    },
+    'qq send failed',
+  );
+}
+
+/**
+ * 记录降级路径（渲染失败、COS 失败、图→文等）。
+ *
+ * @param logger - 可选日志器
+ * @param level - 日志级别
+ * @param fields - 路径与详情
+ * @returns 无返回值
+ */
+function logDegrade(
+  logger: Logger | undefined,
+  level: 'info' | 'warn' | 'error',
+  fields: { path: string; step: string; detail: string },
+): void {
+  if (!logger) {
+    return;
+  }
+  logger[level](fields, 'qq reply degraded');
 }

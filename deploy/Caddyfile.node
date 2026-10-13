@@ -1,0 +1,23 @@
+# 宿主机 Node 生产：Caddy 反代本机三进程（非 Docker 服务名）。
+# 用法（系统 Caddy）：
+#   caddy run --config /opt/lanius/repo/deploy/Caddyfile.node
+# 或复制到 /etc/caddy/Caddyfile 并 export DOMAIN=warframe.example.com
+#
+# Docker 可选路径仍用 Caddyfile.app（反代 lanius-app 容器）。
+
+{$DOMAIN:localhost} {
+	encode gzip
+
+	handle /qq/* {
+		reverse_proxy 127.0.0.1:8788
+	}
+
+	handle /api/lanius/* {
+		uri strip_prefix /api/lanius
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:8790
+	}
+}

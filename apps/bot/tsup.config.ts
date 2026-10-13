@@ -8,7 +8,7 @@ export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
   platform: 'node',
-  target: 'node20',
+  target: 'node22',
   clean: true,
   sourcemap: true,
   noExternal: [/^@lanius\//],
@@ -22,5 +22,8 @@ export default defineConfig({
     'vite',
     '@vitejs/plugin-vue',
     'vue',
+    // CJS 第三方依赖：保持 external，避免被卷入 ESM 产物后
+    // 触发 "Dynamic require of \"process\" is not supported"（yaml 等）
+    'yaml',
   ],
 });

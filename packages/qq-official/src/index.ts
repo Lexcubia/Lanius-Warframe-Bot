@@ -21,6 +21,7 @@ export {
   type QqKeyboardContent,
   type QqKeyboardRow,
 } from './keyboard.js';
+export { uploadCardPng, type CosUploadConfig, type CosUploadResult } from './cos-upload.js';
 export {
   syncQqCustomMenu,
   type QqMenuSendItem,
@@ -33,13 +34,10 @@ export {
   truncateWeightedChars,
   type QqOpenApiOptions,
 } from './open-api.js';
-export {
-  loadQqPanelIdStore,
-  saveQqPanelIdStore,
-  type QqPanelIdStore,
-} from './panel-id-store.js';
+export { loadQqPanelIdStore, saveQqPanelIdStore, type QqPanelIdStore } from './panel-id-store.js';
 export {
   ensureQqGroupCommandPanel,
+  forgetQqGroupPanelBinding,
   reclaimOrphanPanels,
   syncQqCommandPanels,
   type QqPanelCommandItem,
@@ -47,6 +45,7 @@ export {
   type SyncQqCommandPanelResult,
   type SyncQqCommandPanelsOptions,
 } from './panels.js';
+export { parseQqSendFailure, type ParsedQqSendFailure } from './parse-send-failure.js';
 export {
   expandBotSecretToEd25519Seed,
   signQqWebhookValidation,
@@ -55,3 +54,4 @@ export {
   type SignQqWebhookValidationOptions,
   type VerifyQqCallbackOptions,
 } from './verify.js';
+export { buildQqWebhookAck, type QqWebhookAckBody } from './webhook-ack.js';
