@@ -51,7 +51,8 @@ defineProps<{
   color: var(--lanius-text);
   font-family: var(--lanius-font-body);
   border: 1px solid var(--lanius-border);
-  border-radius: calc(var(--lanius-card-radius, 16px) + 4px);
+  /* 与 QQ 卡片圆角一致的紧凑圆角 */
+  border-radius: 10px;
   /* 截图保留圆角：溢出裁剪，避免内容超出圆角边界 */
   overflow: hidden;
   box-shadow: 0 10px 28px rgba(62, 78, 110, 0.1);

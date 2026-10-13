@@ -51,9 +51,7 @@ function rewardText(reward: CatalogItemDto | undefined): string {
  */
 const items = computed((): InvasionDto[] => {
   const limit = props.maxItems ?? 8;
-  return props.worldstate.invasions
-    .filter((row) => !row.expired)
-    .slice(0, limit);
+  return props.worldstate.invasions.filter((row) => !row.expired).slice(0, limit);
 });
 
 /**
@@ -61,9 +59,7 @@ const items = computed((): InvasionDto[] => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() =>
-  props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
-);
+const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
 </script>
 
 <template>
@@ -125,7 +121,7 @@ const stamp = computed(() =>
 
 .invasions__row {
   padding: 10px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   transition:

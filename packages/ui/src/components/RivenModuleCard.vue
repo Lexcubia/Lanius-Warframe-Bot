@@ -11,11 +11,7 @@ defineProps<{
 </script>
 
 <template>
-  <QqCardShell
-    :title="locale === 'en' ? 'Riven' : '紫卡'"
-    :subtitle="riven.query"
-    :locale="locale"
-  >
+  <QqCardShell :title="locale === 'en' ? 'Riven' : '紫卡'" :subtitle="riven.query" :locale="locale">
     <p v-if="!riven.results.length" class="empty">
       {{ locale === 'en' ? 'No riven samples.' : '暂无紫卡样本。' }}
     </p>
@@ -50,7 +46,7 @@ defineProps<{
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   padding: 8px 10px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,

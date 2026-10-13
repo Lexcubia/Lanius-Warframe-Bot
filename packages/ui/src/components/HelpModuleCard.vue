@@ -48,7 +48,7 @@ const props = defineProps<{
   border: 1px solid var(--lanius-border);
   border-radius: 8px;
   padding: 8px 10px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,

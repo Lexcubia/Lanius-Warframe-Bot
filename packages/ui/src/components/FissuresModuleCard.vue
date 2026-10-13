@@ -153,7 +153,7 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
   gap: 8px;
   padding: 8px 10px;
   white-space: nowrap;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   transition:

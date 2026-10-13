@@ -50,13 +50,9 @@ function remain(remainingMs: number): string {
   const minutes = Math.floor((totalSec % 3600) / 60);
   const seconds = totalSec % 60;
   if (hours > 0) {
-    return props.locale === 'en'
-      ? `${hours}h ${minutes}m`
-      : `${hours}时 ${minutes}分`;
+    return props.locale === 'en' ? `${hours}h ${minutes}m` : `${hours}时 ${minutes}分`;
   }
-  return props.locale === 'en'
-    ? `${minutes}m ${seconds}s`
-    : `${minutes}分 ${seconds}秒`;
+  return props.locale === 'en' ? `${minutes}m ${seconds}s` : `${minutes}分 ${seconds}秒`;
 }
 
 /**
@@ -115,11 +111,7 @@ function cycleRing(cycle: OpenWorldCycleDto): {
     </p>
 
     <div class="lanius-ws__cycles">
-      <article
-        v-for="cycle in worldstate.cycles"
-        :key="cycle.id"
-        class="lanius-ws__cycle"
-      >
+      <article v-for="cycle in worldstate.cycles" :key="cycle.id" class="lanius-ws__cycle">
         <template v-for="ring in [cycleRing(cycle)]" :key="`${cycle.id}-ring`">
           <h3 :style="{ color: ring.color }">{{ label(cycle.name) }}</h3>
           <div class="lanius-ws__ring-wrap">
@@ -267,7 +259,7 @@ function cycleRing(cycle: OpenWorldCycleDto): {
 }
 
 .lanius-ws__cycle {
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 1rem;
   padding: 0.75rem;

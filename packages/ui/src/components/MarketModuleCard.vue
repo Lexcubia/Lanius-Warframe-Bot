@@ -23,14 +23,8 @@ defineProps<{
       <li v-for="item in market.items" :key="item.urlName" class="row">
         <div class="name">{{ pickLocalized(item.name, locale) }}</div>
         <div class="prices">
-          <span
-            >{{ locale === 'en' ? 'Sell' : '在售' }}
-            {{ item.lowestSell ?? '—' }}</span
-          >
-          <span
-            >{{ locale === 'en' ? 'Buy' : '求购' }}
-            {{ item.highestBuy ?? '—' }}</span
-          >
+          <span>{{ locale === 'en' ? 'Sell' : '在售' }} {{ item.lowestSell ?? '—' }}</span>
+          <span>{{ locale === 'en' ? 'Buy' : '求购' }} {{ item.highestBuy ?? '—' }}</span>
         </div>
       </li>
     </ul>
@@ -54,7 +48,7 @@ defineProps<{
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   padding: 8px 10px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease,
