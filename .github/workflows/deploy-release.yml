@@ -1,6 +1,7 @@
-# 长期分支 `release`：SSH 自动部署（默认 Node）。
-# 机房直连 github.com 常失败：Actions checkout 打 tarball → scp → apply-node-release.sh。
-# 可选 runtime=docker → 旧 update-image.sh（GHCR pull）。
+# 长期分支 `release`：SSH 自动部署（默认 docker 容器热启动）。
+# 机房直连 github.com 常失败：docker 路径 SSH 到服务器执行 deploy/update-container.sh
+# （git 对齐 ref + 重建 card-host/web + docker compose up -d）。
+# 可选 runtime=node 走 systemd 路径（Actions 预构建 dist + apply-node-release.sh）。
 
 name: Deploy release branch
 
@@ -15,13 +16,13 @@ on:
         required: false
         type: string
       runtime:
-        description: 'node（默认）或 docker（可选镜像路径）'
+        description: 'docker（默认，容器热启动）或 node（systemd 路径）'
         required: false
         type: choice
         options:
-          - node
           - docker
-        default: node
+          - node
+        default: docker
 
 permissions:
   contents: read
@@ -44,7 +45,7 @@ jobs:
           fi
           RUNTIME='${{ inputs.runtime }}'
           if [ -z "$RUNTIME" ]; then
-            RUNTIME='node'
+            RUNTIME='docker'
           fi
           echo "ref=${REF}" >> "$GITHUB_OUTPUT"
           echo "runtime=${RUNTIME}" >> "$GITHUB_OUTPUT"
@@ -174,7 +175,7 @@ jobs:
               curl -fsS "http://127.0.0.1:8787/v1/health" || \
               curl -fsS "http://127.0.0.1/api/lanius/v1/health"
 
-      - name: Deploy Docker path over SSH (optional)
+      - name: Deploy Docker hot-start over SSH
         if: steps.ver.outputs.runtime == 'docker'
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -188,10 +189,9 @@ jobs:
             DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
             REF='${{ steps.ver.outputs.ref }}'
             cd "${DEPLOY_DIR}"
-            export IMAGE_TAG="${REF}"
-            export GHCR_IMAGE_PREFIX='ghcr.io/lexcubia/lanius-warframe-bot'
-            export COMPOSE_FILE=docker-compose.app.yml
-            bash ./update-image.sh "${REF}"
+            # 容器热启动：源码挂载进容器，git 对齐到目标 ref 后重建 card-host/web 并重启容器
+            export LANIUS_UPDATE_REF="${REF}"
+            bash ./update-container.sh
             docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
             curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
               curl -fsS "http://127.0.0.1/api/lanius/v1/health"
