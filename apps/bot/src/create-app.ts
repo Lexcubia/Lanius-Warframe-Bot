@@ -1,12 +1,15 @@
 import {
+  buildQqWebhookAck,
   createQqOfficialClient,
   ensureQqGroupCommandPanel,
+  parseQqSendFailure,
   signQqWebhookValidation,
   verifyQqCallback,
   type QqOfficialClient,
+  type QqSendTarget,
 } from '@lanius/qq-official';
+import { hashLogId, type Logger } from '@lanius/logger';
 import { Hono } from 'hono';
-import type { Logger } from 'pino';
 
 import type { BotConfig } from './config.js';
 import { parseCommand } from './commands/parse-command.js';
@@ -24,10 +27,18 @@ import { buildQqPanelSyncOptions } from './qq/panel-sync-options.js';
 export type BotAppBundle = {
   app: Hono;
   qq: QqOfficialClient;
+  /**
+   * 排空后台命令处理（测试用）。
+   * 生产路径在 ACK 后异步跑管线，单测需 await 本方法再断言发信。
+   */
+  drainBackgroundWork: () => Promise<void>;
 };
 
 /**
  * 构建 Bot HTTP 应用（健康检查 + 官方 QQ 回调）。
+ *
+ * 回调路径：验签 → 立即回 OpCode 12 ACK → 后台解析命令并 OpenAPI 发信。
+ * 避免「先跑完整管线再回包」触发平台重推，叠加 msg_id 去重后群内完全无回复。
  *
  * @param config - 已加载的 Bot 配置
  * @param logger - 结构化日志实例
@@ -46,10 +57,10 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
   };
   /** 短时去重：官方可能对同一 msg_id 重推。 */
   const seenMsgIds = new Map<string, number>();
+  /** 后台管线 Promise，供 drainBackgroundWork 排空。 */
+  const backgroundWork = new Set<Promise<void>>();
 
-  app.get('/health', (c) =>
-    c.json({ ok: true, service: 'lanius-bot', dryRun: config.bot.dryRun }),
-  );
+  app.get('/health', (c) => c.json({ ok: true, service: 'lanius-bot', dryRun: config.bot.dryRun }));
 
   app.post(config.qq.callbackPath, async (c) => {
     const rawBody = await c.req.text();
@@ -81,10 +92,7 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
       // 普通事件继续走签名校验
     }
 
-    const verified = verifyQqCallback(
-      { rawBody, headers },
-      { appSecret: config.qq.appSecret },
-    );
+    const verified = verifyQqCallback({ rawBody, headers }, { appSecret: config.qq.appSecret });
     if (!verified && !config.bot.dryRun) {
       logger.warn('qq callback signature rejected');
       return c.json({ ok: false }, 401);
@@ -94,46 +102,67 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
     try {
       payload = JSON.parse(rawBody) as QqInboundPayload;
     } catch {
+      logger.warn('qq callback invalid json');
       return c.json({ ok: false, error: 'invalid_json' }, 400);
     }
 
-    // Webhook 群指令面板需 API 按群 specific 绑定；在入群/@ 时异步 ensure，不阻断回包。
+    // Webhook 群指令面板需 API 按群 specific 绑定；在入群/@ 时异步 ensure，不阻断 ACK。
     const groupOpenid = extractGroupOpenid(payload);
     if (groupOpenid && !config.bot.dryRun) {
-      void ensureQqGroupCommandPanel({
-        ...buildQqPanelSyncOptions(config, qq.getAccessTokenCache()),
-        groupOpenid,
-      })
-        .then((result) => {
-          if (result.action === 'failed') {
-            logger.warn({ result, groupOpenid }, 'qq group panel ensure failed');
-          } else if (result.action !== 'skipped') {
-            logger.info({ result, groupOpenid }, 'qq group panel ensured');
-          }
+      trackBackground(
+        backgroundWork,
+        ensureQqGroupCommandPanel({
+          ...buildQqPanelSyncOptions(config, qq.getAccessTokenCache()),
+          groupOpenid,
         })
-        .catch((error: unknown) => {
-          logger.warn(
-            {
-              err: error instanceof Error ? error.message : String(error),
-              groupOpenid,
-            },
-            'qq group panel ensure error',
-          );
-        });
+          .then((result) => {
+            if (result.action === 'failed') {
+              logger.warn(
+                { result, groupIdHash: hashLogId(groupOpenid) },
+                'qq group panel ensure failed',
+              );
+            } else if (result.action !== 'skipped') {
+              logger.info(
+                { result, groupIdHash: hashLogId(groupOpenid) },
+                'qq group panel ensured',
+              );
+            }
+          })
+          .catch((error: unknown) => {
+            logger.warn(
+              {
+                err: error instanceof Error ? error.message : String(error),
+                groupIdHash: hashLogId(groupOpenid),
+              },
+              'qq group panel ensure error',
+            );
+          }),
+      );
     }
 
     const inbound = parseInboundQqMessage(payload);
     if (!inbound) {
-      return c.json({ ok: true, ignored: true, reason: 'non_message_event' });
+      logger.info({ eventType: payload.t ?? '', op: payload.op }, 'qq event ignored (non_message)');
+      return c.json(buildQqWebhookAck());
     }
+
+    const targetLog = {
+      scene: inbound.target.scene,
+      targetIdHash: hashLogId(inbound.target.targetId),
+      msgIdHash: inbound.target.msgId ? hashLogId(inbound.target.msgId) : undefined,
+      eventType: inbound.eventType,
+      hasMsgId: Boolean(inbound.target.msgId),
+    };
 
     const dedupeKey = inbound.target.msgId;
     if (dedupeKey) {
       const now = Date.now();
       pruneSeenMsgIds(seenMsgIds, now);
       if (seenMsgIds.has(dedupeKey)) {
-        return c.json({ ok: true, ignored: true, reason: 'duplicate_msg' });
+        logger.info({ ...targetLog, reason: 'duplicate_msg' }, 'qq event ignored');
+        return c.json(buildQqWebhookAck());
       }
+      // 先占坑再 ACK：避免平台重推导致双回复；失败路径会尝试主动错误回执。
       seenMsgIds.set(dedupeKey, now);
     }
 
@@ -142,37 +171,168 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
       prefixPolicy: config.bot.commandPrefixPolicy,
     });
     if (!parsed.matched || !parsed.intent) {
-      // prefix_required / no_root：后续可在此接入 Agent（自然语言 → 模块查询）
-      return c.json({
-        ok: true,
-        ignored: true,
-        reason: parsed.reason ?? 'no_command',
-      });
+      logger.info(
+        {
+          ...targetLog,
+          reason: parsed.reason ?? 'no_command',
+          contentLen: inbound.content.length,
+        },
+        'qq event ignored (no_command)',
+      );
+      return c.json(buildQqWebhookAck());
     }
 
-    const outcome = await handleCommand(parsed.intent, inbound.target, {
-      config,
-      qq,
-      prefs,
-      scene:
-        inbound.target.scene === 'group' || inbound.target.scene === 'c2c'
-          ? inbound.target.scene
-          : 'c2c',
-    });
     logger.info(
       {
-        scene: inbound.target.scene,
-        targetId: inbound.target.targetId,
-        eventType: inbound.eventType,
-        outcome,
+        ...targetLog,
         intent: parsed.intent.type,
+        dryRun: config.bot.dryRun,
       },
-      'command handled',
+      'qq command accepted',
     );
-    return c.json({ ok: true, outcome });
+
+    // 关键 ACK 再跑业务：平台回调窗口短；拖到管线结束再回包会重推，叠加去重 → 群内静默。
+    trackBackground(
+      backgroundWork,
+      runCommandPipeline({
+        config,
+        qq,
+        prefs,
+        logger,
+        seenMsgIds,
+        intent: parsed.intent,
+        target: inbound.target,
+        eventType: inbound.eventType,
+        dedupeKey,
+      }),
+    );
+
+    return c.json(buildQqWebhookAck());
   });
 
-  return { app, qq };
+  return {
+    app,
+    qq,
+    drainBackgroundWork: async () => {
+      while (backgroundWork.size > 0) {
+        await Promise.all([...backgroundWork]);
+      }
+    },
+  };
+}
+
+/**
+ * 在后台执行命令管线：成功/失败/异常均打结构化日志；异常时尽量被动回错文案。
+ *
+ * @param ctx - 管线上下文
+ * @returns 无返回值
+ */
+async function runCommandPipeline(ctx: {
+  config: BotConfig;
+  qq: QqOfficialClient;
+  prefs: SessionPrefs;
+  logger: Logger;
+  seenMsgIds: Map<string, number>;
+  intent: NonNullable<ReturnType<typeof parseCommand>['intent']>;
+  target: QqSendTarget;
+  eventType: string;
+  dedupeKey: string | undefined;
+}): Promise<void> {
+  const startedAt = Date.now();
+  const baseFields = {
+    scene: ctx.target.scene,
+    targetIdHash: hashLogId(ctx.target.targetId),
+    msgIdHash: ctx.target.msgId ? hashLogId(ctx.target.msgId) : undefined,
+    eventType: ctx.eventType,
+    intent: ctx.intent.type,
+    hasMsgId: Boolean(ctx.target.msgId),
+  };
+
+  try {
+    const outcome = await handleCommand(ctx.intent, ctx.target, {
+      config: ctx.config,
+      qq: ctx.qq,
+      prefs: ctx.prefs,
+      logger: ctx.logger,
+      scene: ctx.target.scene === 'group' || ctx.target.scene === 'c2c' ? ctx.target.scene : 'c2c',
+    });
+    const durationMs = Date.now() - startedAt;
+    if (outcome.startsWith('send-failed:')) {
+      const detail = outcome.slice('send-failed:'.length);
+      const failure = parseQqSendFailure(detail);
+      ctx.logger.warn(
+        {
+          ...baseFields,
+          outcome,
+          durationMs,
+          qqCode: failure.code,
+          passiveWindowExceeded: failure.passiveWindowExceeded,
+          rateLimited: failure.rateLimited,
+          detail: failure.summary,
+        },
+        'command send failed (user sees silence unless fallback worked)',
+      );
+      return;
+    }
+    ctx.logger.info({ ...baseFields, outcome, durationMs }, 'command handled');
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    ctx.logger.error(
+      { ...baseFields, err: detail, durationMs: Date.now() - startedAt },
+      'command handler threw',
+    );
+    // 释放去重键，便于平台重推时再试（仅在尚未成功发信时有意义）。
+    if (ctx.dedupeKey) {
+      ctx.seenMsgIds.delete(ctx.dedupeKey);
+    }
+    const failText =
+      ctx.prefs.locale === 'en' ? 'Bot error; please try again.' : '机器人处理出错，请稍后重试。';
+    try {
+      const sent = await ctx.qq.sendText(ctx.target, failText);
+      if (!sent.ok) {
+        const failure = parseQqSendFailure(sent.detail);
+        ctx.logger.warn(
+          {
+            ...baseFields,
+            qqCode: failure.code,
+            detail: failure.summary,
+          },
+          'error notice send failed',
+        );
+      } else {
+        ctx.logger.info(baseFields, 'error notice sent after handler throw');
+        if (ctx.dedupeKey) {
+          ctx.seenMsgIds.set(ctx.dedupeKey, Date.now());
+        }
+      }
+    } catch (sendError) {
+      ctx.logger.warn(
+        {
+          ...baseFields,
+          err: sendError instanceof Error ? sendError.message : String(sendError),
+        },
+        'error notice send threw',
+      );
+    }
+  }
+}
+
+/**
+ * 将 Promise 登记到后台集合，便于测试排空与避免未处理 rejection。
+ *
+ * @param work - 后台 Promise 集合
+ * @param promise - 要跟踪的异步任务（允许非 void 返回，统一忽略结果）
+ * @returns 无返回值
+ */
+function trackBackground(work: Set<Promise<void>>, promise: Promise<unknown>): void {
+  const tracked: Promise<void> = Promise.resolve(promise).then(
+    () => undefined,
+    () => undefined,
+  );
+  work.add(tracked);
+  void tracked.finally(() => {
+    work.delete(tracked);
+  });
 }
 
 /**

@@ -44,6 +44,7 @@ export {
   type SyncQqCommandPanelResult,
   type SyncQqCommandPanelsOptions,
 } from './panels.js';
+export { parseQqSendFailure, type ParsedQqSendFailure } from './parse-send-failure.js';
 export {
   expandBotSecretToEd25519Seed,
   signQqWebhookValidation,
@@ -52,3 +53,4 @@ export {
   type SignQqWebhookValidationOptions,
   type VerifyQqCallbackOptions,
 } from './verify.js';
+export { buildQqWebhookAck, type QqWebhookAckBody } from './webhook-ack.js';
