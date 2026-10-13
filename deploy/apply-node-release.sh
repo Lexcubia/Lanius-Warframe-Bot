@@ -60,20 +60,26 @@ chmod +x deploy/*.sh 2>/dev/null || true
 NODE_IMAGE="${LANIUS_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"
 
 # 首次：需要完整 Node（含 npm）。残缺 node 也会重装。
+# 机房常连不上 NodeSource/GitHub：默认从 npmmirror 拉官方 linux-x64 包。
 need_full_node=0
 if ! command -v node >/dev/null 2>&1; then need_full_node=1; fi
 if ! command -v npm >/dev/null 2>&1; then need_full_node=1; fi
 if [[ "${need_full_node}" == "1" ]]; then
-  if [[ "$(id -u)" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
-    echo "[lanius] installing full Node.js 22 via NodeSource…"
-    apt-get update -y
-    apt-get install -y ca-certificates curl gnupg
-    curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
-    apt-get install -y nodejs
-  else
-    echo "[lanius] 缺少完整 Node/npm 且无法 apt 安装" >&2
+  if [[ "$(id -u)" -ne 0 ]]; then
+    echo "[lanius] 缺少完整 Node/npm（需 root 安装）" >&2
     exit 1
   fi
+  NODE_VER="${LANIUS_NODE_VERSION:-22.14.0}"
+  NODE_MIRROR="${LANIUS_NODE_MIRROR:-https://npmmirror.com/mirrors/node}"
+  echo "[lanius] installing Node ${NODE_VER} from ${NODE_MIRROR}…"
+  apt-get update -y >/dev/null 2>&1 || true
+  apt-get install -y ca-certificates curl xz-utils >/dev/null 2>&1 || true
+  curl -fsSL "${NODE_MIRROR}/v${NODE_VER}/node-v${NODE_VER}-linux-x64.tar.xz" -o /tmp/lanius-node.tar.xz
+  tar -xJf /tmp/lanius-node.tar.xz -C /usr/local --strip-components=1
+  rm -f /tmp/lanius-node.tar.xz
+  hash -r || true
+  node -v
+  npm -v
 fi
 # pnpm：corepack → npm -g → 官方安装脚本
 if command -v corepack >/dev/null 2>&1; then
