@@ -70,9 +70,20 @@ if ! command -v node >/dev/null 2>&1; then
     exit 1
   fi
 fi
-corepack enable >/dev/null 2>&1 || true
+# 部分精简 Node 包无 corepack：优先 corepack，否则 npm -g pnpm
+if command -v corepack >/dev/null 2>&1; then
+  corepack enable >/dev/null 2>&1 || true
+  if ! command -v pnpm >/dev/null 2>&1; then
+    corepack prepare pnpm@9.15.0 --activate || true
+  fi
+fi
 if ! command -v pnpm >/dev/null 2>&1; then
-  corepack prepare pnpm@9.15.0 --activate
+  echo "[lanius] installing pnpm via npm -g…"
+  npm install -g pnpm@9.15.0
+fi
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "[lanius] pnpm 仍不可用" >&2
+  exit 1
 fi
 if [[ "$(id -u)" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
   if ! command -v redis-server >/dev/null 2>&1 && ! systemctl cat redis-server >/dev/null 2>&1; then
