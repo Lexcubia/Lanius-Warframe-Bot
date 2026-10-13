@@ -52,7 +52,7 @@ const CARD_ROOT_SELECTOR = '[data-lanius-card-root]';
  */
 function cardWidthFor(kind: CardKind): number {
   if (kind === 'weaponRotation') {
-    return 720;
+    return 560;
   }
   return laniusTokens.card.width;
 }
