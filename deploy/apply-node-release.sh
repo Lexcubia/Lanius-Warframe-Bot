@@ -57,33 +57,38 @@ fi
 cd "${REPO_ROOT}"
 chmod +x deploy/*.sh 2>/dev/null || true
 
-# 首次：尽量自动装 Node 22 + Redis（Debian/Ubuntu）；失败则明确报错
-if ! command -v node >/dev/null 2>&1; then
+NODE_IMAGE="${LANIUS_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"
+
+# 首次：需要完整 Node（含 npm）。残缺 node 也会重装。
+need_full_node=0
+if ! command -v node >/dev/null 2>&1; then need_full_node=1; fi
+if ! command -v npm >/dev/null 2>&1; then need_full_node=1; fi
+if [[ "${need_full_node}" == "1" ]]; then
   if [[ "$(id -u)" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
-    echo "[lanius] installing Node.js 22 via NodeSource…"
+    echo "[lanius] installing full Node.js 22 via NodeSource…"
     apt-get update -y
     apt-get install -y ca-certificates curl gnupg
     curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
     apt-get install -y nodejs
   else
-    echo "[lanius] Node 未安装且无法自动安装（需 root + apt）" >&2
+    echo "[lanius] 缺少完整 Node/npm 且无法 apt 安装" >&2
     exit 1
   fi
 fi
-# 部分精简 Node 包无 corepack：优先 corepack，否则 npm -g pnpm
+# pnpm：corepack → npm -g → 官方安装脚本
 if command -v corepack >/dev/null 2>&1; then
   corepack enable >/dev/null 2>&1 || true
-  if ! command -v pnpm >/dev/null 2>&1; then
-    corepack prepare pnpm@9.15.0 --activate || true
-  fi
+  corepack prepare pnpm@9.15.0 --activate 2>/dev/null || true
 fi
-if ! command -v pnpm >/dev/null 2>&1; then
+if ! command -v pnpm >/dev/null 2>&1 && command -v npm >/dev/null 2>&1; then
   echo "[lanius] installing pnpm via npm -g…"
   npm install -g pnpm@9.15.0
 fi
 if ! command -v pnpm >/dev/null 2>&1; then
-  echo "[lanius] pnpm 仍不可用" >&2
-  exit 1
+  echo "[lanius] installing pnpm via get.pnpm.io…"
+  curl -fsSL https://get.pnpm.io/install.sh | SHELL="$(command -v bash)" bash -
+  export PNPM_HOME="${PNPM_HOME:-$HOME/.local/share/pnpm}"
+  export PATH="${PNPM_HOME}:${PATH}"
 fi
 if [[ "$(id -u)" -eq 0 ]] && command -v apt-get >/dev/null 2>&1; then
   if ! command -v redis-server >/dev/null 2>&1 && ! systemctl cat redis-server >/dev/null 2>&1; then
@@ -96,11 +101,42 @@ export NPM_CONFIG_REGISTRY="${NPM_CONFIG_REGISTRY:-https://registry.npmmirror.co
 export PLAYWRIGHT_BROWSERS_PATH="${PLAYWRIGHT_DIR}"
 export PLAYWRIGHT_DOWNLOAD_HOST="${PLAYWRIGHT_DOWNLOAD_HOST:-https://npmmirror.com/mirrors/playwright}"
 
-# 树已由 tarball 对齐；跳过 git checkout
+# 构建：优先宿主机 pnpm；失败则 Docker Node 镜像构建（机房友好镜像）
 export LANIUS_REPO="${REPO_ROOT}"
 export LANIUS_SKIP_GIT=1
 export LANIUS_SYSTEMCTL=0
-bash "${REPO_ROOT}/deploy/update-node.sh" "${TAG}"
+build_ok=0
+if command -v pnpm >/dev/null 2>&1; then
+  if bash "${REPO_ROOT}/deploy/update-node.sh" "${TAG}"; then
+    build_ok=1
+  else
+    echo "[lanius] host pnpm build failed; trying Docker Node image…"
+  fi
+fi
+if [[ "${build_ok}" != "1" ]]; then
+  if ! command -v docker >/dev/null 2>&1; then
+    echo "[lanius] host build failed and docker unavailable" >&2
+    exit 1
+  fi
+  docker pull "${NODE_IMAGE}"
+  docker run --rm \
+    -v "${REPO_ROOT}:/app" \
+    -v "${PLAYWRIGHT_DIR}:/ms-playwright" \
+    -w /app \
+    -e NPM_CONFIG_REGISTRY \
+    -e PLAYWRIGHT_BROWSERS_PATH=/ms-playwright \
+    -e PLAYWRIGHT_DOWNLOAD_HOST \
+    -e LANIUS_SKIP_GIT=1 \
+    -e LANIUS_SYSTEMCTL=0 \
+    -e LANIUS_SKIP_PLAYWRIGHT="${LANIUS_SKIP_PLAYWRIGHT:-0}" \
+    "${NODE_IMAGE}" \
+    bash -lc '
+      set -euo pipefail
+      corepack enable
+      corepack prepare pnpm@9.15.0 --activate
+      bash deploy/update-node.sh "'"${TAG}"'"
+    '
+fi
 
 # 安装 systemd（首次）
 if [[ "$(id -u)" -eq 0 ]]; then
