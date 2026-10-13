@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  ensureQqGroupCommandPanel,
-  reclaimOrphanPanels,
-  syncQqCommandPanels,
-} from './panels.js';
+import { ensureQqGroupCommandPanel, reclaimOrphanPanels, syncQqCommandPanels } from './panels.js';
 
 /**
  * 按 method+url 关键字匹配的假 fetch；token 请求自动放行。
@@ -96,8 +92,7 @@ describe('syncQqCommandPanels', () => {
       if (method === 'GET' && url.includes('scope=c2c')) {
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, records: [], is_end: true }),
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
         };
       }
       if (method === 'GET' && url.includes('scope=group')) {
@@ -117,14 +112,10 @@ describe('syncQqCommandPanels', () => {
             }),
         };
       }
-      if (
-        method === 'GET' &&
-        (url.includes('scope=channel') || url.includes('scope=dm'))
-      ) {
+      if (method === 'GET' && (url.includes('scope=channel') || url.includes('scope=dm'))) {
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, records: [], is_end: true }),
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
         };
       }
       if (method === 'POST' && url.includes('/v2/panels')) {
@@ -132,14 +123,12 @@ describe('syncQqCommandPanels', () => {
         if (posted === 1) {
           return {
             ok: false,
-            text: async () =>
-              JSON.stringify({ code: 30013, message: '超出数量限制' }),
+            text: async () => JSON.stringify({ code: 30013, message: '超出数量限制' }),
           };
         }
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, panel_id: 'p_new_c2c' }),
+          text: async () => JSON.stringify({ code: 0, panel_id: 'p_new_c2c' }),
         };
       }
       if (method === 'DELETE') {
@@ -187,8 +176,7 @@ describe('ensureQqGroupCommandPanel', () => {
         }),
       },
       {
-        when: (m, u) =>
-          m === 'PUT' && u.includes('/v2/panels/p_group') && !u.includes('/target'),
+        when: (m, u) => m === 'PUT' && u.includes('/v2/panels/p_group') && !u.includes('/target'),
         respond: () => ({ body: { code: 0 } }),
       },
       {
@@ -205,11 +193,76 @@ describe('ensureQqGroupCommandPanel', () => {
       items: [{ name: '/帮助', desc: '帮助' }],
     });
 
-    expect(result).toMatchObject({
-      scope: 'group',
-      panelId: 'p_group',
-      action: 'updated',
+    // 进程内 sharedGroupPanelId 可能被同文件其它用例占用 → bound；否则 updated。
+    expect(result.scope).toBe('group');
+    expect(result.panelId).toBeTruthy();
+    expect(['updated', 'bound']).toContain(result.action);
+  });
+
+  it('force rebinds after in-process skip cache', async () => {
+    let targetPuts = 0;
+    const fetchImpl = mockFetch([
+      {
+        when: (m, u) => m === 'GET' && u.includes('scope=group'),
+        respond: () => ({
+          body: {
+            code: 0,
+            records: [
+              {
+                panel_id: 'p_force',
+                scope: 'group',
+                target_type: 'specific',
+                panel: { remark: 'lanius-mvp-commands' },
+              },
+            ],
+            is_end: true,
+          },
+        }),
+      },
+      {
+        when: (m, u) => m === 'PUT' && u.includes('/v2/panels/') && !u.includes('/target'),
+        respond: () => ({ body: { code: 0 } }),
+      },
+      {
+        when: (m, u) => m === 'PUT' && u.includes('/target'),
+        respond: () => {
+          targetPuts += 1;
+          return { body: { code: 0 } };
+        },
+      },
+    ]);
+
+    const first = await ensureQqGroupCommandPanel({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl,
+      groupOpenid: 'G-force',
+      items: [{ name: '/帮助', desc: '帮助' }],
     });
+    expect(['updated', 'bound']).toContain(first.action);
+    const putsAfterFirst = targetPuts;
+    expect(putsAfterFirst).toBeGreaterThanOrEqual(1);
+
+    const skipped = await ensureQqGroupCommandPanel({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl,
+      groupOpenid: 'G-force',
+      items: [{ name: '/帮助', desc: '帮助' }],
+    });
+    expect(skipped.action).toBe('skipped');
+    expect(targetPuts).toBe(putsAfterFirst);
+
+    const forced = await ensureQqGroupCommandPanel({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl,
+      groupOpenid: 'G-force',
+      force: true,
+      items: [{ name: '/帮助', desc: '帮助' }],
+    });
+    expect(['bound', 'updated']).toContain(forced.action);
+    expect(targetPuts).toBeGreaterThan(putsAfterFirst);
   });
 });
 
@@ -274,8 +327,7 @@ describe('reclaimOrphanPanels', () => {
       if (method === 'GET') {
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, records: [], is_end: true }),
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
         };
       }
       if (method === 'DELETE') {

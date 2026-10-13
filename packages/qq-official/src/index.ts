@@ -37,6 +37,7 @@ export {
 export { loadQqPanelIdStore, saveQqPanelIdStore, type QqPanelIdStore } from './panel-id-store.js';
 export {
   ensureQqGroupCommandPanel,
+  forgetQqGroupPanelBinding,
   reclaimOrphanPanels,
   syncQqCommandPanels,
   type QqPanelCommandItem,

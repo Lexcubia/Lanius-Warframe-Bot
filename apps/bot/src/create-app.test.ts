@@ -117,4 +117,37 @@ describe('createBotApp webhook', () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toMatchObject({ op: 12 });
   });
+
+  it('ACKs group lifecycle events without running command pipeline', async () => {
+    const logger = createLaniusLogger({ service: 'lanius-bot-test', level: 'silent' });
+    const { app, qq, drainBackgroundWork } = createBotApp(sampleConfig(), logger);
+    const sendText = vi.spyOn(qq, 'sendText');
+
+    const add = await app.request('/qq/callback', {
+      method: 'POST',
+      body: JSON.stringify({
+        op: 0,
+        t: 'GROUP_ADD_ROBOT',
+        d: { group_openid: 'group-readd' },
+      }),
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(add.status).toBe(200);
+    expect(await add.json()).toMatchObject({ op: 12 });
+
+    const del = await app.request('/qq/callback', {
+      method: 'POST',
+      body: JSON.stringify({
+        op: 0,
+        t: 'GROUP_DEL_ROBOT',
+        d: { group_openid: 'group-readd' },
+      }),
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(del.status).toBe(200);
+    expect(await del.json()).toMatchObject({ op: 12 });
+
+    await drainBackgroundWork();
+    expect(sendText).not.toHaveBeenCalled();
+  });
 });

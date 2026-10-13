@@ -2,6 +2,7 @@ import {
   buildQqWebhookAck,
   createQqOfficialClient,
   ensureQqGroupCommandPanel,
+  forgetQqGroupPanelBinding,
   parseQqSendFailure,
   signQqWebhookValidation,
   verifyQqCallback,
@@ -16,6 +17,7 @@ import { parseCommand } from './commands/parse-command.js';
 import { handleCommand, type SessionPrefs } from './pipeline/handle-command.js';
 import {
   extractGroupOpenid,
+  isQqGroupLifecycleEvent,
   parseInboundQqMessage,
   type QqInboundPayload,
 } from './qq/parse-inbound-event.js';
@@ -106,8 +108,23 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
       return c.json({ ok: false, error: 'invalid_json' }, 400);
     }
 
-    // Webhook 群指令面板需 API 按群 specific 绑定；在入群/@ 时异步 ensure，不阻断 ACK。
+    // 群生命周期：踢群清缓存、重新拉入强制面板 rebind、主动通知开关单独打日志。
+    // 注意：面板绑定不阻断命令回复；踢出再加能恢复更吻合平台侧群关系/权限刷新。
+    const eventType = payload.t ?? '';
     const groupOpenid = extractGroupOpenid(payload);
+    if (groupOpenid && isQqGroupLifecycleEvent(eventType)) {
+      handleGroupLifecycleEvent({
+        eventType,
+        groupOpenid,
+        config,
+        qq,
+        logger,
+        backgroundWork,
+      });
+      return c.json(buildQqWebhookAck());
+    }
+
+    // Webhook 群指令面板需 API 按群 specific 绑定；在 @ 消息时异步 ensure，不阻断 ACK。
     if (groupOpenid && !config.bot.dryRun) {
       trackBackground(
         backgroundWork,
@@ -142,7 +159,7 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
 
     const inbound = parseInboundQqMessage(payload);
     if (!inbound) {
-      logger.info({ eventType: payload.t ?? '', op: payload.op }, 'qq event ignored (non_message)');
+      logger.info({ eventType, op: payload.op }, 'qq event ignored (non_message)');
       return c.json(buildQqWebhookAck());
     }
 
@@ -219,6 +236,115 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
       }
     },
   };
+}
+
+/**
+ * 处理群生命周期事件：日志 + 踢群清面板缓存 + 入群强制 rebind。
+ *
+ * @param ctx - 事件与依赖
+ * @returns 无返回值
+ */
+function handleGroupLifecycleEvent(ctx: {
+  eventType: string;
+  groupOpenid: string;
+  config: BotConfig;
+  qq: QqOfficialClient;
+  logger: Logger;
+  backgroundWork: Set<Promise<void>>;
+}): void {
+  const groupIdHash = hashLogId(ctx.groupOpenid);
+  const fields = { eventType: ctx.eventType, groupIdHash };
+
+  if (ctx.eventType === 'GROUP_DEL_ROBOT') {
+    const cleared = forgetQqGroupPanelBinding(ctx.groupOpenid);
+    ctx.logger.info({ ...fields, panelCacheCleared: cleared }, 'qq group membership removed');
+    return;
+  }
+
+  if (ctx.eventType === 'GROUP_MSG_REJECT') {
+    // 官方语义为关闭「主动消息/通知」；被动 @ 回复一般仍可用，但需可观测。
+    ctx.logger.warn(fields, 'qq group proactive notify rejected by admin');
+    return;
+  }
+
+  if (ctx.eventType === 'GROUP_MSG_RECEIVE') {
+    ctx.logger.info(fields, 'qq group proactive notify enabled by admin');
+    if (ctx.config.bot.dryRun) {
+      return;
+    }
+    trackBackground(
+      ctx.backgroundWork,
+      ensurePanelForGroup({
+        config: ctx.config,
+        qq: ctx.qq,
+        logger: ctx.logger,
+        groupOpenid: ctx.groupOpenid,
+        force: false,
+      }),
+    );
+    return;
+  }
+
+  // GROUP_ADD_ROBOT：重新拉入时强制面板关联（进程内可能仍标为已绑定）。
+  ctx.logger.info(fields, 'qq group membership added');
+  if (ctx.config.bot.dryRun) {
+    forgetQqGroupPanelBinding(ctx.groupOpenid);
+    return;
+  }
+  trackBackground(
+    ctx.backgroundWork,
+    ensurePanelForGroup({
+      config: ctx.config,
+      qq: ctx.qq,
+      logger: ctx.logger,
+      groupOpenid: ctx.groupOpenid,
+      force: true,
+    }),
+  );
+}
+
+/**
+ * 异步 ensure 群指令面板并打成功/失败日志。
+ *
+ * @param ctx - 配置与群 openid
+ * @returns 无返回值
+ */
+async function ensurePanelForGroup(ctx: {
+  config: BotConfig;
+  qq: QqOfficialClient;
+  logger: Logger;
+  groupOpenid: string;
+  force: boolean;
+}): Promise<void> {
+  try {
+    const result = await ensureQqGroupCommandPanel({
+      ...buildQqPanelSyncOptions(ctx.config, ctx.qq.getAccessTokenCache()),
+      groupOpenid: ctx.groupOpenid,
+      force: ctx.force,
+    });
+    if (result.action === 'failed') {
+      ctx.logger.warn(
+        { result, groupIdHash: hashLogId(ctx.groupOpenid), force: ctx.force },
+        'qq group panel ensure failed',
+      );
+      return;
+    }
+    if (result.action !== 'skipped') {
+      ctx.logger.info(
+        { result, groupIdHash: hashLogId(ctx.groupOpenid), force: ctx.force },
+        'qq group panel ensured',
+      );
+    }
+  } catch (error: unknown) {
+    ctx.logger.warn(
+      {
+        err: error instanceof Error ? error.message : String(error),
+        groupIdHash: hashLogId(ctx.groupOpenid),
+        force: ctx.force,
+      },
+      'qq group panel ensure error',
+    );
+  }
 }
 
 /**
