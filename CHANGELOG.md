@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **生产默认运行时改为 Node + systemd**（API `dist` / Bot `dist` / Web Nitro `.output`）；新增 `deploy/systemd/*`、`deploy/update-node.sh`、`deploy/Caddyfile.node`、`deploy/install-node-services.sh`。
+- 长期分支 `release` 部署改为 SSH 执行 `update-node.sh`（git checkout + pnpm build + systemd）；旧 GHCR `update-image.sh` / 单容器 `lanius-app` 降级为可选。
+- Admin「版本」默认 `github.deployMode: node`；可选 `docker` 仍调用 `update-image.sh`。
+- 部署文档与版本策略改为 Node 优先；取消「远端开发/生产双环境 / 子域名切换」方案（不落地）。
+
 ## [0.3.0] - 2026-10-12
 
 ### Added

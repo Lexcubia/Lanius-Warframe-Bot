@@ -149,13 +149,21 @@ export const WebModuleSchema = z.object({
 
 /**
  * GitHub 版本列表（Admin 选版）；token 可选提高限额。
+ * 生产默认 `deployMode=node`（git + pnpm build + systemd）；`docker` 为可选镜像路径。
  */
 export const GithubModuleSchema = z.object({
   owner: z.string().default('Lexcubia'),
   repo: z.string().default('Lanius-Warframe-Bot'),
   token: z.string().optional(),
-  /** compose 工程目录（容器内或宿主机路径，供 update 脚本） */
+  /** 升级脚本所在目录（宿主机 `deploy/`） */
   deployDir: z.string().default('/opt/lanius/repo/deploy'),
+  /** 仓库根（Node 升级脚本 `LANIUS_REPO`；默认由 deployDir 上一级推断） */
+  repoRoot: z.string().default('/opt/lanius/repo'),
+  /**
+   * 选版执行路径：`node` → update-node.sh；`docker` → update-image.sh。
+   */
+  deployMode: z.enum(['node', 'docker']).default('node'),
+  /** 仅 docker 模式使用的 compose 文件名 */
   composeFile: z.string().default('docker-compose.app.yml'),
 });
 
@@ -261,7 +269,9 @@ export const MODULE_FIELD_META: Record<ConfigModuleId, Record<string, FieldMeta>
     owner: {},
     repo: {},
     deployDir: { description: '宿主机 deploy 目录' },
-    composeFile: {},
+    repoRoot: { description: '仓库根（Node 升级用）' },
+    deployMode: { description: 'node | docker（生产默认 node）' },
+    composeFile: { description: '仅 docker 模式的 compose 文件' },
   },
 };
 

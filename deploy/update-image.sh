@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# 按 tag pull 换版并 up（禁止 build）。Admin / release 分支部署共用。
+# 【可选 Docker 路径】按 tag pull 换版并 up（禁止 build）。
+# 生产默认请用 update-node.sh。仅当 github.deployMode=docker 或
+# deploy-release runtime=docker 时使用本脚本。
 set -euo pipefail
 
 TAG="${1:-${IMAGE_TAG:-}}"

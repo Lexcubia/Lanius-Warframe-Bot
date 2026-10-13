@@ -1,6 +1,6 @@
 # 已停用：develop 不再远程 build/部署。
-# 请将稳定版本推到长期分支 `release`，由 deploy-release.yml 执行 pull 换版；
-# 或使用 Admin「版本」页 / 宿主机 update-image.sh。
+# 请将稳定版本推到长期分支 `release`，由 deploy-release.yml 执行 Node 换版；
+# 或使用 Admin「版本」页 / 宿主机 update-node.sh（Docker 可选 update-image.sh）。
 
 name: Deploy develop (disabled)
 

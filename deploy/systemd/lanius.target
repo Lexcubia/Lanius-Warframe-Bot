@@ -1,0 +1,7 @@
+# 一次性启停三个 Lanius 应用进程（不含 Redis / Caddy）。
+# systemctl start lanius.target
+# systemctl stop lanius.target
+
+[Unit]
+Description=Lanius Warframe Bot (API + Bot + Web)
+Wants=lanius-api.service lanius-bot.service lanius-web.service

@@ -1,6 +1,7 @@
-# 部署指南（开源：手动 + Docker）
+# 部署指南（生产默认：Node + systemd）
 
-Lanius 面向社区自托管。生产推荐 **Docker 单容器 `lanius-app` + 旁路 Caddy**；也可用纯 Node 手动部署。
+Lanius 面向社区自托管。**生产默认**为：git checkout/tag → `pnpm build` → **Node 进程**（systemd）+ 旁路 Caddy。  
+Docker 单容器 `lanius-app` 仍可用，但已降级为**可选**路径（见文末 §B）。
 
 ## 架构摘要
 
@@ -8,145 +9,168 @@ Lanius 面向社区自托管。生产推荐 **Docker 单容器 `lanius-app` + �
 Internet
    │
    ▼
- Caddy (:80/:443)                 ← deploy/Caddyfile.app
-   ├─ /qq/*           → lanius-app:8788
-   ├─ /api/lanius/*   → lanius-app:8787
-   └─ /*              → lanius-app:8790
-                              └─ 内嵌 Redis + SQLite(/data)
+ Caddy (:80/:443)                 ← deploy/Caddyfile.node（系统 Caddy）
+   ├─ /qq/*           → 127.0.0.1:8788   (lanius-bot)
+   ├─ /api/lanius/*   → 127.0.0.1:8787   (lanius-api，strip 前缀)
+   └─ /*              → 127.0.0.1:8790   (lanius-web Nitro .output)
+                              ├─ Redis（本机 redis-server，可选）
+                              └─ SQLite（config database.sqlitePath）
 ```
 
-配置：`config/default`（回退）+ `config/local`（可写，Admin 热更新）。见 [config/README.md](../config/README.md)。
+配置：`config/default`（回退）+ `config/local`（可写，Admin 热更新）。见 [config/README.md](../config/README.md)。  
+**密钥只放配置文件/DB**，不要写进仓库或环境变量主存储。
 
 ## 发版与自动部署（维护者）
 
-| 事件 | 行为 |
-| --- | --- |
-| PR / `develop` | 仅 [ci.yml](../.github/workflows/ci.yml) |
-| tag `v*` / `main` auto-tag | [release.yml](../.github/workflows/release.yml)：测试 + **推 GHCR**（含 `lanius-app`），**不 SSH** |
-| 长期分支 **`release`** push | [deploy-release.yml](../.github/workflows/deploy-release.yml)：SSH → **`update-image.sh`（pull + up，禁止 build）** |
-| Admin「版本」 | 拉 GitHub Releases/tags，同样走 pull 换版 |
+| 事件                        | 行为                                                                                                               |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| PR / `develop`              | 仅 [ci.yml](../.github/workflows/ci.yml)                                                                           |
+| tag `v*` / `main` auto-tag  | [release.yml](../.github/workflows/release.yml)：推 **GHCR（可选镜像产物）**，**不 SSH**                           |
+| 长期分支 **`release`** push | [deploy-release.yml](../.github/workflows/deploy-release.yml)：SSH → **`update-node.sh`（git + build + systemd）** |
+| Admin「版本」               | 默认执行 `update-node.sh`；`github.deployMode: docker` 时才走镜像                                                  |
 
-约定：先确保 GHCR 上已有对应 tag 镜像，再更新 `release` 分支或 Admin 选版。
+约定：先在 `main` 打好 SemVer tag，再推进 `release` 分支（或 Admin 选版）完成上线。  
+旧「仅 pull GHCR、禁止 build」流程已降级：仅当显式选 `docker` 运行时使用。
 
 Fork 安全：部署 / 推包 job 限制 `github.repository == Lexcubia/Lanius-Warframe-Bot`；`ci.yml` 无 secrets。
 
-### Environment `production` secrets（仅 deploy-release）
+### Environment `production` secrets（deploy-release）
 
-| Name | 含义 |
-| --- | --- |
-| `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` | SSH |
-| `DEPLOY_PORT` | 可选，默认 22 |
-| `DEPLOY_PATH` | 服务器上 `deploy/` 绝对路径 |
+| Name                                             | 含义                                                        |
+| ------------------------------------------------ | ----------------------------------------------------------- |
+| `DEPLOY_HOST` / `DEPLOY_USER` / `DEPLOY_SSH_KEY` | SSH                                                         |
+| `DEPLOY_PORT`                                    | 可选，默认 22                                               |
+| `DEPLOY_PATH`                                    | 服务器上 `deploy/` 绝对路径（如 `/opt/lanius/repo/deploy`） |
 
 ---
 
-## A. 手动部署（无 Docker）
+## A. Node 生产部署（推荐默认）
 
-适合开发机或小型 VPS。
+适合 VPS / 裸机。三进程：**API `dist`**、**Bot `dist`**、**Web Nuxt/Nitro `.output`**（**禁止**生产用 `nuxt dev`）。
 
-1. 安装 **Node ≥ 20**、**pnpm 9**；可选 Redis；Bot 出图需 Playwright Chromium。
+### A.1 首次安装
+
+1. 安装 **Node ≥ 20**、**pnpm 9**（建议 `corepack enable`）、**Caddy**、可选 **Redis**；系统用户建议专用账号 `lanius`。
 2. Clone 并检出版本：
 
    ```bash
+   sudo mkdir -p /opt/lanius && sudo chown "$USER":"$USER" /opt/lanius
    git clone https://github.com/Lexcubia/Lanius-Warframe-Bot.git /opt/lanius/repo
    cd /opt/lanius/repo
-   git checkout v0.2.0
+   git checkout v0.3.0   # 换成目标 tag
    ```
 
-3. 配置：
+3. 配置（密钥仅写 local，勿提交）：
 
    ```bash
    cp config/local/admin.yaml.example config/local/admin.yaml
    cp config/local/api.yaml.example config/local/api.yaml
    cp config/local/qq.yaml.example config/local/qq.yaml
-   # 编辑口令哈希、adminToken、QQ 凭据等
+   cp config/local/redis.yaml.example config/local/redis.yaml
+   # 编辑口令哈希、adminToken、QQ 凭据、redis.url、sqlitePath 等
+   mkdir -p /opt/lanius/data
+   # 建议 config/local/database.yaml：
+   #   sqlitePath: '/opt/lanius/data/lanius.sqlite'
    ```
 
-4. 安装与构建：
+4. Redis（推荐；空 `redis.url` 则内存缓存）：
 
    ```bash
-   pnpm install --frozen-lockfile
-   pnpm --filter @lanius/render exec playwright install chromium
-   pnpm build
+   # Debian/Ubuntu 示例
+   sudo apt-get install -y redis-server
+   sudo systemctl enable --now redis-server
+   # config/local/redis.yaml → url: 'redis://127.0.0.1:6379'
    ```
 
-5. 启动（三进程，可用 systemd）：
+5. 安装依赖、Playwright、构建：
 
    ```bash
-   pnpm --filter @lanius/server start   # :8787
-   pnpm --filter @lanius/bot start      # :8788
-   # web：pnpm --filter @lanius/web build && node apps/web/.output/server/index.mjs  # :8790
-   ```
-
-6. 反代：`/qq`→8788，`/api/lanius`→8787，`/`→8790。  
-7. 升级：`git fetch && git checkout vX.Y.Z && pnpm install && pnpm build` 后重启进程。配置项优先在 Admin 改（热加载）。
-
-systemd 单元示例可放在 `deploy/systemd/`（按需复制）。
-
----
-
-## B. Docker 部署（推荐）
-
-### 首次安装
-
-1. 安装 Docker Engine + Compose；国内建议配置镜像加速。
-2. 准备目录与密钥（**密钥在 git 工作树外**）：
-
-   ```bash
-   mkdir -p /opt/lanius/secrets /opt/lanius/data
-   git clone https://github.com/Lexcubia/Lanius-Warframe-Bot.git /opt/lanius/repo
    cd /opt/lanius/repo
-   git checkout v0.2.0   # 或 release 分支
-   # 填写 config/local/*.yaml（或仍用单体 secrets 文件，见下）
-   cp deploy/.env.example deploy/.env
+   pnpm install --frozen-lockfile
+   bash deploy/prepare-playwright.sh   # 默认 native；浏览器进 /opt/lanius/ms-playwright
+   pnpm --filter @lanius/render build:card-host
+   pnpm build
+   pnpm --filter @lanius/web build
+   # 确认存在：
+   #   apps/api/dist/index.js
+   #   apps/bot/dist/index.js
+   #   apps/web/.output/server/index.mjs
    ```
 
-3. `deploy/.env` 示例：
-
-   ```env
-   DOMAIN=warframe.xxxx.com
-   PUBLIC_SITE_BASE_URL=https://warframe.xxxx.com
-   IMAGE_TAG=v0.2.0
-   GHCR_IMAGE_PREFIX=ghcr.io/lexcubia/lanius-warframe-bot
-   LANIUS_CONFIG_DEFAULT=/opt/lanius/repo/config/default
-   LANIUS_CONFIG_LOCAL=/opt/lanius/repo/config/local
-   LANIUS_CONFIG_FILE=/opt/lanius/secrets/config.local.yaml
-   ```
-
-4. Playwright（Bot 出图）：
+6. 安装 systemd 单元并启动：
 
    ```bash
-   bash /opt/lanius/repo/deploy/prepare-playwright.sh
+   sudo bash deploy/install-node-services.sh
+   sudo systemctl start lanius.target
+   curl -fsS http://127.0.0.1:8787/v1/health
    ```
 
-5. 启动（优先 pull，避免每次重建）：
+   若希望 **Admin 选版** 能从 `lanius` 用户触发重启，配置受限 sudoers（勿放开任意命令）：
+
+   ```text
+   # /etc/sudoers.d/lanius-deploy
+   lanius ALL=(root) NOPASSWD: /bin/systemctl restart lanius-api.service, /bin/systemctl restart lanius-bot.service, /bin/systemctl restart lanius-web.service, /bin/systemctl start lanius.target
+   ```
+
+   无 sudo 时 Admin 会返回手动执行 `update-node.sh` 的指引。
+
+7. Caddy（系统安装，非容器）：
 
    ```bash
-   cd /opt/lanius/repo/deploy
-   export IMAGE_TAG=v0.2.0
-   docker compose -f docker-compose.app.yml pull
-   docker compose -f docker-compose.app.yml up -d
+   export DOMAIN=warframe.example.com
+   # 将 deploy/Caddyfile.node 装入 /etc/caddy/Caddyfile，或：
+   caddy run --config /opt/lanius/repo/deploy/Caddyfile.node
    ```
 
-   若 GHCR 拉取过慢，可首次 `docker compose -f docker-compose.app.yml build`，之后日常仍用 pull。
+### A.2 日常启停
 
-6. DNS 指向服务器；Caddy 申请证书。
+```bash
+sudo systemctl start lanius.target
+sudo systemctl stop lanius.target
+sudo systemctl restart lanius-api lanius-bot lanius-web
+journalctl -u lanius-api -u lanius-bot -u lanius-web -f
+```
 
-### 日常更新 / 回退（不 rebuild）
+### A.3 升级 / 回退
 
 ```bash
 cd /opt/lanius/repo/deploy
-bash ./update-image.sh v0.2.1
+bash ./update-node.sh v0.3.1
 ```
 
-或：将 `release` 分支推进到目标版本（Actions 自动 pull），或在 **Admin → 版本** 选择 tag。
+脚本会：`git fetch` → checkout tag → `pnpm install` → build（含 Web）→ `systemctl restart` → 打健康检查。  
+配置项优先在 Admin 改（热加载）；改监听端口 / Redis URL / SQLite 路径后需重启对应单元。
 
-Admin 自动执行需可选挂载 `docker.sock`（见 `docker-compose.app.yml` 注释；有安全风险，默认关闭）。
+或：将长期分支 **`release`** 推进到含目标版本的提交（Actions 调用同一脚本），或在 **Admin → 版本** 选 tag（`github.deployMode` 须为 `node`）。
 
-### 配置热更新
+### A.4 Playwright / SQLite / Redis 要点
 
-在 `/admin` 编辑模块配置并保存 → 写入 `config/local` → API/Bot 进程内重载。  
-更改监听端口 / Redis URL / SQLite 路径后需重启容器或进程。
+| 组件       | 说明                                                                                                                                        |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| Redis      | 本机 `redis-server`；`config` 中 `redis.url`；改 URL 需重启 API                                                                             |
+| SQLite     | 相对路径相对**仓库根**（systemd `WorkingDirectory`）；生产建议绝对路径到 `/opt/lanius/data`                                                 |
+| Playwright | `PLAYWRIGHT_BROWSERS_PATH`（单元已设）；`prepare-playwright.sh` 或 `pnpm --filter @lanius/render browsers:install`；失败时 Bot 图片降级文本 |
+
+---
+
+## B. Docker 部署（可选）
+
+仍提供 `deploy/docker-compose.app.yml` + `update-image.sh`，适合坚持镜像交付的环境。  
+**不是**当前推荐主路径；Admin 需设 `github.deployMode: docker`，`deploy-release` 需选 runtime=`docker`。
+
+### 首次（摘要）
+
+```bash
+cp deploy/.env.example deploy/.env
+# 填写 DOMAIN / IMAGE_TAG / 配置挂载路径
+bash deploy/prepare-playwright.sh   # 可加 LANIUS_PLAYWRIGHT_METHOD=docker
+cd deploy
+export IMAGE_TAG=v0.3.0
+docker compose -f docker-compose.app.yml pull
+docker compose -f docker-compose.app.yml up -d
+```
+
+日常：`bash ./update-image.sh v0.3.1`（仅 pull，不 rebuild）。
 
 ---
 
@@ -155,3 +179,4 @@ Admin 自动执行需可选挂载 `docker.sock`（见 `docker-compose.app.yml` �
 - 勿将 `config/local`、`config.local.yaml`、真实口令提交进 git。
 - 生产 `admin.passwordHash` 使用 bcrypt；`plain:` 仅本地。
 - 不要把 API/Bot 端口直接暴露公网；经 Caddy 反代。
+- QQ 仅腾讯官方机器人开放平台；勿接入非官方协议。

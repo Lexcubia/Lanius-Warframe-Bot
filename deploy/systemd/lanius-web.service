@@ -1,0 +1,35 @@
+# Lanius Web（Nuxt/Nitro 生产产物）systemd 单元。
+# 启动的是 apps/web/.output/server/index.mjs，不是 nuxt dev。
+
+[Unit]
+Description=Lanius Web (Nuxt Nitro .output)
+Documentation=https://github.com/Lexcubia/Lanius-Warframe-Bot
+After=network-online.target lanius-api.service
+Wants=network-online.target
+PartOf=lanius.target
+
+[Service]
+Type=simple
+User=lanius
+Group=lanius
+WorkingDirectory=__LANIUS_REPO__
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=8790
+Environment=NITRO_HOST=127.0.0.1
+Environment=NITRO_PORT=8790
+# 运行时覆盖 Nitro 代理目标（与 config/default/web.yaml 一致）
+Environment=NUXT_LANIUS_API_BASE=http://127.0.0.1:8787
+Environment=LANIUS_API_BASE=http://127.0.0.1:8787
+ExecStart=/usr/bin/env node apps/web/.output/server/index.mjs
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lanius-web
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target lanius.target

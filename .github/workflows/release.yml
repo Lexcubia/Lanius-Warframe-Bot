@@ -1,5 +1,5 @@
-﻿# 构建推送 GHCR（不 SSH 部署）。
-# 部署见 deploy-release.yml（长期分支 release → pull + up）。
+﻿# 可选：构建推送 GHCR（不 SSH 部署）。生产默认走 Node，不依赖本产物。
+# 部署见 deploy-release.yml（长期分支 release → update-node.sh）。
 # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
 
 name: Release

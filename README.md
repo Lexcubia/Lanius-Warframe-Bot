@@ -9,17 +9,17 @@
 
 已落地 API + Bot + Web 骨架：共享视觉 token（`packages/ui`）同时驱动公开站与 QQ 卡片图。
 
-| 表面              | 路径                                          | MVP / 状态                                         |
-| ----------------- | --------------------------------------------- | -------------------------------------------------- |
-| Lanius API        | `apps/api`（Hono）                            | health / meta / help / worldstate（国际服）        |
-| 共享契约          | `packages/core`                               | DTO / Zod / 错误码 / realm·locale                  |
-| HTTP 客户端       | `packages/api`（`fetch`）              | health / meta / help / worldstate                  |
-| 视觉 / UI         | `packages/ui`                                 | token + WorldstateBoard（Web）                     |
-| QQ 卡片           | `packages/render`                        | worldstate PNG（与 Web 同色板）                    |
-| QQ 官方封装       | `packages/qq-official`                        | 验签 + dry-run 发送                                |
-| QQ 官方适配       | `apps/bot`                                    | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/模式` `/帮助`；文本+图片降级 |
-| 公开站 + 管理壳   | `apps/web`（Nuxt）                            | 首页 / 世界状态 / 帮助 /admin；zh/en               |
-| 桌面 / 移动       | Tauri 2（后期）                               | **现不脚手架**；见 `docs/TODO-TAURI.md`            |
+| 表面            | 路径                      | MVP / 状态                                                                |
+| --------------- | ------------------------- | ------------------------------------------------------------------------- |
+| Lanius API      | `apps/api`（Hono）        | health / meta / help / worldstate（国际服）                               |
+| 共享契约        | `packages/core`           | DTO / Zod / 错误码 / realm·locale                                         |
+| HTTP 客户端     | `packages/api`（`fetch`） | health / meta / help / worldstate                                         |
+| 视觉 / UI       | `packages/ui`             | token + WorldstateBoard（Web）                                            |
+| QQ 卡片         | `packages/render`         | worldstate PNG（与 Web 同色板）                                           |
+| QQ 官方封装     | `packages/qq-official`    | 验签 + dry-run 发送                                                       |
+| QQ 官方适配     | `apps/bot`                | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/模式` `/帮助`；文本+图片降级 |
+| 公开站 + 管理壳 | `apps/web`（Nuxt）        | 首页 / 世界状态 / 帮助 /admin；zh/en                                      |
+| 桌面 / 移动     | Tauri 2（后期）           | **现不脚手架**；见 `docs/TODO-TAURI.md`                                   |
 
 ## 本地运行
 
@@ -67,17 +67,17 @@ pnpm typecheck
 
 ## 规范与 Agent 入口
 
-| 文档 / 配置                                              | 说明                         |
-| -------------------------------------------------------- | ---------------------------- |
-| [AGENTS.md](./AGENTS.md)                                 | 给人类与 Agent 的总约束      |
-| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)           | 架构边界与模块               |
-| [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码、命名、注释率与 TSDoc   |
-| [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope |
-| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程           |
-| [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程        |
-| [docs/DEPLOY.md](./docs/DEPLOY.md)                       | Docker / GHCR / 同域部署与 Fork 安全 CI |
-| [docs/TODO-TAURI.md](./docs/TODO-TAURI.md)               | 后期 Tauri 2；现期 Web TODO  |
-| [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                 |
+| 文档 / 配置                                              | 说明                                                |
+| -------------------------------------------------------- | --------------------------------------------------- |
+| [AGENTS.md](./AGENTS.md)                                 | 给人类与 Agent 的总约束                             |
+| [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)           | 架构边界与模块                                      |
+| [docs/CODING_STANDARDS.md](./docs/CODING_STANDARDS.md)   | 编码、命名、注释率与 TSDoc                          |
+| [docs/COMMIT_CONVENTION.md](./docs/COMMIT_CONVENTION.md) | Conventional Commits + scope                        |
+| [docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md)           | 分支策略与 PR 流程                                  |
+| [docs/VERSIONING.md](./docs/VERSIONING.md)               | SemVer、tag、发布流程                               |
+| [docs/DEPLOY.md](./docs/DEPLOY.md)                       | Node/systemd 生产部署（Docker 可选）与 Fork 安全 CI |
+| [docs/TODO-TAURI.md](./docs/TODO-TAURI.md)               | 后期 Tauri 2；现期 Web TODO                         |
+| [CHANGELOG.md](./CHANGELOG.md)                           | 版本变更记录                                        |
 
 ### Git 模型（摘要）
 
