@@ -3,6 +3,9 @@ import type {
   Locale,
   MarketSearchDto,
   RivenSearchDto,
+  VarziaDto,
+  VoidTraderDto,
+  WeaponRotationDto,
   WorldstateDto,
 } from '@lanius/core';
 import {
@@ -13,6 +16,9 @@ import {
   MarketModuleCard,
   NightwaveModuleCard,
   RivenModuleCard,
+  VarziaModuleCard,
+  VoidTraderModuleCard,
+  WeaponRotationModuleCard,
 } from '@lanius/ui';
 import '@lanius/ui/tokens.css';
 import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
@@ -33,7 +39,10 @@ export type CardHostKind =
   | 'nightwave'
   | 'help'
   | 'market'
-  | 'riven';
+  | 'riven'
+  | 'voidTrader'
+  | 'varzia'
+  | 'weaponRotation';
 
 /**
  * Playwright `page.evaluate` 注入的挂载载荷。
@@ -46,6 +55,9 @@ export type CardHostPayload = {
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
+  voidTrader?: VoidTraderDto;
+  varzia?: VarziaDto;
+  weaponRotation?: WeaponRotationDto;
 };
 
 /**
@@ -85,6 +97,12 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return MarketModuleCard;
     case 'riven':
       return RivenModuleCard;
+    case 'voidTrader':
+      return VoidTraderModuleCard;
+    case 'varzia':
+      return VarziaModuleCard;
+    case 'weaponRotation':
+      return WeaponRotationModuleCard;
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown card kind: ${_exhaustive}`);
@@ -119,6 +137,12 @@ function mountCard(payload: CardHostPayload): void {
     props.market = payload.market;
   } else if (payload.kind === 'riven') {
     props.riven = payload.riven;
+  } else if (payload.kind === 'voidTrader') {
+    props.voidTrader = payload.voidTrader;
+  } else if (payload.kind === 'varzia') {
+    props.varzia = payload.varzia;
+  } else if (payload.kind === 'weaponRotation') {
+    props.rotation = payload.weaponRotation;
   } else {
     props.worldstate = payload.worldstate;
   }
