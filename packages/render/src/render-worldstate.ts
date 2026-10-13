@@ -105,3 +105,60 @@ export async function renderRivenCard(input: {
     riven: input.riven,
   });
 }
+
+/**
+ * 渲染虚空商人卡片 PNG。
+ *
+ * @param input - 虚空商人 DTO 与 locale
+ * @returns PNG 字节
+ */
+export async function renderVoidTraderCard(input: {
+  voidTrader: import('@lanius/core').VoidTraderDto;
+  locale: import('@lanius/core').Locale;
+  stale?: boolean;
+}): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'voidTrader',
+    locale: input.locale,
+    stale: input.stale,
+    voidTrader: input.voidTrader,
+  });
+}
+
+/**
+ * 渲染瓦奇娅卡片 PNG。
+ *
+ * @param input - 瓦奇娅 DTO 与 locale
+ * @returns PNG 字节
+ */
+export async function renderVarziaCard(input: {
+  varzia: import('@lanius/core').VarziaDto;
+  locale: import('@lanius/core').Locale;
+  stale?: boolean;
+}): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'varzia',
+    locale: input.locale,
+    stale: input.stale,
+    varzia: input.varzia,
+  });
+}
+
+/**
+ * 渲染信条 / 终幕轮换卡片 PNG。
+ *
+ * @param input - 武器轮换 DTO 与 locale
+ * @returns PNG 字节
+ */
+export async function renderWeaponRotationCard(input: {
+  rotation: import('@lanius/core').WeaponRotationDto;
+  locale: import('@lanius/core').Locale;
+  stale?: boolean;
+}): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'weaponRotation',
+    locale: input.locale,
+    stale: input.stale,
+    weaponRotation: input.rotation,
+  });
+}

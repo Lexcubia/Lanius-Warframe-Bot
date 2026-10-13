@@ -6,6 +6,9 @@ import {
   renderMarketCard,
   renderNightwaveCard,
   renderRivenCard,
+  renderVarziaCard,
+  renderVoidTraderCard,
+  renderWeaponRotationCard,
   renderWorldstateCard,
 } from '@lanius/render';
 import {
@@ -171,8 +174,19 @@ export async function handleCommand(
     const text = formatVoidTraderText(envelope.data, locale, {
       stale: envelope.meta.stale,
     });
-    const sent = await deps.qq.sendText(target, text);
-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderVoidTraderCard({
+          voidTrader: envelope.data,
+          locale,
+          stale: envelope.meta.stale,
+        }),
+      label: 'voidTrader',
+    });
   }
 
   if (intent.type === 'varzia') {
@@ -183,8 +197,19 @@ export async function handleCommand(
     const text = formatVarziaText(envelope.data, locale, {
       stale: envelope.meta.stale,
     });
-    const sent = await deps.qq.sendText(target, text);
-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderVarziaCard({
+          varzia: envelope.data,
+          locale,
+          stale: envelope.meta.stale,
+        }),
+      label: 'varzia',
+    });
   }
 
   if (intent.type === 'tenetRotation' || intent.type === 'codaRotation') {
@@ -194,8 +219,18 @@ export async function handleCommand(
       return sendFail(deps, target, locale, envelope.error.message);
     }
     const text = formatRotationText(envelope.data, locale);
-    const sent = await deps.qq.sendText(target, text);
-    return sent.ok ? 'text' : `send-failed:${sent.detail ?? 'unknown'}`;
+    return replyTextOrImage({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWeaponRotationCard({
+          rotation: envelope.data,
+          locale,
+        }),
+      label: kind === 'tenet' ? 'tenetRotation' : 'codaRotation',
+    });
   }
 
   const envelope = await api.getWorldstate(publicQuery);

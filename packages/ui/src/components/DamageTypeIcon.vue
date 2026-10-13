@@ -76,15 +76,19 @@ function onError(_event: Event): void {
     :role="alt && src && !failed ? 'img' : undefined"
     :aria-label="alt && src && !failed ? alt : undefined"
   >
+    <!--
+      与 OfficialItemIcon 相同：截图前须完成加载，故强制 eager。
+    -->
     <img
       v-if="src && !failed"
       class="dmg-icon__img"
+      data-lanius-icon="damage"
       :src="src"
       :alt="alt"
       :width="size"
       :height="size"
-      loading="lazy"
-      decoding="async"
+      loading="eager"
+      decoding="sync"
       @error="onError"
     />
   </span>

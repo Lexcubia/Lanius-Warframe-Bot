@@ -20,6 +20,9 @@ export {
   renderMarketCard,
   renderNightwaveCard,
   renderRivenCard,
+  renderVarziaCard,
+  renderVoidTraderCard,
+  renderWeaponRotationCard,
   renderWorldstateCard,
   type RenderWorldstateCardInput,
 } from './render-worldstate.js';

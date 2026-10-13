@@ -8,4 +8,7 @@ export type CardKind =
   | 'nightwave'
   | 'help'
   | 'market'
-  | 'riven';
+  | 'riven'
+  | 'voidTrader'
+  | 'varzia'
+  | 'weaponRotation';
