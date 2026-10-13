@@ -96,17 +96,14 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   const width = laniusTokens.card.width;
 
   await page.setViewportSize({ width: width + 24, height: 1200 });
-  await page.evaluate(
-    (payload) => {
-      const host = globalThis as unknown as CardHostGlobals;
-      const mount = host.__LANIUS_MOUNT_CARD__;
-      if (typeof mount !== 'function') {
-        throw new Error('card-host mount API missing');
-      }
-      mount(payload);
-    },
-    input,
-  );
+  await page.evaluate((payload) => {
+    const host = globalThis as unknown as CardHostGlobals;
+    const mount = host.__LANIUS_MOUNT_CARD__;
+    if (typeof mount !== 'function') {
+      throw new Error('card-host mount API missing');
+    }
+    mount(payload);
+  }, input);
 
   await page.waitForFunction(() => {
     const host = globalThis as unknown as CardHostGlobals;
@@ -127,52 +124,47 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
 /**
  * 等待卡片内字体与 `<img>` 加载完成（失败亦放行，避免永久卡住）。
  *
- * 说明：旧实现用 `page.evaluate('async () => …')` 字符串表达式，只返回函数对象
- * 而未执行，导致图标等待从未生效。
+ * 说明：旧实现为 `page.evaluate('async () => …')`，字符串只求值出函数对象而未调用，
+ * 图标等待从未生效。此处用立即执行的 async IIFE 字符串，且避免把 DOM 类型泄漏进
+ * 消费方（bot）的 Node `tsc`。
  *
  * @param page - Playwright Page
  * @returns 无返回值
  */
 async function waitForCardAssets(page: Page): Promise<void> {
-  await page.evaluate(async () => {
-    if (document.fonts?.ready) {
+  // Playwright 串形式：表达式须自行调用；async 函数体在浏览器内执行。
+  await page.evaluate(`(async () => {
+    if (document.fonts && document.fonts.ready) {
       await document.fonts.ready;
     }
-
     const images = Array.from(document.images);
     for (const img of images) {
-      // 截图路径强制即时加载，避免 lazy 未触发请求
       if (img.loading === 'lazy') {
         img.loading = 'eager';
       }
     }
-
     await Promise.all(
       images.map(async (img) => {
         if (!img.complete) {
-          await new Promise<void>((resolve) => {
-            const done = (): void => {
-              resolve();
-            };
+          await new Promise((resolve) => {
+            const done = () => resolve();
             img.addEventListener('load', done, { once: true });
             img.addEventListener('error', done, { once: true });
-            // 竞态：监听注册前已完成
             if (img.complete) {
               resolve();
             }
           });
         }
-        // decode 失败（坏图 / 占位）仍放行，由组件 error 占位兜底
         if (typeof img.decode === 'function' && img.naturalWidth > 0) {
           try {
             await img.decode();
-          } catch {
-            /* ignore decode errors */
+          } catch (_) {
+            /* 坏图仍放行，由组件占位兜底 */
           }
         }
       }),
     );
-  });
+  })()`);
 }
 
 /**
