@@ -1,10 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import {
-  ensureQqGroupCommandPanel,
-  reclaimOrphanPanels,
-  syncQqCommandPanels,
-} from './panels.js';
+import { ensureQqGroupCommandPanel, reclaimOrphanPanels, syncQqCommandPanels } from './panels.js';
 
 /**
  * 按 method+url 关键字匹配的假 fetch；token 请求自动放行。
@@ -38,6 +34,64 @@ function mockFetch(
   });
   return fetchImpl as unknown as typeof fetch;
 }
+
+describe('toPanelItems via sync payload', () => {
+  it('weighted-truncates long desc before POST body', async () => {
+    let postedDesc: string | undefined;
+    const fetchImpl = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (url.includes('getAppAccessToken')) {
+        const tokenBody = { access_token: 'tok', expires_in: 7200 };
+        return {
+          ok: true,
+          json: async () => tokenBody,
+          text: async () => JSON.stringify(tokenBody),
+        };
+      }
+      if (method === 'GET' && url.includes('scope=c2c')) {
+        return {
+          ok: true,
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
+        };
+      }
+      if (method === 'POST' && url.includes('/v2/panels')) {
+        const body = JSON.parse(String(init?.body ?? '{}')) as {
+          panel?: { items?: Array<{ desc?: string }> };
+        };
+        postedDesc = body.panel?.items?.[0]?.desc;
+        return {
+          ok: true,
+          text: async () => JSON.stringify({ code: 0, panel_id: 'p_new' }),
+        };
+      }
+      throw new Error(`unexpected ${method} ${url}`);
+    });
+
+    await syncQqCommandPanels({
+      appId: 'app',
+      appSecret: 'secret',
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+      items: [
+        {
+          name: '世界状态',
+          desc: '查看开放世界周期（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）',
+        },
+      ],
+    });
+
+    // 中文加权 2：30 上限约 15 汉字，不得整句原样上传
+    expect(postedDesc).toBeDefined();
+    expect(postedDesc!.length).toBeLessThan(
+      '查看开放世界周期（地球 / 平原 / 魔胎 / 山谷 / 双衍 / 扎里曼）'.length,
+    );
+    let weight = 0;
+    for (const ch of postedDesc!) {
+      weight += /[\u4e00-\u9fff]/.test(ch) ? 2 : 1;
+    }
+    expect(weight).toBeLessThanOrEqual(30);
+  });
+});
 
 describe('syncQqCommandPanels', () => {
   it('updates existing c2c panel instead of creating', async () => {
@@ -96,8 +150,7 @@ describe('syncQqCommandPanels', () => {
       if (method === 'GET' && url.includes('scope=c2c')) {
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, records: [], is_end: true }),
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
         };
       }
       if (method === 'GET' && url.includes('scope=group')) {
@@ -117,14 +170,10 @@ describe('syncQqCommandPanels', () => {
             }),
         };
       }
-      if (
-        method === 'GET' &&
-        (url.includes('scope=channel') || url.includes('scope=dm'))
-      ) {
+      if (method === 'GET' && (url.includes('scope=channel') || url.includes('scope=dm'))) {
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, records: [], is_end: true }),
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
         };
       }
       if (method === 'POST' && url.includes('/v2/panels')) {
@@ -132,14 +181,12 @@ describe('syncQqCommandPanels', () => {
         if (posted === 1) {
           return {
             ok: false,
-            text: async () =>
-              JSON.stringify({ code: 30013, message: '超出数量限制' }),
+            text: async () => JSON.stringify({ code: 30013, message: '超出数量限制' }),
           };
         }
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, panel_id: 'p_new_c2c' }),
+          text: async () => JSON.stringify({ code: 0, panel_id: 'p_new_c2c' }),
         };
       }
       if (method === 'DELETE') {
@@ -187,8 +234,7 @@ describe('ensureQqGroupCommandPanel', () => {
         }),
       },
       {
-        when: (m, u) =>
-          m === 'PUT' && u.includes('/v2/panels/p_group') && !u.includes('/target'),
+        when: (m, u) => m === 'PUT' && u.includes('/v2/panels/p_group') && !u.includes('/target'),
         respond: () => ({ body: { code: 0 } }),
       },
       {
@@ -274,8 +320,7 @@ describe('reclaimOrphanPanels', () => {
       if (method === 'GET') {
         return {
           ok: true,
-          text: async () =>
-            JSON.stringify({ code: 0, records: [], is_end: true }),
+          text: async () => JSON.stringify({ code: 0, records: [], is_end: true }),
         };
       }
       if (method === 'DELETE') {
