@@ -50,15 +50,19 @@ function onError(_event: Event): void {
     :role="alt && iconUrl && !failed ? 'img' : undefined"
     :aria-label="alt && iconUrl && !failed ? alt : undefined"
   >
+    <!--
+      QQ/Chromium 截图路径必须 eager：lazy 可能尚未发起请求就被截图，导致白槽。
+    -->
     <img
       v-if="iconUrl && !failed"
       class="item-icon__img"
+      data-lanius-icon="item"
       :src="iconUrl"
       :alt="alt"
       :width="size"
       :height="size"
-      loading="lazy"
-      decoding="async"
+      loading="eager"
+      decoding="sync"
       @error="onError"
     />
   </span>

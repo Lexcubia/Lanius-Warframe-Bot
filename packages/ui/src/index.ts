@@ -37,3 +37,6 @@ export { default as NightwaveModuleCard } from './components/NightwaveModuleCard
 export { default as HelpModuleCard } from './components/HelpModuleCard.vue';
 export { default as MarketModuleCard } from './components/MarketModuleCard.vue';
 export { default as RivenModuleCard } from './components/RivenModuleCard.vue';
+export { default as VoidTraderModuleCard } from './components/VoidTraderModuleCard.vue';
+export { default as VarziaModuleCard } from './components/VarziaModuleCard.vue';
+export { default as WeaponRotationModuleCard } from './components/WeaponRotationModuleCard.vue';
