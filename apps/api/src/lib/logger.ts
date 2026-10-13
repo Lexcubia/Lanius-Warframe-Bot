@@ -1,15 +1,16 @@
-import pino, { type Logger } from 'pino';
+import { createLaniusLogger, type Logger } from '@lanius/logger';
 
 /**
- * Creates the process-wide structured logger for `apps/api`.
+ * 创建 API 进程级结构化日志器（委托 `@lanius/logger`，含密钥脱敏）。
  *
- * @param level - Pino log level string (default `info`).
- * @returns Configured pino logger instance.
+ * @param level - Pino 日志级别字符串（默认 `info`）
+ * @returns 已配置的 logger 实例
  */
 export function createLogger(level: string = 'info'): Logger {
-  return pino({
+  return createLaniusLogger({
+    service: 'lanius-api',
     level,
-    name: 'lanius-api',
-    base: { service: 'lanius-api' },
   });
 }
+
+export type { Logger };

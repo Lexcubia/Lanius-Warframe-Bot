@@ -20,8 +20,9 @@ import {
   type Locale,
   type WorldstateDto,
 } from '@lanius/core';
+import type { Logger } from '@lanius/logger';
 import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
-import { uploadCardPng } from '@lanius/qq-official';
+import { parseQqSendFailure, uploadCardPng } from '@lanius/qq-official';
 
 import type { BotConfig } from '../config.js';
 import type { BotIntent } from '../commands/parse-command.js';
@@ -61,8 +62,9 @@ export type HandleCommandDeps = {
   apiClient?: ReturnType<typeof createLaniusApiClient>;
   scene?: 'group' | 'c2c';
   userId?: string;
+  /** 可选结构化日志；缺省时降级路径不打业务日志。 */
+  logger?: Logger;
 };
-
 /**
  * 处理已解析的 Bot 意图。
  *
@@ -448,10 +450,17 @@ async function replyFissuresWithShortcuts(options: {
     if (sent.ok) {
       return 'markdown-fissures';
     }
+    logSendFailure(deps.logger, 'fissures_markdown', sent.detail);
     const fallback = await deps.qq.sendText(target, text);
     if (!fallback.ok) {
+      logSendFailure(deps.logger, 'fissures_text_fallback', fallback.detail);
       return `send-failed:${fallback.detail ?? sent.detail ?? 'unknown'}`;
     }
+    logDegrade(deps.logger, 'info', {
+      path: 'fissures',
+      step: 'markdown_to_text',
+      detail: sent.detail ?? 'markdown send failed',
+    });
     return 'markdown-fallback-text';
   }
 
@@ -470,21 +479,34 @@ async function replyFissuresWithShortcuts(options: {
         }
         // 嵌图 markdown 失败则落到下方两条路径。
       } else {
-        console.warn(`[lanius-bot] cos upload failed: ${uploaded.detail ?? 'unknown'}`);
+        logDegrade(deps.logger, 'warn', {
+          path: 'fissures',
+          step: 'cos_upload',
+          detail: uploaded.detail ?? 'unknown',
+        });
       }
     }
     // 回退：QQ 富媒体不支持挂按钮，发图片 + 一条 Markdown 按钮提示。
     const img = await deps.qq.sendImage(target, png);
     if (img.ok) {
       const tip = await deps.qq.sendMarkdown(target, fissureShortcutMarkdownHint(locale), keyboard);
+      if (!tip.ok) {
+        logSendFailure(deps.logger, 'fissures_keyboard_tip', tip.detail);
+      }
       return tip.ok ? 'image+markdown-fissures' : 'image';
     }
+    logSendFailure(deps.logger, 'fissures_image', img.detail);
     const fallback = await deps.qq.sendMarkdown(
       target,
       `${mdBody}\n\n${locale === 'en' ? '_(image send failed; text fallback)_' : '_（图片发送失败，已降级文本）_'}`,
       keyboard,
     );
     if (fallback.ok) {
+      logDegrade(deps.logger, 'info', {
+        path: 'fissures',
+        step: 'image_to_markdown',
+        detail: img.detail ?? 'image send failed',
+      });
       return 'image-fallback-markdown';
     }
     const plain = await deps.qq.sendText(target, text);
@@ -493,7 +515,11 @@ async function replyFissuresWithShortcuts(options: {
       : `send-failed:${plain.detail ?? img.detail ?? 'unknown'}`;
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    console.error(`[lanius-bot] image render failed (fissures): ${detail}`);
+    logDegrade(deps.logger, 'error', {
+      path: 'fissures',
+      step: 'render',
+      detail,
+    });
     const fallback = await deps.qq.sendMarkdown(
       target,
       `${mdBody}\n\n${locale === 'en' ? '_(image render failed; text fallback)_' : '_（图片渲染失败，已降级文本）_'}`,
@@ -508,7 +534,6 @@ async function replyFissuresWithShortcuts(options: {
       : `send-failed:${plain.detail ?? detail}`;
   }
 }
-
 /**
  * 将裂隙纯文本转为简 Markdown（保留换行，标题行加粗）。
  *
@@ -586,6 +611,7 @@ async function replyTextOrImage(options: {
   if (!preferImage) {
     const sent = await deps.qq.sendText(target, text);
     if (!sent.ok) {
+      logSendFailure(deps.logger, label, sent.detail);
       return `send-failed:${sent.detail ?? 'unknown'}`;
     }
     return 'text';
@@ -597,28 +623,39 @@ async function replyTextOrImage(options: {
     if (sent.ok) {
       return 'image';
     }
+    logSendFailure(deps.logger, `${label}_image`, sent.detail);
     const fallback = await deps.qq.sendText(
       target,
       `${text}\n${locale === 'en' ? '(image send failed; text fallback)' : '（图片发送失败，已降级文本）'}`,
     );
     if (!fallback.ok) {
+      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
       return `send-failed:${fallback.detail ?? 'unknown'}`;
     }
+    logDegrade(deps.logger, 'info', {
+      path: label,
+      step: 'image_to_text',
+      detail: sent.detail ?? 'image send failed',
+    });
     return 'image-fallback-send';
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
-    console.error(`[lanius-bot] image render failed (${label}): ${detail}`);
+    logDegrade(deps.logger, 'error', {
+      path: label,
+      step: 'render',
+      detail,
+    });
     const fallback = await deps.qq.sendText(
       target,
       `${text}\n${locale === 'en' ? '(image render failed; text fallback)' : '（图片渲染失败，已降级文本）'}`,
     );
     if (!fallback.ok) {
+      logSendFailure(deps.logger, `${label}_text_fallback`, fallback.detail);
       return `send-failed:${fallback.detail ?? 'unknown'}`;
     }
     return `image-fallback-render:${detail.slice(0, 160)}`;
   }
 }
-
 /**
  * 发送查询失败文本。
  *
@@ -664,4 +701,52 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T
       clearTimeout(timer);
     }
   }
+}
+
+/**
+ * 记录发信失败（含 QQ 错误码分类字段）。
+ *
+ * @param logger - 可选日志器
+ * @param path - 业务路径标签（如 `help` / `fissures_image`）
+ * @param detail - 客户端失败详情
+ * @returns 无返回值
+ */
+function logSendFailure(
+  logger: Logger | undefined,
+  path: string,
+  detail: string | undefined,
+): void {
+  if (!logger) {
+    return;
+  }
+  const failure = parseQqSendFailure(detail);
+  logger.warn(
+    {
+      path,
+      qqCode: failure.code,
+      passiveWindowExceeded: failure.passiveWindowExceeded,
+      rateLimited: failure.rateLimited,
+      detail: failure.summary,
+    },
+    'qq send failed',
+  );
+}
+
+/**
+ * 记录降级路径（渲染失败、COS 失败、图→文等）。
+ *
+ * @param logger - 可选日志器
+ * @param level - 日志级别
+ * @param fields - 路径与详情
+ * @returns 无返回值
+ */
+function logDegrade(
+  logger: Logger | undefined,
+  level: 'info' | 'warn' | 'error',
+  fields: { path: string; step: string; detail: string },
+): void {
+  if (!logger) {
+    return;
+  }
+  logger[level](fields, 'qq reply degraded');
 }

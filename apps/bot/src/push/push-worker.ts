@@ -1,6 +1,6 @@
 import { createLaniusApiClient } from '@lanius/api';
 import type { QqOfficialClient, QqSendTarget } from '@lanius/qq-official';
-import type { Logger } from 'pino';
+import type { Logger } from '@lanius/logger';
 
 import type { BotConfig } from '../config.js';
 
@@ -71,10 +71,7 @@ export function startPushWorker(deps: PushWorkerDeps): () => void {
         if (fingerprint) {
           const ack = await api.pushAck(row.subscriptionId, fingerprint);
           if (!ack.ok) {
-            deps.logger.warn(
-              { subscriptionId: row.subscriptionId },
-              'push ack failed',
-            );
+            deps.logger.warn({ subscriptionId: row.subscriptionId }, 'push ack failed');
           }
         }
       }

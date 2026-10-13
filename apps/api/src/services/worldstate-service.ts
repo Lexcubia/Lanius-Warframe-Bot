@@ -1,16 +1,8 @@
-import {
-  isRealmAvailable,
-  type Locale,
-  type Realm,
-  type WorldstateDto,
-} from '@lanius/core';
-import type { Logger } from 'pino';
+import { isRealmAvailable, type Locale, type Realm, type WorldstateDto } from '@lanius/core';
+import type { Logger } from '@lanius/logger';
 
 import { fetchInternationalWorldstate } from '../adapters/worldstate/international.js';
-import {
-  mapWorldstate,
-  WORLDSTATE_SOURCE,
-} from '../adapters/worldstate/map-worldstate.js';
+import { mapWorldstate, WORLDSTATE_SOURCE } from '../adapters/worldstate/map-worldstate.js';
 import type { UpstreamWorldstate } from '../adapters/worldstate/types.js';
 import type { CacheStore } from '../cache/types.js';
 import { realmNotAvailableError, upstreamUnavailableError } from '../lib/http-error.js';

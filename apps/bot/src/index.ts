@@ -1,10 +1,6 @@
 import { serve } from '@hono/node-server';
-import {
-  syncQqCommandPanels,
-  syncQqCustomMenu,
-  type AccessTokenCache,
-} from '@lanius/qq-official';
-import pino from 'pino';
+import { syncQqCommandPanels, syncQqCustomMenu, type AccessTokenCache } from '@lanius/qq-official';
+import { createLaniusLogger, type Logger } from '@lanius/logger';
 
 import { loadBotConfig, resolveRepoRoot, type BotConfig } from './config.js';
 import { createBotApp } from './create-app.js';
@@ -20,7 +16,7 @@ import { buildQqPanelSyncOptions } from './qq/panel-sync-options.js';
 function main(): void {
   const repoRoot = resolveRepoRoot();
   const config = loadBotConfig(repoRoot);
-  const logger = pino({ name: 'lanius-bot', level: 'info' });
+  const logger = createLaniusLogger({ service: 'lanius-bot', level: 'info' });
   const { app, qq } = createBotApp(config, logger);
 
   const host = process.env.HOST ?? config.bot.host;
@@ -59,7 +55,7 @@ function main(): void {
 async function syncQqUi(
   config: BotConfig,
   cache: { current?: AccessTokenCache },
-  logger: pino.Logger,
+  logger: Logger,
 ): Promise<void> {
   const creds = {
     appId: config.qq.appId,
