@@ -61,7 +61,6 @@ const labelText = computed(() => `${Number(props.bonusPct.toFixed(1))}%`);
 .valence-bar__track {
   flex: 1;
   min-width: 3.5rem;
-  max-width: 12rem;
   height: 6px;
   border-radius: 999px;
   background: rgba(62, 78, 110, 0.14);

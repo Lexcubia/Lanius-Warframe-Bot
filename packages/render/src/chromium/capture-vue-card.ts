@@ -133,6 +133,8 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   const png = await root.screenshot({
     type: 'png',
     animations: 'disabled',
+    // 透明底：保留卡片圆角，不填充圆角外的宿主底色
+    omitBackground: true,
   });
   return Buffer.from(png);
 }

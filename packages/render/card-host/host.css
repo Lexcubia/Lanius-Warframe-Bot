@@ -7,7 +7,8 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #fff8f2;
+  /* 透明底：截图仅含卡片本身，保留卡片圆角，不出现圆角外的直角底色 */
+  background: transparent;
   font-family: 'Noto Sans SC', 'Liberation Sans', sans-serif;
 }
 
