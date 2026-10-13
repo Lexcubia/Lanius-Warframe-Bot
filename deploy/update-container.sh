@@ -22,8 +22,9 @@ echo "[lanius-update-container] repo=${REPO_ROOT} ref=${REF}"
 cd "${REPO_ROOT}"
 
 # 1. 对齐代码到目标 ref（tag 直接 reset；分支则对齐 origin/<branch>）
+# +refs/tags/* 强制更新本地 tag：发布时 tag 可能被 force 重打，避免 fetch 因 clobber 拒绝。
 echo "[lanius-update-container] git fetch"
-git fetch origin --tags --prune
+git fetch origin --prune '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
 if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
   TARGET="${REF}"
 elif git rev-parse -q --verify "refs/remotes/origin/${REF}" >/dev/null; then
