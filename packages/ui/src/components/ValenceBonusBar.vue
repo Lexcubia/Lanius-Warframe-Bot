@@ -5,12 +5,18 @@ import { computed } from 'vue';
 /**
  * Valence 加成百分比进度条（相对游戏上限 60% 归一）。
  */
-const props = defineProps<{
-  /** 加成百分比（通常 25–60） */
-  bonusPct: number;
-  /** 是否显示右侧数值文案 */
-  showLabel?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** 加成百分比（通常 25–60） */
+    bonusPct: number;
+    /** 是否显示右侧数值文案（默认显示） */
+    showLabel?: boolean;
+  }>(),
+  {
+    // 显式默认 true：Vue boolean prop 未传时会被隐式置 false，导致数值不渲染。
+    showLabel: true,
+  },
+);
 
 /**
  * 填充宽度 0–100（相对 VALENCE_BONUS_MAX_PCT）。
