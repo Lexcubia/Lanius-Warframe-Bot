@@ -57,8 +57,6 @@ fi
 cd "${REPO_ROOT}"
 chmod +x deploy/*.sh 2>/dev/null || true
 
-NODE_IMAGE="${LANIUS_NODE_IMAGE:-docker.m.daocloud.io/library/node:22-bookworm}"
-
 # 首次：需要完整 Node（含 npm）。残缺 node 也会重装。
 # 机房常连不上 NodeSource/GitHub：默认从 npmmirror 拉官方 linux-x64 包。
 need_full_node=0
