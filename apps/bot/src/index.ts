@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { checkForUpdate } from '@lanius/config';
 import { syncQqCommandPanels, syncQqCustomMenu, type AccessTokenCache } from '@lanius/qq-official';
 import { createLaniusLogger, type Logger } from '@lanius/logger';
 
@@ -28,6 +29,19 @@ function main(): void {
   );
 
   serve({ fetch: app.fetch, hostname: host, port });
+
+  // 启动时检查更新（不阻断，失败只打日志）
+  const update = checkForUpdate(repoRoot);
+  if (update.error) {
+    logger.warn({ err: update.error }, 'update check skipped');
+  } else if (update.hasUpdate) {
+    logger.warn(
+      { local: update.localCommit, remote: update.remoteCommit, behind: update.behind },
+      'update available: run deploy/update.sh',
+    );
+  } else {
+    logger.info({ commit: update.localCommit }, 'up to date');
+  }
 
   // 启动后同步自定义菜单 + 指令面板；失败只打日志，不阻断回调服务。
   if (!config.bot.dryRun) {

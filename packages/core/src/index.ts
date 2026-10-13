@@ -3,20 +3,9 @@
  * Apps must consume these DTOs instead of upstream Warframe JSON shapes.
  */
 
-export {
-  DEFAULT_REALM,
-  MVP_REALMS,
-  RealmSchema,
-  isRealmAvailable,
-  type Realm,
-} from './realm.js';
+export { DEFAULT_REALM, MVP_REALMS, RealmSchema, isRealmAvailable, type Realm } from './realm.js';
 
-export {
-  DEFAULT_LOCALE,
-  LocaleSchema,
-  SUPPORTED_LOCALES,
-  type Locale,
-} from './locale.js';
+export { DEFAULT_LOCALE, LocaleSchema, SUPPORTED_LOCALES, type Locale } from './locale.js';
 
 export { pickLocalized } from './localized.js';
 
@@ -46,17 +35,9 @@ export {
   type HealthDto,
 } from './dto/health.js';
 
-export {
-  MetaDtoSchema,
-  ReplyModeSchema,
-  type MetaDto,
-  type ReplyMode,
-} from './dto/meta.js';
+export { MetaDtoSchema, ReplyModeSchema, type MetaDto, type ReplyMode } from './dto/meta.js';
 
-export {
-  CatalogItemDtoSchema,
-  type CatalogItemDto,
-} from './dto/item.js';
+export { CatalogItemDtoSchema, type CatalogItemDto } from './dto/item.js';
 
 export {
   FissureDtoSchema,
@@ -101,11 +82,7 @@ export {
   type CommandParamDef,
 } from './commands/catalog.js';
 
-export {
-  GATED_MODULE_IDS,
-  ModuleIdSchema,
-  type ModuleId,
-} from './modules.js';
+export { GATED_MODULE_IDS, ModuleIdSchema, type ModuleId } from './modules.js';
 
 export {
   MarketItemDtoSchema,

@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import type {
-  NightwaveChallengeDto,
-  NightwaveChallengeKind,
-  WorldstateDto,
-} from '@lanius/core';
+import type { NightwaveChallengeDto, NightwaveChallengeKind, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import { computed } from 'vue';
 
 import QqCardShell from './QqCardShell.vue';
@@ -66,16 +63,14 @@ const groups = computed(() => {
   for (const row of challenges.value) {
     byKind.get(row.kind)?.push(row);
   }
-  return KIND_ORDER.filter((kind) => (byKind.get(kind)?.length ?? 0) > 0).map(
-    (kind) => ({
-      kind,
-      label: byKind.get(kind)?.[0]?.kindLabel ?? {
-        zh: kind,
-        en: kind,
-      },
-      items: byKind.get(kind) ?? [],
-    }),
-  );
+  return KIND_ORDER.filter((kind) => (byKind.get(kind)?.length ?? 0) > 0).map((kind) => ({
+    kind,
+    label: byKind.get(kind)?.[0]?.kindLabel ?? {
+      zh: kind,
+      en: kind,
+    },
+    items: byKind.get(kind) ?? [],
+  }));
 });
 
 /**
@@ -83,9 +78,7 @@ const groups = computed(() => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() =>
-  props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
-);
+const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 </script>
 
 <template>
@@ -106,28 +99,18 @@ const stamp = computed(() =>
       </div>
 
       <template v-if="groups.length">
-        <section
-          v-for="group in groups"
-          :key="group.kind"
-          class="nw__group"
-        >
+        <section v-for="group in groups" :key="group.kind" class="nw__group">
           <h4 class="nw__group-title" :data-kind="group.kind">
             {{ label(group.label) }}
           </h4>
           <ul class="nw__list">
-            <li
-              v-for="challenge in group.items"
-              :key="challenge.id"
-              class="nw__row"
-            >
+            <li v-for="challenge in group.items" :key="challenge.id" class="nw__row">
               <span class="nw__tag" :data-kind="challenge.kind">
                 {{ label(challenge.kindLabel) }}
               </span>
               <div class="nw__body">
                 <strong>
-                  {{
-                    challenge.title ? label(challenge.title) : challenge.id
-                  }}
+                  {{ challenge.title ? label(challenge.title) : challenge.id }}
                 </strong>
                 <p v-if="challenge.description">
                   {{ label(challenge.description) }}
@@ -217,7 +200,7 @@ const stamp = computed(() =>
 @media (hover: hover) {
   .nw__row:hover {
     border-color: var(--lanius-border);
-    background: var(--lanius-panel-raised);
+    background: var(--lanius-panel);
     box-shadow: 0 4px 12px rgba(62, 78, 110, 0.08);
   }
 }

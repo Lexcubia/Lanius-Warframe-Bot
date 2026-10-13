@@ -10,6 +10,7 @@ import neoUrl from '../../assets/relics/neo.png';
 import omniaUrl from '../../assets/relics/omnia.png';
 import requiemUrl from '../../assets/relics/requiem.png';
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
@@ -92,7 +93,7 @@ const items = computed((): FissureDto[] => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
+const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 </script>
 
 <template>
@@ -133,18 +134,14 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-wrap: wrap;
+  /* 两列网格：最后一行单个只占一列宽，不撑满整行 */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .fissures__row {
-  /*
-   * 卡片内禁止换行；三列等宽（basis 1/3），
-   * 超长节点名以省略号截断，避免撑大容器。
-   */
   box-sizing: border-box;
-  flex: 1 1 calc((100% - 16px) / 3);
   min-width: 0;
   max-width: 100%;
   display: flex;
@@ -152,8 +149,7 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  white-space: nowrap;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   transition:
@@ -179,7 +175,6 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
 .fissures__main {
   flex: 1 1 auto;
   min-width: 0;
-  white-space: nowrap;
 }
 
 .fissures__top {
@@ -194,9 +189,11 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
   font-size: 13px;
   font-weight: 700;
   color: var(--lanius-brand);
+  white-space: nowrap;
 }
 
 .fissures__path {
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;
@@ -226,11 +223,9 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
   margin: 2px 0 0;
   font-size: 12px;
   color: var(--lanius-text);
-  white-space: nowrap;
-  /* 节点名过长时截断而非撑大容器 */
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
+  /* 两列窄格内容完整优先：长节点名自然换行，不截断不溢出 */
+  white-space: normal;
+  overflow-wrap: break-word;
 }
 
 .fissures__remain {

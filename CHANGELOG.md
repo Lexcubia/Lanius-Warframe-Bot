@@ -6,19 +6,22 @@
 
 ## [Unreleased]
 
-## [0.4.0] - 2026-10-13
+## [0.4.0] - 2026-10-14
 
 ### Added
 
 - 共享包 `@lanius/logger`：统一结构化日志与敏感路径脱敏（API / Bot）。
 - QQ 图片模式模块卡：信条 / 终幕 / 瓦奇娅 / 虚空商人（`packages/ui` + `packages/render`）。
 - Node 生产部署资产：`deploy/systemd/*`、`deploy/update-node.sh`、`deploy/Caddyfile.node`、`deploy/install-node-services.sh`。
+- 容器热启动：`docker-compose.app.yml` 挂载 monorepo 源码，api/bot 经 `tsx` 直跑 TypeScript，更新即重启生效；启动更新检查与 `deploy/update.sh`。
 
 ### Changed
 
 - **生产默认运行时改为 Node + systemd**（API `dist` / Bot `dist` / Web Nitro `.output`）；长期分支 `release` 部署执行 `update-node.sh`（git checkout + pnpm build + systemd）。
 - 旧 GHCR `update-image.sh` / 单容器 `lanius-app` 降级为可选；Admin「版本」默认 `github.deployMode: node`。
 - QQ Webhook：先 ACK 再异步发信；群面板支持 `force` 重绑；取消远端开发/生产双环境方案（不落地）。
+- QQ 卡片统一小圆角（10px，对齐 QQ 原生卡片），内容行纯白背景与米白卡片底区分。
+- 裂隙卡片改两列网格（末行单个只占一列），卡片截图透明背景保留圆角。
 
 ### Fixed
 
@@ -26,6 +29,9 @@
 - Markdown 嵌图占位保留 alt 中的 `#Wpx #Hpx` 尺寸标注（#34）。
 - 群聊命令静默：入群强制面板 rebind、退群清缓存、发信失败结构化日志（#35）。
 - 入侵等 CDN 图标截白图：截图等待改为可执行 async IIFE；图标 `loading="eager"`（#36）。
+- 卡片时间戳时区偏差 8 小时：容器设 `TZ=Asia/Shanghai`，时间戳经 `formatTimestamp` 走运行时本地时区。
+- 裂隙时间/节点名溢出省略：移除截断，文本完整显示不换行溢出；信条/终幕卡片宽度收紧并显示加成数值百分比。
+- 截图卡片直角白底：`omitBackground` + 透明 host 背景；去除卡片嵌套导致的双层内边距。
 
 ## [0.3.0] - 2026-10-12
 

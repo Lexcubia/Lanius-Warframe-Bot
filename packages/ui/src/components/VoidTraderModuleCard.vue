@@ -4,6 +4,7 @@ import { pickLocalized } from '@lanius/core';
 import { computed } from 'vue';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
@@ -54,9 +55,7 @@ const statusLine = computed(() => {
       ? `${node} · leaves in ${remain}`
       : `Arrives ${node} in ${remain}`;
   }
-  return props.voidTrader.active
-    ? `${node} · ${remain}后离开`
-    : `${remain}后抵达 ${node}`;
+  return props.voidTrader.active ? `${node} · ${remain}后离开` : `${remain}后抵达 ${node}`;
 });
 
 /**
@@ -64,9 +63,7 @@ const statusLine = computed(() => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() =>
-  props.voidTrader.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
-);
+const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
 </script>
 
 <template>
@@ -79,11 +76,7 @@ const stamp = computed(() =>
     <p class="trader__meta">{{ statusLine }}</p>
     <ul v-if="items.length" class="trader__list">
       <li v-for="(item, idx) in items" :key="idx" class="trader__row">
-        <OfficialItemIcon
-          :icon-url="item.iconUrl"
-          :alt="label(item.name)"
-          :size="32"
-        />
+        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="32" />
         <span class="trader__name">{{ label(item.name) }}</span>
         <span v-if="item.ducats != null" class="trader__price">{{ item.ducats }}d</span>
         <span v-if="item.credits != null" class="trader__price">
@@ -118,7 +111,7 @@ const stamp = computed(() =>
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   min-width: 0;

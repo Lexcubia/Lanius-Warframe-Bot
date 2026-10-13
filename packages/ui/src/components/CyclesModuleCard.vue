@@ -3,6 +3,7 @@ import type { OpenWorldCycleDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import { resolveOpenWorldCycleTheme } from '../lib/open-world-cycle-theme.js';
 import OpenWorldCycleIcon from './OpenWorldCycleIcon.vue';
 import QqCardShell from './QqCardShell.vue';
@@ -61,12 +62,9 @@ function ringGeom(cycle: OpenWorldCycleDto): {
   };
 }
 
-const rows = [
-  () => props.worldstate.cycles.slice(0, 3),
-  () => props.worldstate.cycles.slice(3, 6),
-];
+const rows = [() => props.worldstate.cycles.slice(0, 3), () => props.worldstate.cycles.slice(3, 6)];
 
-const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, '');
+const stamp = formatTimestamp(props.worldstate.fetchedAt);
 </script>
 
 <template>
@@ -78,23 +76,18 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   >
     <div class="cycles">
       <div v-for="(rowFn, ri) in rows" :key="ri" class="cycles__row">
-        <article
-          v-for="cycle in rowFn()"
-          :key="cycle.id"
-          class="cycles__tile"
-        >
+        <article v-for="cycle in rowFn()" :key="cycle.id" class="cycles__tile">
           <template v-for="g in [ringGeom(cycle)]" :key="`${cycle.id}-g`">
             <h3 :style="{ color: g.color }">{{ label(cycle.name) }}</h3>
             <div class="cycles__ring-wrap">
-              <svg class="cycles__ring" viewBox="0 0 88 88" width="86" height="86" aria-hidden="true">
-                <circle
-                  cx="44"
-                  cy="44"
-                  r="34"
-                  fill="none"
-                  stroke-width="8"
-                  :stroke="g.track"
-                />
+              <svg
+                class="cycles__ring"
+                viewBox="0 0 88 88"
+                width="86"
+                height="86"
+                aria-hidden="true"
+              >
+                <circle cx="44" cy="44" r="34" fill="none" stroke-width="8" :stroke="g.track" />
                 <circle
                   cx="44"
                   cy="44"
@@ -154,7 +147,7 @@ const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''
   flex-direction: column;
   align-items: center;
   padding: 10px 4px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: var(--lanius-card-radius, 16px);
   text-align: center;

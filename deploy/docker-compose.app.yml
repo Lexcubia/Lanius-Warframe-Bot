@@ -1,71 +1,68 @@
-# 【可选】Docker 路径：主体单容器 lanius-app + 旁路 Caddy。
-# 生产默认请用 Node + systemd（见 docs/DEPLOY.md、update-node.sh）。
-# 在 deploy/ 目录：
-#   IMAGE_TAG=vX.Y.Z docker compose -f docker-compose.app.yml pull && up -d
+# Lanius 一体化应用容器（热启动模式）。
 #
-# 日常升级（仅 docker 模式）：update-image.sh（仅 pull，不 build）
+# 与镜像内置 dist 不同：本 compose 将宿主机 monorepo 源码挂载进容器，
+# api/bot 用 tsx 直跑 TypeScript 源码；web 仍跑 Nuxt 构建产物 .output。
+# 更新 = 宿主机 git pull +（依赖变化时 pnpm install）+ docker compose restart。
+#
+# 前提：宿主机 /opt/lanius/repo 已是 git 仓库且 pnpm install 完成
+#       （node_modules 与容器同为 linux x64，可直接复用）。
+#
+# 用法（在 deploy/ 目录）：
+#   DOMAIN=warframe.example.com docker compose -f docker-compose.app.yml up -d
 
 name: lanius
 
 services:
   lanius-app:
-    image: ${GHCR_IMAGE_PREFIX:-ghcr.io/lexcubia/lanius-warframe-bot}/lanius-app:${IMAGE_TAG:-latest}
-    build:
-      context: ..
-      dockerfile: deploy/Dockerfile.app
+    image: ghcr.io/lexcubia/lanius-warframe-bot/lanius-app:pr36-git
+    container_name: lanius-lanius-app-1
     restart: unless-stopped
     environment:
       NODE_ENV: production
-      PUBLIC_SITE_BASE_URL: ${PUBLIC_SITE_BASE_URL:-https://localhost}
-      IMAGE_TAG: ${IMAGE_TAG:-latest}
-      LANIUS_CONFIG_ROOT: /config
-      # 可选：挂载 docker.sock 后 Admin 可执行 update-image.sh
-      # DOCKER_HOST: unix:///var/run/docker.sock
+      # tsx 直跑源码，无需 dist
+      LANIUS_REPO_ROOT: /repo
+      # 业务面向中文用户：统一东八区，卡片时间戳等本地时间展示以容器时区为准
+      TZ: Asia/Shanghai
     volumes:
-      # 模块化配置：default 只读，local 可写（Admin 热更新）
-      - ${LANIUS_CONFIG_DEFAULT:-../config/default}:/config/default:ro
-      - ${LANIUS_CONFIG_LOCAL:-../config/local}:/config/local:rw
-      # 兼容：若仍有单体 secrets，挂载后首次启动会拆分进 local/
-      - ${LANIUS_CONFIG_FILE:-/opt/lanius/secrets/config.local.yaml}:/config/config.local.yaml:ro
-      - ${LANIUS_DATA_DIR:-/opt/lanius/data}:/data
-      - ${LANIUS_PLAYWRIGHT_DIR:-/opt/lanius/ms-playwright}:/ms-playwright:ro
-      # 可选：后台选版（取消下一行注释）
-      # - /var/run/docker.sock:/var/run/docker.sock
-      # - ./update-image.sh:/opt/lanius/repo/deploy/update-image.sh:ro
-      # - .:/opt/lanius/repo/deploy:rw
+      # monorepo 源码（含 node_modules，同架构复用）
+      - /opt/lanius/repo:/repo
+      # 配置与数据（保持镜像内 /config /data 约定）
+      - /opt/lanius/repo/config/default:/config/default:ro
+      - /opt/lanius/repo/config/local:/config/local
+      - /opt/lanius/secrets/config.local.yaml:/config/config.local.yaml:ro
+      - /opt/lanius/data:/data
+      - /opt/lanius/ms-playwright:/ms-playwright
+      # 热启动 supervisord（tsx 直跑，覆盖镜像内旧配置）
+      - /opt/lanius/repo/deploy/supervisord.app.conf:/etc/supervisor/conf.d/lanius.conf:ro
     expose:
       - '8787'
       - '8788'
       - '8790'
-    healthcheck:
-      test:
-        [
-          'CMD',
-          'node',
-          '-e',
-          "fetch('http://127.0.0.1:8787/v1/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 15s
-      timeout: 10s
-      retries: 6
-      start_period: 90s
+    networks:
+      - default
 
   caddy:
-    image: caddy:2.9-alpine
+    image: caddy:2-alpine
+    container_name: lanius-caddy-1
     restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
     ports:
       - '80:80'
       - '443:443'
-    environment:
-      DOMAIN: ${DOMAIN:-localhost}
     volumes:
-      - ./Caddyfile.app:/etc/caddy/Caddyfile:ro
+      - /opt/lanius/repo/deploy/Caddyfile.app:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      lanius-app:
-        condition: service_started
+      - lanius-app
+    networks:
+      - default
 
 volumes:
   caddy_data:
   caddy_config:
+
+networks:
+  default:
+    name: lanius_default

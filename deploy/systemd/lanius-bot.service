@@ -20,7 +20,8 @@ Environment=LANIUS_CONFIG_ROOT=__LANIUS_REPO__/config
 Environment=PLAYWRIGHT_BROWSERS_PATH=__LANIUS_PLAYWRIGHT__
 # 无图形、受限用户时如启动失败可设为 1（见 packages/render ensure-browser）
 # Environment=LANIUS_PLAYWRIGHT_NO_SANDBOX=1
-ExecStart=/usr/bin/env node apps/bot/dist/index.js
+# 热启动：tsx 直跑 TS 源码（无 dist 构建，git pull 后重启即生效）
+ExecStart=__LANIUS_REPO__/apps/bot/node_modules/.bin/tsx apps/bot/src/index.ts
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=30

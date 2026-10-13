@@ -7,12 +7,18 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #fff8f2;
+  /* 透明底：截图仅含卡片本身，保留卡片圆角，不出现圆角外的直角底色 */
+  background: transparent;
   font-family: 'Noto Sans SC', 'Liberation Sans', sans-serif;
 }
 
 #app {
-  display: inline-block;
+  /*
+   * 固定为注入的卡片逻辑宽度：卡片 QqCardShell 用 min(100%, var(--lanius-card-width))，
+   * 若 #app 为 inline-block 收缩宽度，则 100% 解析成内容固有宽度（进度条卡被压窄）。
+   */
+  display: block;
+  width: var(--lanius-card-width, 640px);
   margin: 0;
   padding: 0;
 }

@@ -4,6 +4,7 @@ import { pickLocalized } from '@lanius/core';
 import { computed } from 'vue';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import DamageTypeIcon from './DamageTypeIcon.vue';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
@@ -83,43 +84,21 @@ const remainLine = computed(() => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() =>
-  props.rotation.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
-);
+const stamp = computed(() => formatTimestamp(props.rotation.fetchedAt));
 </script>
 
 <template>
-  <QqCardShell
-    :title="title"
-    :subtitle="stamp || 'LANIUS'"
-    :stale="stale"
-    :locale="locale"
-  >
+  <QqCardShell :title="title" :subtitle="stamp || 'LANIUS'" :stale="stale" :locale="locale">
     <p class="rot__meta">{{ remainLine }}</p>
     <ul class="rot__list">
-      <li
-        v-for="(item, idx) in offerings"
-        :key="`${idx}-${item.name.en}`"
-        class="rot__row"
-      >
-        <OfficialItemIcon
-          :icon-url="item.iconUrl"
-          :alt="label(item.name)"
-          :size="36"
-        />
+      <li v-for="(item, idx) in offerings" :key="`${idx}-${item.name.en}`" class="rot__row">
+        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="36" />
         <div class="rot__body">
           <p class="rot__name">{{ label(item.name) }}</p>
           <div class="rot__valence">
-            <DamageTypeIcon
-              :element="item.element"
-              :alt="elementName(item) ?? ''"
-              :size="16"
-            />
+            <DamageTypeIcon :element="item.element" :alt="elementName(item) ?? ''" :size="16" />
             <span class="rot__el">{{ elementName(item) || '—' }}</span>
-            <ValenceBonusBar
-              v-if="item.bonusPct != null"
-              :bonus-pct="item.bonusPct"
-            />
+            <ValenceBonusBar v-if="item.bonusPct != null" :bonus-pct="item.bonusPct" />
             <span v-else class="rot__pct">—</span>
           </div>
         </div>
@@ -149,7 +128,7 @@ const stamp = computed(() =>
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   min-width: 0;

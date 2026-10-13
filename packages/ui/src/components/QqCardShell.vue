@@ -42,7 +42,8 @@ defineProps<{
   width: min(100%, var(--lanius-card-width, 640px));
   max-width: 100%;
   min-width: 0;
-  padding: var(--lanius-card-padding, 12px);
+  padding: var(--lanius-card-padding, 12px) var(--lanius-card-padding, 12px)
+    calc(var(--lanius-card-padding, 12px) + 2px);
   background:
     radial-gradient(420px 180px at 6% -20%, rgba(78, 183, 232, 0.22), transparent 60%),
     radial-gradient(360px 160px at 96% 0%, rgba(255, 122, 110, 0.18), transparent 55%),
@@ -50,7 +51,10 @@ defineProps<{
   color: var(--lanius-text);
   font-family: var(--lanius-font-body);
   border: 1px solid var(--lanius-border);
-  border-radius: calc(var(--lanius-card-radius, 16px) + 4px);
+  /* 与 QQ 卡片圆角一致的紧凑圆角 */
+  border-radius: 10px;
+  /* 截图保留圆角：溢出裁剪，避免内容超出圆角边界 */
+  overflow: hidden;
   box-shadow: 0 10px 28px rgba(62, 78, 110, 0.1);
 }
 
@@ -102,10 +106,7 @@ defineProps<{
 }
 
 .lanius-qq-shell__body {
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid var(--lanius-border);
-  border-radius: var(--lanius-card-radius, 16px);
-  padding: 12px;
-  box-shadow: 0 4px 14px rgba(62, 78, 110, 0.05);
+  /* 内容区：去掉独立白底框与边框，减少"卡中卡"嵌套感，内容直接落在 shell 渐变底上 */
+  padding: 4px 0 0;
 }
 </style>

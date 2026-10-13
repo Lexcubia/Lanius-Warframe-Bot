@@ -5,12 +5,18 @@ import { computed } from 'vue';
 /**
  * Valence 加成百分比进度条（相对游戏上限 60% 归一）。
  */
-const props = defineProps<{
-  /** 加成百分比（通常 25–60） */
-  bonusPct: number;
-  /** 是否显示右侧数值文案 */
-  showLabel?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    /** 加成百分比（通常 25–60） */
+    bonusPct: number;
+    /** 是否显示右侧数值文案（默认显示） */
+    showLabel?: boolean;
+  }>(),
+  {
+    // 显式默认 true：Vue boolean prop 未传时会被隐式置 false，导致数值不渲染。
+    showLabel: true,
+  },
+);
 
 /**
  * 填充宽度 0–100（相对 VALENCE_BONUS_MAX_PCT）。
@@ -25,13 +31,17 @@ const fillPct = computed(() => {
 /**
  * 展示用百分比文案（一位小数）。
  */
-const labelText = computed(
-  () => `${Number(props.bonusPct.toFixed(1))}%`,
-);
+const labelText = computed(() => `${Number(props.bonusPct.toFixed(1))}%`);
 </script>
 
 <template>
-  <div class="valence-bar" role="meter" :aria-valuenow="bonusPct" :aria-valuemin="0" :aria-valuemax="VALENCE_BONUS_MAX_PCT">
+  <div
+    class="valence-bar"
+    role="meter"
+    :aria-valuenow="bonusPct"
+    :aria-valuemin="0"
+    :aria-valuemax="VALENCE_BONUS_MAX_PCT"
+  >
     <div class="valence-bar__track">
       <div class="valence-bar__fill" :style="{ width: `${fillPct}%` }" />
     </div>
@@ -51,7 +61,6 @@ const labelText = computed(
 .valence-bar__track {
   flex: 1;
   min-width: 3.5rem;
-  max-width: 9rem;
   height: 6px;
   border-radius: 999px;
   background: rgba(62, 78, 110, 0.14);
@@ -67,9 +76,11 @@ const labelText = computed(
 
 .valence-bar__label {
   flex-shrink: 0;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--lanius-text-muted, #6b7385);
-  min-width: 2.75em;
+  color: var(--lanius-text, #2b3350);
+  min-width: 3em;
+  text-align: right;
 }
 </style>

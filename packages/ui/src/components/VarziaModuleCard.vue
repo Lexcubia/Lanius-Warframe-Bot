@@ -4,6 +4,7 @@ import { pickLocalized } from '@lanius/core';
 import { computed } from 'vue';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
@@ -48,9 +49,7 @@ const items = computed(() => {
  */
 const statusLine = computed(() => {
   const remain =
-    props.varzia.remainingMs != null
-      ? formatRemain(props.varzia.remainingMs, props.locale)
-      : null;
+    props.varzia.remainingMs != null ? formatRemain(props.varzia.remainingMs, props.locale) : null;
   if (props.locale === 'en') {
     if (props.varzia.active) {
       return remain ? `Active · ${remain}` : 'Active';
@@ -68,9 +67,7 @@ const statusLine = computed(() => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() =>
-  props.varzia.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''),
-);
+const stamp = computed(() => formatTimestamp(props.varzia.fetchedAt));
 </script>
 
 <template>
@@ -86,11 +83,7 @@ const stamp = computed(() =>
     </p>
     <ul v-if="items.length" class="trader__list">
       <li v-for="(item, idx) in items" :key="idx" class="trader__row">
-        <OfficialItemIcon
-          :icon-url="item.iconUrl"
-          :alt="label(item.name)"
-          :size="32"
-        />
+        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="32" />
         <span class="trader__name">{{ label(item.name) }}</span>
       </li>
     </ul>
@@ -126,7 +119,7 @@ const stamp = computed(() =>
   align-items: center;
   gap: 8px;
   padding: 6px 8px;
-  background: var(--lanius-panel-raised);
+  background: var(--lanius-panel);
   border: 1px solid var(--lanius-border);
   border-radius: 10px;
   min-width: 0;

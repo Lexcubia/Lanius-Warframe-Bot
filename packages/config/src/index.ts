@@ -34,6 +34,7 @@ export {
 } from './mask.js';
 export { resolveConfigRoot, findRepoRoot } from './root.js';
 export { migrateMonolithLocalIfNeeded } from './migrate.js';
+export { checkForUpdate, type UpdateCheckResult } from './update-check.js';
 export {
   assembleApiConfig,
   assembleBotConfig,

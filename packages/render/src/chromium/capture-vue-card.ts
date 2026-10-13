@@ -45,6 +45,19 @@ type CardHostGlobals = {
 const CARD_ROOT_SELECTOR = '[data-lanius-card-root]';
 
 /**
+ * 按卡片类型决定逻辑宽度。信条/终幕武器名与加成进度条较长，加宽以容纳数值。
+ *
+ * @param kind - 卡片类型
+ * @returns 逻辑宽度像素
+ */
+function cardWidthFor(kind: CardKind): number {
+  if (kind === 'weaponRotation') {
+    return 560;
+  }
+  return laniusTokens.card.width;
+}
+
+/**
  * 串行化截图。
  */
 let captureChain: Promise<unknown> = Promise.resolve();
@@ -93,9 +106,12 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   const origin = await ensureCardHostOrigin();
   const browser = await ensureBrowser();
   const page = await ensureSharedPage(browser, origin);
-  const width = laniusTokens.card.width;
+  // 信条/终幕武器名与进度条较长，单独加宽；其余卡片用全局默认宽度。
+  const width = cardWidthFor(input.kind);
 
   await page.setViewportSize({ width: width + 24, height: 1200 });
+  // 注入本次卡片的逻辑宽度（QqCardShell 读 --lanius-card-width）。evaluate 回调跑在浏览器，tsc 按 Node lib 检查，故用 addStyleTag 规避 document 引用。
+  await page.addStyleTag({ content: `:root{--lanius-card-width:${width}px}` });
   await page.evaluate((payload) => {
     const host = globalThis as unknown as CardHostGlobals;
     const mount = host.__LANIUS_MOUNT_CARD__;
@@ -117,6 +133,8 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   const png = await root.screenshot({
     type: 'png',
     animations: 'disabled',
+    // 透明底：保留卡片圆角，不填充圆角外的宿主底色
+    omitBackground: true,
   });
   return Buffer.from(png);
 }
