@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { CatalogItemDto, InvasionDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import { computed } from 'vue';
 
 import OfficialItemIcon from './OfficialItemIcon.vue';
@@ -59,7 +60,7 @@ const items = computed((): InvasionDto[] => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
+const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 </script>
 
 <template>

@@ -3,6 +3,7 @@ import type { OpenWorldCycleDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import { resolveOpenWorldCycleTheme } from '../lib/open-world-cycle-theme.js';
 import OpenWorldCycleIcon from './OpenWorldCycleIcon.vue';
 import QqCardShell from './QqCardShell.vue';
@@ -63,7 +64,7 @@ function ringGeom(cycle: OpenWorldCycleDto): {
 
 const rows = [() => props.worldstate.cycles.slice(0, 3), () => props.worldstate.cycles.slice(3, 6)];
 
-const stamp = props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, '');
+const stamp = formatTimestamp(props.worldstate.fetchedAt);
 </script>
 
 <template>

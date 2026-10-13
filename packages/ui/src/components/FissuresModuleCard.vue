@@ -10,6 +10,7 @@ import neoUrl from '../../assets/relics/neo.png';
 import omniaUrl from '../../assets/relics/omnia.png';
 import requiemUrl from '../../assets/relics/requiem.png';
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
@@ -92,7 +93,7 @@ const items = computed((): FissureDto[] => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
+const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 </script>
 
 <template>
@@ -188,15 +189,25 @@ const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replac
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  /* 防止长纪元/路径标签把剩余时间挤出容器 */
+  overflow: hidden;
 }
 
 .fissures__era {
   font-size: 13px;
   font-weight: 700;
   color: var(--lanius-brand);
+  /* 过长时优先收缩纪元标签，保证剩余时间完整可见 */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .fissures__path {
+  /* 路径标签固定宽度，不收缩、不换行 */
+  flex: 0 0 auto;
+  white-space: nowrap;
   font-size: 10px;
   font-weight: 700;
   padding: 1px 6px;

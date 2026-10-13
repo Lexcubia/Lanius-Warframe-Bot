@@ -4,6 +4,7 @@ import { pickLocalized } from '@lanius/core';
 import { computed } from 'vue';
 
 import { formatRemain } from '../lib/format-remain.js';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import DamageTypeIcon from './DamageTypeIcon.vue';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
@@ -83,7 +84,7 @@ const remainLine = computed(() => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() => props.rotation.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
+const stamp = computed(() => formatTimestamp(props.rotation.fetchedAt));
 </script>
 
 <template>

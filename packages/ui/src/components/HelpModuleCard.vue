@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { HelpDto, Locale } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 
 import QqCardShell from './QqCardShell.vue';
 
@@ -13,7 +14,7 @@ const props = defineProps<{
 <template>
   <QqCardShell
     :title="pickLocalized(help.title, locale)"
-    :subtitle="new Date().toISOString().slice(0, 19).replace('T', ' ')"
+    :subtitle="formatTimestamp(new Date().toISOString())"
     :locale="locale"
   >
     <p class="help-intro">{{ pickLocalized(help.intro, locale) }}</p>

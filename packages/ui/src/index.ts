@@ -4,6 +4,7 @@
 
 export { laniusTokens, tokensAsCssVariables, type LaniusTokens } from './tokens.js';
 export { formatRemain } from './lib/format-remain.js';
+export { formatTimestamp } from './lib/format-timestamp.js';
 export {
   collectMissionTypeOptions,
   emptyFissureFilter,

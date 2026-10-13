@@ -21,6 +21,8 @@ services:
       NODE_ENV: production
       # tsx 直跑源码，无需 dist
       LANIUS_REPO_ROOT: /repo
+      # 业务面向中文用户：统一东八区，卡片时间戳等本地时间展示以容器时区为准
+      TZ: Asia/Shanghai
     volumes:
       # monorepo 源码（含 node_modules，同架构复用）
       - /opt/lanius/repo:/repo

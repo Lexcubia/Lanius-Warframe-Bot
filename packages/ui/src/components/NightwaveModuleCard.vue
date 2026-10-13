@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { NightwaveChallengeDto, NightwaveChallengeKind, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { formatTimestamp } from '../lib/format-timestamp.js';
 import { computed } from 'vue';
 
 import QqCardShell from './QqCardShell.vue';
@@ -77,7 +78,7 @@ const groups = computed(() => {
  *
  * @returns 卡片副标题用时间
  */
-const stamp = computed(() => props.worldstate.fetchedAt.replace('T', ' ').replace(/\.\d+Z$/, ''));
+const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 </script>
 
 <template>
