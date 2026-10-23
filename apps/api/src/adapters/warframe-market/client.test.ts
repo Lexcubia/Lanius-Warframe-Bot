@@ -47,17 +47,18 @@ describe('WarframeMarketClient v2 mapping', () => {
     ]);
   });
 
-  it('listItems keeps thumb from i18n', async () => {
+  it('listItems keeps thumb and subIcon from i18n', async () => {
     const fetchImpl = vi.fn(async () => {
       return new Response(
         JSON.stringify({
           data: [
             {
-              slug: 'latron_prime_set',
+              slug: 'latron_prime_barrel',
               i18n: {
                 'zh-hans': {
-                  name: '拉特昂 Prime 一套',
-                  thumb: 'items/images/en/thumbs/latron_prime_set.png',
+                  name: '拉特昂 Prime 枪管',
+                  thumb: 'items/images/en/thumbs/latron_prime_barrel.png',
+                  subIcon: 'sub_icons/weapon/prime_barrel_128x128.png',
                 },
               },
             },
@@ -69,7 +70,8 @@ describe('WarframeMarketClient v2 mapping', () => {
 
     const client = new WarframeMarketClient({ fetchImpl });
     const rows = await client.listItems('zh-hans');
-    expect(rows[0]?.thumb).toBe('items/images/en/thumbs/latron_prime_set.png');
+    expect(rows[0]?.thumb).toBe('items/images/en/thumbs/latron_prime_barrel.png');
+    expect(rows[0]?.subIcon).toBe('sub_icons/weapon/prime_barrel_128x128.png');
     expect(rows[0]?.ducats).toBeNull();
   });
 

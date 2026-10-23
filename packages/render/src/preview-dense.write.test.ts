@@ -10,6 +10,7 @@ import {
   renderInvasionsCard,
   renderMarketCard,
   renderRivenCard,
+  renderVoidTraderCard,
 } from './render-worldstate.js';
 import type { CardSkinId } from './vue-cards/skins.js';
 
@@ -145,33 +146,36 @@ const marketSample = {
       {
         urlName: 'latron_prime_barrel',
         name: { zh: '拉特昂 Prime 枪管', en: 'Latron Prime Barrel' },
-        iconUrl:
-          'https://warframe.market/static/assets/items/images/en/thumbs/latron_prime_barrel.5c8b8009acbdb97fd49177ba155ecfbe.128x128.png',
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/weapon/prime_barrel_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_receiver',
         name: { zh: '拉特昂 Prime 枪机', en: 'Latron Prime Receiver' },
+        iconUrl:
+          'https://warframe.market/static/assets/sub_icons/weapon/prime_receiver_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_stock',
         name: { zh: '拉特昂 Prime 枪托', en: 'Latron Prime Stock' },
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/weapon/prime_stock_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_blueprint',
         name: { zh: '拉特昂 Prime 蓝图', en: 'Latron Prime Blueprint' },
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/blueprint_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
     ],
   },
   page: 1,
-  pageSize: 10,
+  pageSize: 6,
   total: 2,
   orders: [
     {
@@ -207,7 +211,7 @@ const rivenSample = {
     iconUrl: 'https://warframe.market/static/assets/items/images/en/thumbs/lanka.thumb.png',
   },
   page: 1,
-  pageSize: 10,
+  pageSize: 6,
   total: 1,
   orders: [
     {
@@ -245,12 +249,38 @@ const rivenSample = {
   updatedAt: new Date().toISOString(),
 };
 
+const voidTraderSample = {
+  character: { zh: '虚空商人', en: 'Void Trader' },
+  node: { zh: '拉柔（地球）', en: 'Larunda (Earth)' },
+  active: true,
+  activation: new Date().toISOString(),
+  expiry: new Date(Date.now() + 36 * 3600_000).toISOString(),
+  remainingMs: 36 * 3600_000,
+  inventory: [
+    {
+      uniqueName: '/Lotus/Types/StoreItems/Packages/DualKeresPrime',
+      name: { zh: '凯瑞斯双剑 Prime', en: 'Dual Keres Prime' },
+      iconUrl:
+        'https://content.warframe.com/PublicExport/Lotus/Interface/Icons/StoreItems/Weapons/DualKeresPrime.png',
+      ducats: 450,
+      credits: 200_000,
+    },
+    {
+      uniqueName: '/Lotus/Types/Recipes/Components/OrokinCatalyst',
+      name: { zh: 'Orokin 反应堆', en: 'Orokin Reactor' },
+      ducats: 20,
+      credits: 150_000,
+    },
+  ],
+  fetchedAt: new Date().toISOString(),
+};
+
 describe('dense QQ card previews (light/dark)', () => {
   afterAll(async () => {
     await shutdownVueCardCapture();
   });
 
-  it('writes market/help/invasions/riven PNGs for both skins', async () => {
+  it('writes market/help/invasions/riven/baro PNGs for both skins', async () => {
     mkdirSync(outDir, { recursive: true });
     const skins: CardSkinId[] = ['light', 'dark'];
 
@@ -263,16 +293,23 @@ describe('dense QQ card previews (light/dark)', () => {
         skin,
       });
       const riven = await renderRivenCard({ locale: 'zh', riven: rivenSample, skin });
+      const baro = await renderVoidTraderCard({
+        locale: 'zh',
+        voidTrader: voidTraderSample,
+        skin,
+      });
 
       writeFileSync(resolve(outDir, `market-${skin}.png`), market);
       writeFileSync(resolve(outDir, `help-${skin}.png`), help);
       writeFileSync(resolve(outDir, `invasions-${skin}.png`), invasions);
       writeFileSync(resolve(outDir, `riven-${skin}.png`), riven);
+      writeFileSync(resolve(outDir, `void-trader-${skin}.png`), baro);
 
       expect(market.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
       expect(help.length).toBeGreaterThan(1000);
       expect(invasions.length).toBeGreaterThan(1000);
       expect(riven.length).toBeGreaterThan(1000);
+      expect(baro.length).toBeGreaterThan(1000);
     }
   }, 240_000);
 });

@@ -3,6 +3,12 @@ import { z } from 'zod';
 import { LocalizedNameSchema } from './worldstate.js';
 
 /**
+ * 行情排行榜默认每页条数（亦为上限）。
+ * QQ 缩略图可读性：6 条优于挤满 10 条小字。
+ */
+export const MARKET_ORDERS_PAGE_SIZE = 6;
+
+/**
  * 卖家在线状态过滤（行情排行榜固定保留项）。
  */
 export const MarketSellerStatusSchema = z.enum(['online', 'ingame']);
@@ -105,8 +111,8 @@ export const MarketOrdersDtoSchema = z.object({
   resolved: MarketResolvedTargetSchema,
   /** 当前页（从 1 起） */
   page: z.number().int().positive(),
-  /** 每页条数（固定 ≤10） */
-  pageSize: z.number().int().positive().max(10),
+  /** 每页条数（固定 ≤ {@link MARKET_ORDERS_PAGE_SIZE}） */
+  pageSize: z.number().int().positive().max(MARKET_ORDERS_PAGE_SIZE),
   /** 过滤后卖单总数 */
   total: z.number().int().nonnegative(),
   /** 本页卖单 */
@@ -183,7 +189,7 @@ export const RivenOrdersDtoSchema = z.object({
   query: z.string(),
   resolved: MarketResolvedTargetSchema,
   page: z.number().int().positive(),
-  pageSize: z.number().int().positive().max(10),
+  pageSize: z.number().int().positive().max(MARKET_ORDERS_PAGE_SIZE),
   total: z.number().int().nonnegative(),
   orders: z.array(RivenListingDtoSchema),
   statusFilter: z.literal('online|ingame'),
@@ -203,11 +209,6 @@ export const RivenOrdersDtoSchema = z.object({
  * 紫卡拍卖分页 DTO。
  */
 export type RivenOrdersDto = z.infer<typeof RivenOrdersDtoSchema>;
-
-/**
- * 行情排行榜默认每页条数（亦为上限）。
- */
-export const MARKET_ORDERS_PAGE_SIZE = 10;
 
 /**
  * `GET /v1/market/items` 查询参数（路由层 coerce）。

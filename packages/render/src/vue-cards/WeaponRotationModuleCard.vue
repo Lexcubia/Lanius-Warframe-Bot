@@ -53,7 +53,7 @@ function elementName(weapon: RotationWeaponDto): string | null {
  * @returns 武器行
  */
 const offerings = computed(() => {
-  const limit = props.maxItems ?? 12;
+  const limit = props.maxItems ?? 8;
   return props.rotation.offerings.slice(0, limit);
 });
 

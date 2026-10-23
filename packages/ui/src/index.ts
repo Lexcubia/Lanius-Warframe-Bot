@@ -37,3 +37,4 @@ export { default as DamageTypeIcon } from './components/DamageTypeIcon.vue';
 export { default as ValenceBonusBar } from './components/ValenceBonusBar.vue';
 export { resolveValenceElementIconSrc } from './lib/valence-element-icon.js';
 export { resolvePlatinumIconSrc } from './lib/platinum-icon.js';
+export { resolveDucatsIconSrc } from './lib/ducats-icon.js';
