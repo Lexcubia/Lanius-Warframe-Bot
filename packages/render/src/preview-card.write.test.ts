@@ -1,3 +1,4 @@
+import { EMPTY_WORLDSTATE_MISSION_SLICES } from '@lanius/core';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,6 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { shutdownVueCardCapture } from './chromium/capture-vue-card.js';
 import {
+  renderArbitrationCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -20,6 +22,7 @@ const outDir = resolve(dirname(fileURLToPath(import.meta.url)), '../tmp');
 const sample = {
   realm: 'international' as const,
   fetchedAt: new Date().toISOString(),
+  ...EMPTY_WORLDSTATE_MISSION_SLICES,
   fissures: [
     {
       id: 'f1',
@@ -179,6 +182,17 @@ const sample = {
       },
     ],
   },
+  arbitration: {
+    nodeKey: 'SolNode64',
+    node: { zh: 'Tessera（金星）', en: 'Tessera (Venus)' },
+    missionTypeKey: 'Defense',
+    missionType: { zh: '防御', en: 'Defense' },
+    enemyKey: 'Corpus',
+    enemy: { zh: 'Corpus', en: 'Corpus' },
+    activation: new Date(Date.now() - 600_000).toISOString(),
+    expiry: new Date(Date.now() + 2_400_000).toISOString(),
+    source: 'warframestat',
+  },
 };
 
 const helpSample = {
@@ -222,33 +236,36 @@ const marketSample = {
       {
         urlName: 'latron_prime_barrel',
         name: { zh: '拉特昂 Prime 枪管', en: 'Latron Prime Barrel' },
-        iconUrl:
-          'https://warframe.market/static/assets/items/images/en/thumbs/latron_prime_barrel.5c8b8009acbdb97fd49177ba155ecfbe.128x128.png',
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/weapon/prime_barrel_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_receiver',
         name: { zh: '拉特昂 Prime 枪机', en: 'Latron Prime Receiver' },
+        iconUrl:
+          'https://warframe.market/static/assets/sub_icons/weapon/prime_receiver_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_stock',
         name: { zh: '拉特昂 Prime 枪托', en: 'Latron Prime Stock' },
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/weapon/prime_stock_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_blueprint',
         name: { zh: '拉特昂 Prime 蓝图', en: 'Latron Prime Blueprint' },
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/blueprint_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
     ],
   },
   page: 1,
-  pageSize: 10,
+  pageSize: 6,
   total: 2,
   orders: [
     {
@@ -284,7 +301,7 @@ const rivenSample = {
     iconUrl: 'https://warframe.market/static/assets/items/images/en/thumbs/lanka.thumb.png',
   },
   page: 1,
-  pageSize: 10,
+  pageSize: 6,
   total: 1,
   orders: [
     {
@@ -334,6 +351,7 @@ describe('preview card write', () => {
     const fissures = await renderFissuresCard(input);
     const invasions = await renderInvasionsCard(input);
     const nightwave = await renderNightwaveCard(input);
+    const arbitration = await renderArbitrationCard(input);
     const help = await renderHelpCard({ locale: 'zh', help: helpSample });
     const market = await renderMarketCard({
       locale: 'zh',
@@ -345,6 +363,7 @@ describe('preview card write', () => {
     writeFileSync(resolve(outDir, 'preview-fissures.png'), fissures);
     writeFileSync(resolve(outDir, 'preview-invasions.png'), invasions);
     writeFileSync(resolve(outDir, 'preview-nightwave.png'), nightwave);
+    writeFileSync(resolve(outDir, 'preview-arbitration.png'), arbitration);
     writeFileSync(resolve(outDir, 'preview-help.png'), help);
     writeFileSync(resolve(outDir, 'preview-market.png'), market);
     writeFileSync(resolve(outDir, 'preview-riven.png'), riven);
@@ -355,6 +374,7 @@ describe('preview card write', () => {
     expect(fissures.length).toBeGreaterThan(1000);
     expect(invasions.length).toBeGreaterThan(1000);
     expect(nightwave.length).toBeGreaterThan(1000);
+    expect(arbitration.length).toBeGreaterThan(1000);
     expect(help.length).toBeGreaterThan(1000);
     expect(market.length).toBeGreaterThan(1000);
     expect(riven.length).toBeGreaterThan(1000);

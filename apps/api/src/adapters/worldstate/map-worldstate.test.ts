@@ -85,13 +85,11 @@ describe('mapWorldstate', () => {
         ActiveChallenges: [
           {
             _id: { $oid: 'ch-2' },
-            Challenge:
-              '/Lotus/Types/Challenges/Seasons/Weekly/SeasonWeeklyCompleteMissions',
+            Challenge: '/Lotus/Types/Challenges/Seasons/Weekly/SeasonWeeklyCompleteMissions',
           },
           {
             _id: { $oid: 'ch-1' },
-            Challenge:
-              '/Lotus/Types/Challenges/Seasons/Daily/SeasonDailyKillEnemiesWithPrimary',
+            Challenge: '/Lotus/Types/Challenges/Seasons/Daily/SeasonDailyKillEnemiesWithPrimary',
           },
         ],
       },
@@ -107,9 +105,7 @@ describe('mapWorldstate', () => {
     expect(dto.fissures[0]?.missionType.zh).toBe('间谍');
     expect(dto.fissures[0]?.iconPath).toContain('RelicLithA.png');
     expect(dto.fissures[0]?.iconUrl).toContain('content.warframe.com/PublicExport');
-    expect(dto.fissures.find((row) => row.path === 'empyrean')?.missionType.zh).toBe(
-      '前哨战',
-    );
+    expect(dto.fissures.find((row) => row.path === 'empyrean')?.missionType.zh).toBe('前哨战');
     expect(dto.invasions).toHaveLength(1);
     expect(dto.invasions[0]?.node.en).toContain('Naga');
     expect(dto.invasions[0]?.attackingFaction).toEqual({
@@ -117,19 +113,12 @@ describe('mapWorldstate', () => {
       en: 'Grineer',
     });
     expect(dto.invasions[0]?.defendingFaction.en).toBe('Corpus');
-    expect(dto.invasions[0]?.attackerReward?.name.en.toLowerCase()).toContain(
-      'dera',
-    );
-    expect(dto.invasions[0]?.attackerReward?.uniqueName).toContain(
-      'DeraVandalStock',
-    );
+    expect(dto.invasions[0]?.attackerReward?.name.en.toLowerCase()).toContain('dera');
+    expect(dto.invasions[0]?.attackerReward?.uniqueName).toContain('DeraVandalStock');
     expect(dto.invasions[0]?.attackerReward?.quantity).toBe(3);
     expect(dto.invasions[0]?.defenderReward?.quantity).toBe(1);
     expect(dto.invasions[0]?.completionPct).toBe(50);
-    expect(dto.nightwave?.activeChallenges.map((c) => c.kind)).toEqual([
-      'daily',
-      'weekly',
-    ]);
+    expect(dto.nightwave?.activeChallenges.map((c) => c.kind)).toEqual(['daily', 'weekly']);
     expect(dto.nightwave?.activeChallenges[0]?.kindLabel.zh).toBe('每日');
     expect(dto.nightwave?.activeChallenges[1]?.kindLabel.zh).toBe('每周');
     expect(dto.nightwave?.activeChallenges[0]?.title?.en).toBeTruthy();
@@ -156,5 +145,89 @@ describe('mapWorldstate', () => {
       'zariman',
     ]);
   });
-});
 
+  it('maps Sorties / LiteSorties / bounties / alerts / archimedea / circuit', () => {
+    const fetchedAt = '2026-10-10T12:00:00.000Z';
+    const now = Date.parse(fetchedAt);
+    const dto = mapWorldstate(
+      'international',
+      {
+        Sorties: [
+          {
+            _id: { $oid: 'sortie-1' },
+            Boss: 'SORTIE_BOSS_CORRUPTED_VOR',
+            Variants: [
+              {
+                missionType: 'MT_EXTERMINATION',
+                modifierType: 'SORTIE_MODIFIER_SLASH',
+                node: 'SolNode66',
+              },
+            ],
+          },
+        ],
+        LiteSorties: [
+          {
+            _id: { $oid: 'archon-1' },
+            Boss: 'SORTIE_BOSS_AMAR',
+            Missions: [{ missionType: 'MT_RESCUE', node: 'SolNode11' }],
+          },
+        ],
+        EndlessXpSchedule: [
+          {
+            CategoryChoices: [
+              { Category: 'EXC_NORMAL', Choices: ['Hydroid'] },
+              { Category: 'EXC_HARD', Choices: ['Dera'] },
+            ],
+          },
+        ],
+        Alerts: [
+          {
+            _id: { $oid: 'alert-1' },
+            Expiry: { $date: { $numberLong: String(now + 3_600_000) } },
+            MissionInfo: {
+              missionType: 'MT_MOBILE_DEFENSE',
+              faction: 'FC_INFESTATION',
+              location: 'SolNode175',
+              missionReward: { credits: 5000 },
+            },
+            Tag: 'TestAlert',
+          },
+        ],
+        Conquests: [{ Type: 'CT_LAB', Missions: [], Variables: [] }],
+        SyndicateMissions: [
+          {
+            Tag: 'CetusSyndicate',
+            Jobs: [
+              {
+                rewards: '/Lotus/Types/Game/MissionDecks/CetusMissionRewards/TierATableARewards',
+              },
+            ],
+          },
+        ],
+      },
+      fetchedAt,
+    );
+
+    expect(dto.sortie?.id).toBe('sortie-1');
+    expect(dto.sortie?.boss?.en).toContain('Vor');
+    expect(dto.sortie?.missions).toHaveLength(1);
+    expect(dto.sortie?.missions[0]?.missionType?.zh).toBe('歼灭');
+    expect(dto.archon?.id).toBe('archon-1');
+    expect(dto.archon?.boss?.en).toContain('Amar');
+    expect(dto.archon?.missions[0]?.missionType?.zh).toBe('救援');
+    expect(dto.circuit).not.toBeNull();
+    expect(dto.circuit?.normalChoices.map((row) => row.key)).toEqual(['Hydroid']);
+    expect(dto.circuit?.hardChoices.map((row) => row.key)).toEqual(['Dera']);
+    expect(dto.bounties).toHaveLength(1);
+    expect(dto.bounties[0]?.tag).toBe('CetusSyndicate');
+    expect(dto.bounties[0]?.jobs[0]?.rewardTablePath).toContain('TierATableARewards');
+    expect(dto.arbitration).toBeNull();
+    expect(dto.archimedea).not.toBeNull();
+    expect(dto.archimedea?.seasons.map((s) => s.kind)).toEqual(['lab']);
+    expect(dto.alerts).toHaveLength(1);
+    expect(dto.alerts[0]?.id).toBe('alert-1');
+    expect(dto.alerts[0]?.tag).toBe('TestAlert');
+    expect(dto.alerts[0]?.credits).toBe(5000);
+    expect(dto.alerts[0]?.missionType?.zh).toBe('移动防御');
+  });
+});

@@ -79,10 +79,10 @@ function isDetailView(): boolean {
 
 <style scoped>
 .help-intro {
-  margin: 0 0 6px;
-  font-size: 11px;
+  margin: 0 0 4px;
+  font-size: 13px;
   color: var(--lanius-text-muted);
-  line-height: 1.35;
+  line-height: 1.3;
 }
 .help-grid {
   list-style: none;
@@ -98,7 +98,7 @@ function isDetailView(): boolean {
   align-items: baseline;
   gap: 6px;
   min-width: 0;
-  padding: 4px 6px;
+  padding: 5px 6px;
   border-bottom: 1px solid var(--lanius-border);
   border-right: 1px solid var(--lanius-border);
 }
@@ -109,12 +109,12 @@ function isDetailView(): boolean {
   font-weight: 700;
   font-family: var(--lanius-font-display);
   color: var(--lanius-brand);
-  font-size: 12px;
+  font-size: 14px;
   white-space: nowrap;
 }
 .help-cell__alias {
   min-width: 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--lanius-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -126,20 +126,20 @@ function isDetailView(): boolean {
   padding: 0;
 }
 .help-detail__row {
-  padding: 4px 0;
+  padding: 5px 0;
   border-bottom: 1px solid var(--lanius-border);
 }
 .help-detail__cmd {
   font-weight: 700;
   font-family: var(--lanius-font-display);
   color: var(--lanius-brand);
-  font-size: 13px;
+  font-size: 15px;
 }
 .help-detail__alias,
 .help-detail__usage,
 .help-detail__ex {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--lanius-text-muted);
 }
 .help-detail__usage {

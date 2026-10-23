@@ -1,4 +1,5 @@
 import type {
+  ArchimedeaKind,
   HelpDto,
   Locale,
   MarketSearchDto,
@@ -15,6 +16,12 @@ import '@fontsource/noto-sans-sc/latin-700.css';
 import { createApp, type App, type Component } from 'vue';
 
 import {
+  AlertsModuleCard,
+  ArbitrationModuleCard,
+  ArchimedeaModuleCard,
+  BountiesModuleCard,
+  CircuitModuleCard,
+  ArchonModuleCard,
   CyclesModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
@@ -23,6 +30,7 @@ import {
   NightwaveModuleCard,
   resolveCardSkin,
   RivenModuleCard,
+  SortieModuleCard,
   VarziaModuleCard,
   VoidTraderModuleCard,
   WeaponRotationModuleCard,
@@ -40,6 +48,13 @@ export type CardHostKind =
   | 'fissures'
   | 'invasions'
   | 'nightwave'
+  | 'bounties'
+  | 'alerts'
+  | 'arbitration'
+  | 'archimedea'
+  | 'circuit'
+  | 'sortie'
+  | 'archon'
   | 'help'
   | 'market'
   | 'riven'
@@ -57,6 +72,8 @@ export type CardHostPayload = {
   /** QQ 皮肤 id（非法值回落 light） */
   skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
+  /** 科研子类过滤（仅 archimedea） */
+  archimedeaKind?: ArchimedeaKind;
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
@@ -96,6 +113,20 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return InvasionsModuleCard;
     case 'nightwave':
       return NightwaveModuleCard;
+    case 'bounties':
+      return BountiesModuleCard;
+    case 'alerts':
+      return AlertsModuleCard;
+    case 'arbitration':
+      return ArbitrationModuleCard;
+    case 'archimedea':
+      return ArchimedeaModuleCard;
+    case 'circuit':
+      return CircuitModuleCard;
+    case 'sortie':
+      return SortieModuleCard;
+    case 'archon':
+      return ArchonModuleCard;
     case 'help':
       return HelpModuleCard;
     case 'market':
@@ -150,6 +181,11 @@ function mountCard(payload: CardHostPayload): void {
     props.varzia = payload.varzia;
   } else if (payload.kind === 'weaponRotation') {
     props.rotation = payload.weaponRotation;
+  } else if (payload.kind === 'archimedea') {
+    props.worldstate = payload.worldstate;
+    if (payload.archimedeaKind) {
+      props.kind = payload.archimedeaKind;
+    }
   } else {
     props.worldstate = payload.worldstate;
   }

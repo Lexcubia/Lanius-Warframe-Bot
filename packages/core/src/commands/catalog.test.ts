@@ -31,4 +31,16 @@ describe('command catalog', () => {
     expect(help.intro.zh.length).toBeGreaterThan(0);
     expect(help.lines.some((line) => line.id === 'help')).toBe(true);
   });
+
+  it('registers Wave 0 mission module roots', () => {
+    expect(findCommandByRoot('突击')?.id).toBe('sortie');
+    expect(findCommandByRoot('执行官')?.id).toBe('archon');
+    expect(findCommandByRoot('circuit')?.id).toBe('circuit');
+    expect(findCommandByRoot('赏金')?.id).toBe('bounties');
+    expect(findCommandByRoot('仲裁')?.id).toBe('arbitration');
+    expect(findCommandByRoot('警报')?.id).toBe('alerts');
+    expect(findCommandByRoot('科研')?.id).toBe('archimedea');
+    expect(findCommandByRoot('精英科研')?.id).toBe('archimedea');
+    expect(findCommandByRoot('时光科研')?.id).toBe('archimedea');
+  });
 });

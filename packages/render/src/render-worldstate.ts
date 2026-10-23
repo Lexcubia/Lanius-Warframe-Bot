@@ -53,6 +53,23 @@ export async function renderNightwaveCard(input: RenderWorldstateCardInput): Pro
 }
 
 /**
+ * 渲染「科研」独立模块 PNG（精英 / 时光；与警报无关）。
+ *
+ * @param input - 世界状态载荷；可选 `kind` 过滤子类（勿与 CardKind 混淆）
+ * @returns PNG 字节
+ */
+export async function renderArchimedeaCard(
+  input: RenderWorldstateCardInput & { kind?: import('@lanius/core').ArchimedeaKind },
+): Promise<Buffer> {
+  const { kind: archimedeaKind, ...rest } = input;
+  return captureVueCard({
+    kind: 'archimedea',
+    ...rest,
+    ...(archimedeaKind ? { archimedeaKind } : {}),
+  });
+}
+
+/**
  * 渲染「虚空裂隙」独立模块 PNG（Vue + Playwright 节点截图）。
  *
  * @param input - 世界状态载荷
@@ -60,6 +77,66 @@ export async function renderNightwaveCard(input: RenderWorldstateCardInput): Pro
  */
 export async function renderFissuresCard(input: RenderWorldstateCardInput): Promise<Buffer> {
   return captureVueCard({ kind: 'fissures', ...input });
+}
+
+/**
+ * 渲染「警报」独立模块 PNG（Vue + Playwright 节点截图）。
+ * 与科研卡完全分离；空态由卡片展示「当前无警报」。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderAlertsCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'alerts', ...input });
+}
+
+/**
+ * 渲染「仲裁」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷（含 `arbitration` 切片）
+ * @returns PNG 字节
+ */
+export async function renderArbitrationCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'arbitration', ...input });
+}
+
+/**
+ * 渲染「赏金」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷（含 bounties 切片）
+ * @returns PNG 字节
+ */
+export async function renderBountiesCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'bounties', ...input });
+}
+/**
+ * 渲染「回廊 / Circuit」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷（读取 `circuit` 切片）
+ * @returns PNG 字节
+ */
+export async function renderCircuitCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'circuit', ...input });
+}
+
+/**
+ * 渲染「每日突击」独立模块 PNG。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderSortieCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'sortie', ...input });
+}
+
+/**
+ * 渲染「执行官狩猎」独立模块 PNG。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderArchonCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'archon', ...input });
 }
 
 /**

@@ -134,3 +134,49 @@ weapons:
   'Coda Bassocyst':
     zh: '终幕·低音囊肿'
     en: 'Coda Bassocyst'
+  # 回廊 / Circuit 短名与可读英文（对齐灰机 wiki 习惯）
+  Hydroid:
+    zh: '水刑天'
+    en: 'Hydroid'
+  Mirage:
+    zh: '幻影'
+    en: 'Mirage'
+  Limbo:
+    zh: '灵薄狱'
+    en: 'Limbo'
+  Dera:
+    zh: '德拉'
+    en: 'Dera'
+  Cestra:
+    zh: '锡斯特'
+    en: 'Cestra'
+  Okina:
+    zh: '奥金刀'
+    en: 'Okina'
+  Sybaris:
+    zh: '席芭莉丝'
+    en: 'Sybaris'
+  Sicarus:
+    zh: '席卡鲁斯'
+    en: 'Sicarus'
+  DualToxocyst:
+    zh: '双毒囊'
+    en: 'Dual Toxocyst'
+  'Dual Toxocyst':
+    zh: '双毒囊'
+    en: 'Dual Toxocyst'
+  DualIchor:
+    zh: '双伊克瓦'
+    en: 'Dual Ichor'
+  'Dual Ichor':
+    zh: '双伊克瓦'
+    en: 'Dual Ichor'
+  Torid:
+    zh: '托里德'
+    en: 'Torid'
+  Atomos:
+    zh: '原子矿信标'
+    en: 'Atomos'
+  Miter:
+    zh: '米特尔'
+    en: 'Miter'

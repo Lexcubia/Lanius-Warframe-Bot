@@ -8,6 +8,13 @@ interface Window {
       | 'fissures'
       | 'invasions'
       | 'nightwave'
+      | 'bounties'
+      | 'alerts'
+      | 'arbitration'
+      | 'archimedea'
+      | 'circuit'
+      | 'sortie'
+      | 'archon'
       | 'help'
       | 'market'
       | 'riven'
@@ -17,6 +24,7 @@ interface Window {
     locale: 'zh' | 'en';
     stale?: boolean;
     worldstate?: unknown;
+    archimedeaKind?: 'lab' | 'hex';
     help?: unknown;
     market?: unknown;
     riven?: unknown;

@@ -65,6 +65,38 @@ export {
 } from './dto/worldstate.js';
 
 export {
+  AlertDtoSchema,
+  ArbitrationDtoSchema,
+  ArchimedeaDifficultyDtoSchema,
+  ArchimedeaDtoSchema,
+  ArchimedeaKindSchema,
+  ArchimedeaMissionDtoSchema,
+  ArchimedeaSeasonDtoSchema,
+  ArchonHuntDtoSchema,
+  BountyJobDtoSchema,
+  BountySyndicateDtoSchema,
+  CircuitChoiceDtoSchema,
+  CircuitDtoSchema,
+  EMPTY_WORLDSTATE_MISSION_SLICES,
+  SortieDtoSchema,
+  SortieMissionDtoSchema,
+  type AlertDto,
+  type ArbitrationDto,
+  type ArchimedeaDifficultyDto,
+  type ArchimedeaDto,
+  type ArchimedeaKind,
+  type ArchimedeaMissionDto,
+  type ArchimedeaSeasonDto,
+  type ArchonHuntDto,
+  type BountyJobDto,
+  type BountySyndicateDto,
+  type CircuitChoiceDto,
+  type CircuitDto,
+  type SortieDto,
+  type SortieMissionDto,
+} from './dto/worldstate-missions.js';
+
+export {
   HelpDtoSchema,
   HelpLineSchema,
   HelpParamSchema,
@@ -194,3 +226,10 @@ export {
   type FissureMissionOption,
   type FissureQueryFilter,
 } from './fissures/filter-fissures.js';
+
+export {
+  applyBountyMapFilter,
+  isBountyMapFilterActive,
+  parseBountyMapTokens,
+  type BountyMapFilter,
+} from './bounties/filter-bounties.js';

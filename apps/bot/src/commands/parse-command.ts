@@ -2,9 +2,13 @@ import {
   PushFrequencySchema,
   SubscribableModuleIdSchema,
   findCommandByRoot,
+  isBountyMapFilterActive,
   isFissureQueryActive,
+  parseBountyMapTokens,
   parseFissureFilterTokens,
   resolveModuleToken,
+  type ArchimedeaKind,
+  type BountyMapFilter,
   type FissureQueryFilter,
   type PushFrequency,
   type SubscribableModuleId,
@@ -20,6 +24,15 @@ export type BotIntent =
   | { type: 'fissures'; filter?: FissureQueryFilter }
   | { type: 'invasions' }
   | { type: 'nightwave' }
+  /** Wave 1 并行模块：circuit 已接线；其余未就绪时回「数据接入中」 */
+  | { type: 'sortie' }
+  | { type: 'archon' }
+  | { type: 'circuit' }
+  | { type: 'bounties'; mapFilter?: BountyMapFilter }
+  | { type: 'arbitration' }
+  | { type: 'alerts' }
+  /** `kind`：精英=`lab`、时光=`hex`；裸 `/科研` 不带 kind 同时摘要两者 */
+  | { type: 'archimedea'; kind?: ArchimedeaKind }
   | {
       type: 'market';
       query: string;
@@ -183,10 +196,33 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     };
   }
 
+  if (command.id === 'bounties') {
+    const mapFilter = parseBountyMapTokens(restTokens);
+    return {
+      matched: true,
+      intent: isBountyMapFilterActive(mapFilter)
+        ? { type: 'bounties', mapFilter }
+        : { type: 'bounties' },
+    };
+  }
+
+  if (command.id === 'archimedea') {
+    const kind = resolveArchimedeaKind(rootToken);
+    return {
+      matched: true,
+      intent: kind ? { type: 'archimedea', kind } : { type: 'archimedea' },
+    };
+  }
+
   if (
     command.id === 'worldstate' ||
     command.id === 'invasions' ||
     command.id === 'nightwave' ||
+    command.id === 'sortie' ||
+    command.id === 'archon' ||
+    command.id === 'circuit' ||
+    command.id === 'arbitration' ||
+    command.id === 'alerts' ||
     command.id === 'voidTrader' ||
     command.id === 'varzia' ||
     command.id === 'tenetRotation' ||
@@ -196,6 +232,34 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
   }
 
   return { matched: true, intent: { type: 'unknown', raw: body } };
+}
+
+/**
+ * 由指令根词解析科研子类过滤。
+ *
+ * @param rootToken - 用户输入的根（已去前导 `/`）
+ * @returns `lab` / `hex`；总览命令返回 `undefined`
+ */
+function resolveArchimedeaKind(rootToken: string): ArchimedeaKind | undefined {
+  const key = rootToken.trim().toLowerCase();
+  if (
+    key === '精英科研' ||
+    key === 'deeparchimedea' ||
+    key === 'deep' ||
+    key === 'deep-archimedea'
+  ) {
+    return 'lab';
+  }
+  if (
+    key === '时光科研' ||
+    key === 'temporalarchimedea' ||
+    key === 'temporal' ||
+    key === 'temporal-archimedea' ||
+    key === 'hex'
+  ) {
+    return 'hex';
+  }
+  return undefined;
 }
 
 /**

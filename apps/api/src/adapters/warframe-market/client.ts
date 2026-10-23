@@ -26,6 +26,11 @@ export type WfmItemRow = {
   id?: string;
   /** 相对或绝对 thumb；服务层可转绝对 URL */
   thumb?: string;
+  /**
+   * 部件类型小图标（如 `sub_icons/weapon/prime_barrel_128x128.png`）。
+   * WFM 部件 `thumb` 常与套装同图，套装卡部件行应优先用此字段。
+   */
+  subIcon?: string;
   /** 杜卡德价值；非 Prime 等可能缺失 */
   ducats?: number | null;
   /** 上游 tags（如 prime / set / component） */
@@ -40,6 +45,8 @@ export type WfmItemDetail = {
   item_name: string;
   id?: string;
   thumb?: string;
+  /** 部件类型小图标；见 {@link WfmItemRow.subIcon} */
+  subIcon?: string;
   ducats?: number | null;
   tags?: string[];
   /** 是否套装根节点 */
@@ -133,6 +140,8 @@ type WfmV2I18nBlock = {
   name?: string;
   thumb?: string;
   icon?: string;
+  /** 部件类型小图标相对路径（与套装总图区分） */
+  subIcon?: string;
 };
 
 /**
@@ -427,7 +436,10 @@ function mapCatalogRowToItem(
   const localized = row.i18n?.[language]?.name?.trim();
   const fallbackEn = row.i18n?.en?.name?.trim();
   const itemName = localized || fallbackEn || slug.replace(/_/g, ' ');
-  const thumb = row.i18n?.[language]?.thumb?.trim() || row.i18n?.en?.thumb?.trim();
+  const i18nPreferred = row.i18n?.[language];
+  const i18nEn = row.i18n?.en;
+  const thumb = i18nPreferred?.thumb?.trim() || i18nEn?.thumb?.trim();
+  const subIcon = i18nPreferred?.subIcon?.trim() || i18nEn?.subIcon?.trim();
   const id = row.id?.trim();
   const tags = Array.isArray(row.tags)
     ? row.tags.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0)
@@ -441,6 +453,7 @@ function mapCatalogRowToItem(
     item_name: itemName,
     ...(id ? { id } : {}),
     ...(thumb ? { thumb } : {}),
+    ...(subIcon ? { subIcon } : {}),
     ducats,
     ...(tags && tags.length > 0 ? { tags } : {}),
   };

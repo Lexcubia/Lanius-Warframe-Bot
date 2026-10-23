@@ -22,7 +22,7 @@ describe('formatMarketText', () => {
           name: { zh: '拉特昂 Prime 一套', en: 'Latron Prime Set' },
         },
         page: 1,
-        pageSize: 10,
+        pageSize: 6,
         total: 1,
         orders: [
           {
@@ -69,7 +69,7 @@ describe('formatMarketText', () => {
           ],
         },
         page: 1,
-        pageSize: 10,
+        pageSize: 6,
         total: 0,
         orders: [],
         statusFilter: 'online|ingame',

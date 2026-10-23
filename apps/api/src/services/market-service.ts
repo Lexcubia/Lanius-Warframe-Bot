@@ -18,13 +18,17 @@ const ITEM_DETAIL_TTL_MS = 6 * 60 * 60_000;
 const ITEM_ORDERS_TTL_MS = 90_000;
 
 /**
- * 带可选 thumb / id / ducats 的索引行（缓存用）。
+ * 带可选 thumb / subIcon / id / ducats 的索引行（缓存用）。
  */
 type ItemIndexRowWithMeta = ItemIndexRow & {
   /** WFM 物品 id */
   id?: string;
   /** WFM 相对或绝对 thumb */
   thumb?: string;
+  /**
+   * 部件类型小图标；套装部件行优先于 thumb（thumb 常与套装同图）。
+   */
+  subIcon?: string;
   /** 杜卡德价值 */
   ducats?: number | null;
   /** 上游 tags */
@@ -140,8 +144,8 @@ export class MarketService {
    * @returns 索引行（含 id / thumb / ducats）
    */
   private async getItemIndex(language: 'zh-hans' | 'en'): Promise<ItemIndexRowWithMeta[]> {
-    // v2 meta：id/ducats 供套装部件解析；变更时 bump 键避免旧缓存缺字段。
-    const key = `wfm:v2:items:index:meta:${language}`;
+    // v2 meta：id/ducats/subIcon 供套装部件解析；变更时 bump 键避免旧缓存缺字段。
+    const key = `wfm:v2:items:index:meta:subicon:${language}`;
     const fresh = await this.cache.getFresh<ItemIndexRowWithMeta[]>(key);
     if (fresh) {
       return fresh.value;
@@ -152,6 +156,7 @@ export class MarketService {
       itemName: item.item_name,
       ...(item.id ? { id: item.id } : {}),
       ...(item.thumb ? { thumb: item.thumb } : {}),
+      ...(item.subIcon ? { subIcon: item.subIcon } : {}),
       ducats: item.ducats ?? null,
       ...(item.tags && item.tags.length > 0 ? { tags: item.tags } : {}),
     }));
@@ -218,7 +223,15 @@ export class MarketService {
       const partDetail = await this.loadItemDetail(urlName);
       const zhName = zhRow?.itemName ?? enRow?.itemName ?? urlName.replace(/_/g, ' ');
       const enName = enRow?.itemName ?? zhRow?.itemName ?? urlName.replace(/_/g, ' ');
-      const iconUrl = resolveWfmAssetUrl(zhRow?.thumb || enRow?.thumb || partDetail?.thumb);
+      // 优先 subIcon：WFM 部件 thumb 常与套装总图相同，缩略图下无法区分。
+      const iconUrl = resolveWfmAssetUrl(
+        zhRow?.subIcon ||
+          enRow?.subIcon ||
+          partDetail?.subIcon ||
+          zhRow?.thumb ||
+          enRow?.thumb ||
+          partDetail?.thumb,
+      );
       const ducats = resolveDucats(partDetail, zhRow, enRow);
       const quantityInSet = partDetail?.quantityInSet;
       out.push({
@@ -385,10 +398,11 @@ function mergeIndexRows(
       map.set(row.urlName, row);
       continue;
     }
-    // 补缺 thumb / id / ducats / tags。
+    // 补缺 thumb / subIcon / id / ducats / tags。
     map.set(row.urlName, {
       ...existing,
       thumb: existing.thumb ?? row.thumb,
+      subIcon: existing.subIcon ?? row.subIcon,
       id: existing.id ?? row.id,
       ducats: existing.ducats ?? row.ducats ?? null,
       tags: existing.tags ?? row.tags,

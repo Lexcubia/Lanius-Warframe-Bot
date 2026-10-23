@@ -1,17 +1,34 @@
-import { isRealmAvailable, type Locale, type Realm, type WorldstateDto } from '@lanius/core';
+import {
+  isRealmAvailable,
+  type ArbitrationDto,
+  type Locale,
+  type Realm,
+  type WorldstateDto,
+} from '@lanius/core';
 import type { Logger } from '@lanius/logger';
 
+import { mapArbitration } from '../adapters/worldstate/map-arbitration.js';
 import { fetchInternationalWorldstate } from '../adapters/worldstate/international.js';
 import { mapWorldstate, WORLDSTATE_SOURCE } from '../adapters/worldstate/map-worldstate.js';
 import type { UpstreamWorldstate } from '../adapters/worldstate/types.js';
+import {
+  DEFAULT_WARFRAMESTAT_BASE_URL,
+  fetchWarframestatArbitration,
+} from '../adapters/worldstate/warframestat-arbitration.js';
 import type { CacheStore } from '../cache/types.js';
 import { realmNotAvailableError, upstreamUnavailableError } from '../lib/http-error.js';
 import type { ItemIconService } from './item-icon-service.js';
+import type { MissionDeckService } from './mission-deck-service.js';
 
 /**
  * Default worldstate cache TTL (60s), within the documented 60–120s band.
  */
 export const WORLDSTATE_TTL_MS = 60_000;
+
+/**
+ * 仲裁社区源独立 TTL（与官方 worldstate 同量级；失败不写脏缓存）。
+ */
+export const ARBITRATION_TTL_MS = 60_000;
 
 /**
  * Dependencies injected into the worldstate service.
@@ -22,8 +39,15 @@ export type WorldstateServiceDeps = {
   timeoutMs: number;
   logger: Logger;
   fetchImpl?: typeof fetch;
-  /** 可选：为入侵奖励填充官方图标 */
+  /** 可选：为入侵 / 警报 / 赏金奖励填充官方图标 */
   itemIconService?: ItemIconService;
+  /** 可选：赏金 Jobs 的 MissionDeck 奖励表 */
+  missionDeckService?: MissionDeckService;
+  /**
+   * warframestat.us 基址（仲裁社区源）；缺省官方文档默认。
+   * 失败时仅 `arbitration=null`，不拖垮 `/v1/worldstate`。
+   */
+  warframestatBaseUrl?: string;
 };
 
 /**
@@ -67,11 +91,13 @@ export class WorldstateService {
   private readonly logger: Logger;
   private readonly fetchImpl?: typeof fetch;
   private readonly itemIconService?: ItemIconService;
+  private readonly missionDeckService?: MissionDeckService;
+  private readonly warframestatBaseUrl: string;
 
   /**
    * Creates a worldstate service bound to cache and upstream settings.
    *
-   * @param deps - Cache, upstream URL/timeout, logger, optional fetch.
+   * @param deps - Cache, upstream URL/timeout, logger, optional fetch / warframestat 基址。
    */
   constructor(deps: WorldstateServiceDeps) {
     this.cache = deps.cache;
@@ -80,10 +106,13 @@ export class WorldstateService {
     this.logger = deps.logger;
     this.fetchImpl = deps.fetchImpl;
     this.itemIconService = deps.itemIconService;
+    this.missionDeckService = deps.missionDeckService;
+    this.warframestatBaseUrl = deps.warframestatBaseUrl ?? DEFAULT_WARFRAMESTAT_BASE_URL;
   }
 
   /**
    * Returns worldstate for the requested realm/locale context.
+   * 官方切片与仲裁社区源并行；仲裁失败仅置 `arbitration=null`，不抛穿。
    *
    * @param realm - Requested realm (`china` → not available in MVP).
    * @param _locale - Requested locale (reserved for localized enrichment).
@@ -108,10 +137,15 @@ export class WorldstateService {
     }
 
     const upstream = await this.loadUpstream(realm);
-    const mapped = mapWorldstate(realm, upstream.raw, upstream.fetchedAt);
+    const missionDeck = this.missionDeckService
+      ? await this.missionDeckService.getCatalog()
+      : undefined;
+    const mapped = mapWorldstate(realm, upstream.raw, upstream.fetchedAt, { missionDeck });
+    const arbitration = await this.loadArbitration(realm);
+    const withArbitration: WorldstateDto = { ...mapped, arbitration };
     const data = this.itemIconService
-      ? await this.itemIconService.enrichWorldstate(mapped)
-      : mapped;
+      ? await this.itemIconService.enrichWorldstate(withArbitration)
+      : withArbitration;
     await this.cache.set(cacheKey, data, WORLDSTATE_TTL_MS);
     return {
       data,
@@ -120,6 +154,38 @@ export class WorldstateService {
       stale: upstream.stale,
       source: WORLDSTATE_SOURCE,
     };
+  }
+
+  /**
+   * 拉取并映射仲裁社区源；任何失败 / 空数据均返回 `null`（不抛）。
+   *
+   * @param realm - 区服（用于缓存键；MVP 仅 international）
+   * @returns `ArbitrationDto` 或 `null`
+   */
+  async loadArbitration(realm: Realm): Promise<ArbitrationDto | null> {
+    const cacheKey = `arbitration:${realm}`;
+    const fresh = await this.cache.getFresh<ArbitrationDto | null>(cacheKey);
+    if (fresh) {
+      return fresh.value;
+    }
+
+    try {
+      const raw = await fetchWarframestatArbitration({
+        baseUrl: this.warframestatBaseUrl,
+        timeoutMs: this.timeoutMs,
+        fetchImpl: this.fetchImpl,
+      });
+      const mapped = mapArbitration(raw);
+      await this.cache.set(cacheKey, mapped, ARBITRATION_TTL_MS);
+      return mapped;
+    } catch (error) {
+      this.logger.warn(
+        { err: serializeError(error), realm, source: 'warframestat' },
+        'arbitration community source failed; leaving slice null',
+      );
+      // 失败不写 null 进长缓存，避免短暂故障锁死整窗；仍返回 null 以保证 worldstate 可用
+      return null;
+    }
   }
 
   /**

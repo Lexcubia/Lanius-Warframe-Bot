@@ -1,0 +1,26 @@
+{
+  "EndlessXpSchedule": [
+    {
+      "Activation": {
+        "$date": {
+          "$numberLong": "1792368000000"
+        }
+      },
+      "Expiry": {
+        "$date": {
+          "$numberLong": "1792972800000"
+        }
+      },
+      "CategoryChoices": [
+        {
+          "Category": "EXC_NORMAL",
+          "Choices": ["Hydroid", "Mirage", "Limbo"]
+        },
+        {
+          "Category": "EXC_HARD",
+          "Choices": ["Dera", "Cestra", "Okina", "Sybaris", "Sicarus"]
+        }
+      ]
+    }
+  ]
+}

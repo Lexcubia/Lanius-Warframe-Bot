@@ -1,28 +1,29 @@
-import type {
-  CatalogItemDto,
-  InvasionDto,
-  NightwaveDto,
-  Realm,
-  WorldstateDto,
-} from '@lanius/core';
+import type { CatalogItemDto, InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
 
+import { mapAlerts } from './map-alerts.js';
+import { mapArchimedea } from './map-archimedea.js';
+import { mapBounties } from './map-bounties.js';
+import { mapCircuit } from './map-circuit.js';
 import { mapOpenWorldCycles } from './map-cycles.js';
 import { mapFissures } from './map-fissures.js';
-import {
-  NIGHTWAVE_KIND_LABELS,
-  resolveNightwaveChallengeKind,
-} from './nightwave-kind.js';
+import { mapArchonHunt, mapSortie } from './map-sorties.js';
+import { NIGHTWAVE_KIND_LABELS, resolveNightwaveChallengeKind } from './nightwave-kind.js';
+import type { MissionDeckCatalog } from './resolve-mission-deck.js';
 import {
   resolveChallengeLabels,
   resolveFactionLabel,
   resolveNodeLabel,
   resolvePathLabel,
 } from './resolve-labels.js';
-import type {
-  UpstreamInvasion,
-  UpstreamSeasonInfo,
-  UpstreamWorldstate,
-} from './types.js';
+import type { UpstreamInvasion, UpstreamSeasonInfo, UpstreamWorldstate } from './types.js';
+
+/**
+ * `mapWorldstate` 可选依赖（赏金奖励表等）。
+ */
+export type MapWorldstateOptions = {
+  /** MissionDeck 目录；缺省时赏金仍映射 Job 元数据，rewards 为空 */
+  missionDeck?: MissionDeckCatalog;
+};
 
 /**
  * Source tag recorded in response `meta.source` for official worldstate.
@@ -32,16 +33,19 @@ export const WORLDSTATE_SOURCE = 'warframe-worldstate';
 /**
  * Maps official worldState JSON into a Lanius `WorldstateDto`.
  * 仅输出活跃入侵；节点/阵营/挑战/奖励在此解析为双语可读名。
+ * Wave 1：`bounties` / `alerts` / `archimedea` / `circuit` 已接入；仲裁由服务层社区源挂载；其余任务模块仍空默认。
  *
  * @param realm - Realm this snapshot belongs to (must be available).
  * @param raw - Parsed upstream JSON object.
  * @param fetchedAt - ISO8601 timestamp when the snapshot was obtained.
+ * @param options - 可选 MissionDeck 等依赖
  * @returns Normalized worldstate DTO for `/v1/worldstate`.
  */
 export function mapWorldstate(
   realm: Realm,
   raw: UpstreamWorldstate,
   fetchedAt: string,
+  options: MapWorldstateOptions = {},
 ): WorldstateDto {
   const invasions = [...(raw.Invasions ?? []), ...(raw.EventInvasions ?? [])]
     // 已完成入侵对概览无意义，MVP 不返回。
@@ -50,15 +54,24 @@ export function mapWorldstate(
     .filter((row): row is InvasionDto => row !== null);
 
   const nowMs = Date.parse(fetchedAt);
-  const fissureNow = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const snapshotNow = Number.isFinite(nowMs) ? nowMs : Date.now();
 
+  // Wave 1：sortie / archon / bounties / alerts / archimedea / circuit 已映射；仲裁由服务层社区源挂载。
   return {
     realm,
     fetchedAt,
     cycles: mapOpenWorldCycles(raw),
-    fissures: mapFissures(raw, fissureNow),
+    fissures: mapFissures(raw, snapshotNow),
     invasions,
     nightwave: mapNightwave(raw.SeasonInfo),
+    sortie: mapSortie(raw.Sorties),
+    archon: mapArchonHunt(raw.LiteSorties),
+    circuit: mapCircuit(raw, snapshotNow),
+    bounties: mapBounties(raw, options.missionDeck),
+    // 官方 worldState 无仲裁；占位 null，由 WorldstateService.loadArbitration 覆盖
+    arbitration: null,
+    alerts: mapAlerts(raw, snapshotNow),
+    archimedea: mapArchimedea(raw.Conquests),
   };
 }
 
@@ -116,17 +129,13 @@ function mapNightwave(raw: UpstreamSeasonInfo | undefined): NightwaveDto | null 
       kindLabel: NIGHTWAVE_KIND_LABELS[kind],
       title: labels?.title,
       description: labels?.description,
-      expiry: Number.isFinite(expiryMs)
-        ? new Date(expiryMs).toISOString()
-        : undefined,
+      expiry: Number.isFinite(expiryMs) ? new Date(expiryMs).toISOString() : undefined,
     };
   });
 
   // 展示顺序：每日 → 每周 → 其他（同档保持上游顺序）
   const kindRank = { daily: 0, weekly: 1, other: 2 } as const;
-  activeChallenges.sort(
-    (a, b) => kindRank[a.kind] - kindRank[b.kind],
-  );
+  activeChallenges.sort((a, b) => kindRank[a.kind] - kindRank[b.kind]);
 
   return {
     season: raw.Season,
@@ -163,9 +172,7 @@ function computeCompletionPct(
  * @returns CatalogItemDto；无条目时 `undefined`
  */
 function mapCountedReward(
-  reward:
-    | { countedItems?: Array<{ ItemType?: string; ItemCount?: number }> }
-    | undefined,
+  reward: { countedItems?: Array<{ ItemType?: string; ItemCount?: number }> } | undefined,
 ): CatalogItemDto | undefined {
   const row = reward?.countedItems?.[0];
   const itemType = row?.ItemType;
@@ -173,9 +180,7 @@ function mapCountedReward(
     return undefined;
   }
   const quantity =
-    typeof row?.ItemCount === 'number' &&
-    Number.isFinite(row.ItemCount) &&
-    row.ItemCount > 0
+    typeof row?.ItemCount === 'number' && Number.isFinite(row.ItemCount) && row.ItemCount > 0
       ? Math.floor(row.ItemCount)
       : undefined;
   return {

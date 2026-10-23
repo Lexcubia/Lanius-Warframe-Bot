@@ -9,12 +9,19 @@ export {
 } from './chromium/capture-vue-card.js';
 export type { CardKind } from './chromium/card-kind.js';
 export {
+  renderAlertsCard,
+  renderArbitrationCard,
+  renderArchimedeaCard,
+  renderBountiesCard,
+  renderCircuitCard,
+  renderArchonCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
   renderMarketCard,
   renderNightwaveCard,
   renderRivenCard,
+  renderSortieCard,
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,

@@ -1,21 +1,31 @@
 import { createLaniusApiClient } from '@lanius/api';
 import {
+  renderAlertsCard,
+  renderArbitrationCard,
+  renderArchimedeaCard,
+  renderBountiesCard,
+  renderCircuitCard,
+  renderArchonCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
   renderMarketCard,
   renderNightwaveCard,
   renderRivenCard,
+  renderSortieCard,
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
   renderWorldstateCard,
 } from '@lanius/render';
 import {
+  applyBountyMapFilter,
   applyFissureQueryFilter,
   buildHelpDto,
+  isBountyMapFilterActive,
   isFissureQueryActive,
   pickLocalized,
+  type BountyMapFilter,
   type FissureQueryFilter,
   type Locale,
   type WorldstateDto,
@@ -41,10 +51,17 @@ import {
   formatVarziaText,
   formatVoidTraderText,
 } from '../formatters/traders-text.js';
+import { formatArchimedeaText } from '../formatters/archimedea-text.js';
 import {
+  formatAlertsText,
+  formatArbitrationText,
+  formatBountiesText,
+  formatCircuitText,
+  formatArchonText,
   formatFissuresText,
   formatInvasionsText,
   formatNightwaveText,
+  formatSortieText,
   formatWorldstateText,
 } from '../formatters/worldstate-text.js';
 import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
@@ -121,6 +138,39 @@ export async function handleCommand(
     realm: deps.config.defaults.realm,
     locale,
   };
+
+  // Wave 1：sortie / archon / bounties / alerts / arbitration / archimedea / circuit 已接通。
+
+  if (intent.type === 'archimedea') {
+    const envelope = await api.getWorldstate(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const kind = intent.kind;
+    const text = formatArchimedeaText(envelope.data, locale, {
+      stale: envelope.meta.stale,
+      ...(kind ? { kind } : {}),
+    });
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderArchimedeaCard(
+          withCardSkin(
+            {
+              worldstate: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+              ...(kind ? { kind } : {}),
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'archimedea',
+    });
+  }
 
   if (intent.type === 'help' || intent.type === 'unknown') {
     const envelope = await api
@@ -359,6 +409,30 @@ export async function handleCommand(
     return sendFail(deps, target, locale, envelope.error.message);
   }
 
+  if (intent.type === 'circuit') {
+    const text = formatCircuitText(envelope.data, locale, {
+      stale: envelope.meta.stale,
+    });
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderCircuitCard(
+          withCardSkin(
+            {
+              worldstate: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'circuit',
+    });
+  }
+
   const moduleKind =
     intent.type === 'fissures'
       ? 'fissures'
@@ -366,7 +440,17 @@ export async function handleCommand(
         ? 'invasions'
         : intent.type === 'nightwave'
           ? 'nightwave'
-          : 'worldstate';
+          : intent.type === 'bounties'
+            ? 'bounties'
+            : intent.type === 'alerts'
+              ? 'alerts'
+              : intent.type === 'arbitration'
+                ? 'arbitration'
+                : intent.type === 'sortie'
+                  ? 'sortie'
+                  : intent.type === 'archon'
+                    ? 'archon'
+                    : 'worldstate';
 
   let worldstate: WorldstateDto = envelope.data;
   let filterSummary: string | undefined;
@@ -374,6 +458,13 @@ export async function handleCommand(
     const applied = applyFissureQueryFilter(envelope.data.fissures, intent.filter);
     worldstate = { ...envelope.data, fissures: applied.items };
     filterSummary = summarizeFissureFilter(intent.filter, locale);
+  }
+  if (intent.type === 'bounties' && intent.mapFilter && isBountyMapFilterActive(intent.mapFilter)) {
+    worldstate = {
+      ...envelope.data,
+      bounties: applyBountyMapFilter(envelope.data.bounties, intent.mapFilter),
+    };
+    filterSummary = summarizeBountyMapFilter(intent.mapFilter, locale);
   }
 
   const text =
@@ -390,9 +481,30 @@ export async function handleCommand(
           ? formatNightwaveText(envelope.data, locale, {
               stale: envelope.meta.stale,
             })
-          : formatWorldstateText(envelope.data, locale, {
-              stale: envelope.meta.stale,
-            });
+          : moduleKind === 'bounties'
+            ? formatBountiesText(worldstate, locale, {
+                stale: envelope.meta.stale,
+                filterSummary,
+              })
+            : moduleKind === 'alerts'
+              ? formatAlertsText(envelope.data, locale, {
+                  stale: envelope.meta.stale,
+                })
+              : moduleKind === 'arbitration'
+                ? formatArbitrationText(envelope.data, locale, {
+                    stale: envelope.meta.stale,
+                  })
+                : moduleKind === 'sortie'
+                  ? formatSortieText(envelope.data, locale, {
+                      stale: envelope.meta.stale,
+                    })
+                  : moduleKind === 'archon'
+                    ? formatArchonText(envelope.data, locale, {
+                        stale: envelope.meta.stale,
+                      })
+                    : formatWorldstateText(envelope.data, locale, {
+                        stale: envelope.meta.stale,
+                      });
 
   const renderInput = withCardSkin(
     {
@@ -431,9 +543,42 @@ export async function handleCommand(
         ? renderInvasionsCard(renderInput)
         : moduleKind === 'nightwave'
           ? renderNightwaveCard(renderInput)
-          : renderWorldstateCard(renderInput),
+          : moduleKind === 'bounties'
+            ? renderBountiesCard(renderInput)
+            : moduleKind === 'alerts'
+              ? renderAlertsCard(renderInput)
+              : moduleKind === 'arbitration'
+                ? renderArbitrationCard(renderInput)
+                : moduleKind === 'sortie'
+                  ? renderSortieCard(renderInput)
+                  : moduleKind === 'archon'
+                    ? renderArchonCard(renderInput)
+                    : renderWorldstateCard(renderInput),
     label: moduleKind,
   });
+}
+
+/**
+ * 将赏金地图筛选格式化为短摘要。
+ *
+ * @param filter - 地图 Tag 筛选
+ * @param locale - 语言
+ * @returns 摘要串
+ */
+function summarizeBountyMapFilter(filter: BountyMapFilter, locale: Locale): string {
+  const zh = locale !== 'en';
+  const labelByTag: Record<string, { zh: string; en: string }> = {
+    CetusSyndicate: { zh: '平原', en: 'Cetus' },
+    SolarisSyndicate: { zh: '金星', en: 'Vallis' },
+    EntratiSyndicate: { zh: '火卫二', en: 'Deimos' },
+    ZarimanSyndicate: { zh: '扎里曼', en: 'Zariman' },
+  };
+  return filter.tags
+    .map((tag) => {
+      const hit = labelByTag[tag];
+      return hit ? (zh ? hit.zh : hit.en) : tag;
+    })
+    .join(zh ? '、' : ', ');
 }
 
 /**

@@ -2,6 +2,15 @@ import { z } from 'zod';
 
 import { RealmSchema } from '../realm.js';
 import { CatalogItemDtoSchema } from './item.js';
+import {
+  AlertDtoSchema,
+  ArbitrationDtoSchema,
+  ArchimedeaDtoSchema,
+  ArchonHuntDtoSchema,
+  BountySyndicateDtoSchema,
+  CircuitDtoSchema,
+  SortieDtoSchema,
+} from './worldstate-missions.js';
 
 /**
  * Localized display name pair used on worldstate entities.
@@ -39,11 +48,7 @@ export type InvasionDto = z.infer<typeof InvasionDtoSchema>;
 /**
  * 午夜电波挑战周期：每日 / 每周 / 其他（无法识别时）。
  */
-export const NightwaveChallengeKindSchema = z.enum([
-  'daily',
-  'weekly',
-  'other',
-]);
+export const NightwaveChallengeKindSchema = z.enum(['daily', 'weekly', 'other']);
 
 /**
  * 午夜电波单条挑战。
@@ -120,14 +125,7 @@ export type OpenWorldCycleId = z.infer<typeof OpenWorldCycleIdSchema>;
 /**
  * 虚空裂隙遗物纪元（古纪→全能）。
  */
-export const FissureEraSchema = z.enum([
-  'lith',
-  'meso',
-  'neo',
-  'axi',
-  'requiem',
-  'omnia',
-]);
+export const FissureEraSchema = z.enum(['lith', 'meso', 'neo', 'axi', 'requiem', 'omnia']);
 
 /**
  * 裂隙路径档：普通 / 钢铁之路 / 九重天（虚空风暴）。
@@ -165,7 +163,8 @@ export type FissureEra = z.infer<typeof FissureEraSchema>;
 export type FissurePath = z.infer<typeof FissurePathSchema>;
 
 /**
- * Worldstate snapshot：开放世界周期 + 裂隙 + 入侵 + 午夜电波。
+ * Worldstate snapshot：开放世界周期 + 裂隙 + 入侵 + 午夜电波 + 任务模块切片。
+ * 任务模块字段并列、无耦合（alerts 与 archimedea 禁止共享业务类型）。
  * 客户端按指令模块分别消费，勿依赖上游字段名。
  */
 export const WorldstateDtoSchema = z.object({
@@ -175,6 +174,20 @@ export const WorldstateDtoSchema = z.object({
   fissures: z.array(FissureDtoSchema),
   invasions: z.array(InvasionDtoSchema),
   nightwave: NightwaveDtoSchema.nullable(),
+  /** 每日突击；无数据时 `null` */
+  sortie: SortieDtoSchema.nullable().default(null),
+  /** 执行官狩猎；无数据时 `null` */
+  archon: ArchonHuntDtoSchema.nullable().default(null),
+  /** 回廊 / Circuit；无数据时 `null` */
+  circuit: CircuitDtoSchema.nullable().default(null),
+  /** 开放世界赏金（可空数组） */
+  bounties: z.array(BountySyndicateDtoSchema).default([]),
+  /** 仲裁（社区源）；失败或未接入时 `null` */
+  arbitration: ArbitrationDtoSchema.nullable().default(null),
+  /** 警报（独立模块；可空数组） */
+  alerts: z.array(AlertDtoSchema).default([]),
+  /** 精英 / 时光科研；无数据时 `null` */
+  archimedea: ArchimedeaDtoSchema.nullable().default(null),
 });
 
 /**
