@@ -13,6 +13,33 @@ export const MarketSellerStatusSchema = z.enum(['online', 'ingame']);
 export type MarketSellerStatus = z.infer<typeof MarketSellerStatusSchema>;
 
 /**
+ * 套装中的单个部件（市场卡可视化用）。
+ */
+export const MarketSetComponentSchema = z.object({
+  /** WFM slug */
+  urlName: z.string().min(1),
+  /** 部件展示名 */
+  name: LocalizedNameSchema,
+  /**
+   * 部件图标绝对 URL；缺失时卡片占位。
+   */
+  iconUrl: z.string().url().optional(),
+  /**
+   * 该部件杜卡德（Ducats）价值；上游缺失为 null。
+   */
+  ducats: z.number().int().nonnegative().nullable(),
+  /**
+   * 组成一套所需数量；未知时缺省（多数 Prime 为 1）。
+   */
+  quantityInSet: z.number().int().positive().optional(),
+});
+
+/**
+ * 套装部件 DTO。
+ */
+export type MarketSetComponent = z.infer<typeof MarketSetComponentSchema>;
+
+/**
  * 模糊锁定后的物品 / 武器目标。
  */
 export const MarketResolvedTargetSchema = z.object({
@@ -22,6 +49,18 @@ export const MarketResolvedTargetSchema = z.object({
    * 物品/武器图标绝对 URL（WFM thumb 或官方 CDN）；缺失时卡片可降级占位。
    */
   iconUrl: z.string().url().optional(),
+  /**
+   * 杜卡德金币价值（Prime 部件/套装常见）；非 Prime 或上游无字段时为 null。
+   */
+  ducats: z.number().int().nonnegative().nullable().optional(),
+  /**
+   * 是否为套装（WFM `setRoot` 或 tags 含 `set`）。
+   */
+  isSet: z.boolean().optional(),
+  /**
+   * 套装部件列表；非套装时为空数组或缺省。
+   */
+  components: z.array(MarketSetComponentSchema).optional(),
 });
 
 /**
@@ -41,6 +80,10 @@ export const MarketListingDtoSchema = z.object({
   modRank: z.number().int().nonnegative().nullable(),
   /** 卖家游戏内名 */
   seller: z.string().min(1),
+  /**
+   * WFM 用户声誉（reputation）；上游缺失按 0。
+   */
+  sellerReputation: z.number().int().nonnegative(),
   /** 卖家状态（已过滤为 online|ingame） */
   status: MarketSellerStatusSchema,
   /** 订单更新时间（ISO）；上游缺失时用生成时刻 */
@@ -119,6 +162,10 @@ export const RivenListingDtoSchema = z.object({
   polarity: z.string().nullable(),
   /** 卖家游戏内名 */
   seller: z.string().min(1),
+  /**
+   * WFM 用户声誉（reputation）；上游缺失按 0。
+   */
+  sellerReputation: z.number().int().nonnegative(),
   /** 卖家状态 */
   status: MarketSellerStatusSchema,
   updatedAt: z.string().datetime(),

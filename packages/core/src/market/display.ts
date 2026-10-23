@@ -107,6 +107,30 @@ export function formatMarketPriceQuantity(
 }
 
 /**
+ * WFM 卖家声誉展示。
+ *
+ * @param reputation - 非负整数声誉
+ * @param locale - 语言
+ * @returns 如 `声誉 42` / `rep 42`
+ */
+export function formatSellerReputationLabel(reputation: number, locale: Locale): string {
+  const value = Number.isFinite(reputation) && reputation >= 0 ? Math.trunc(reputation) : 0;
+  return locale === 'en' ? `rep ${value}` : `声誉 ${value}`;
+}
+
+/**
+ * 杜卡德（Ducats）展示。
+ *
+ * @param ducats - 杜卡德数量
+ * @param locale - 语言
+ * @returns 如 `杜卡德 15` / `15 ducats`
+ */
+export function formatDucatsLabel(ducats: number, locale: Locale): string {
+  const value = Number.isFinite(ducats) && ducats >= 0 ? Math.trunc(ducats) : 0;
+  return locale === 'en' ? `${value} ducats` : `杜卡德 ${value}`;
+}
+
+/**
  * QQ `<qqbot-cmd-input>` 插入正文上限（与官方文档一致）。
  */
 const QQ_WHISPER_MAX_CHARS = 100;
