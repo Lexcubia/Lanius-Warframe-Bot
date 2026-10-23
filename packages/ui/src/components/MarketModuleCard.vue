@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { Locale, MarketOrdersDto } from '@lanius/core';
-import { formatMarketPriceQuantity, formatSellerStatusLabel, pickLocalized } from '@lanius/core';
+import {
+  formatMarketPlatinumLabel,
+  formatMarketQuantityLabel,
+  formatSellerStatusLabel,
+  pickLocalized,
+  sellerStatusTone,
+} from '@lanius/core';
 
 import { resolvePlatinumIconSrc } from '../lib/platinum-icon.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
@@ -54,9 +60,7 @@ const platIcon = resolvePlatinumIconSrc();
         class="row"
       >
         <div class="name">
-          <span class="price">{{
-            formatMarketPriceQuantity(order.platinum, order.quantity, locale)
-          }}</span>
+          <span class="price">{{ formatMarketPlatinumLabel(order.platinum, locale) }}</span>
           <img
             class="plat"
             :src="platIcon"
@@ -65,13 +69,16 @@ const platIcon = resolvePlatinumIconSrc();
             height="14"
             data-lanius-icon="platinum"
           />
+          <span class="qty">{{ formatMarketQuantityLabel(order.quantity, locale) }}</span>
           <span v-if="order.modRank !== null" class="rank">
             {{ locale === 'en' ? `r${order.modRank}` : `等级${order.modRank}` }}
           </span>
         </div>
         <div class="prices">
           <span>{{ order.seller }}</span>
-          <span>{{ formatSellerStatusLabel(order.status, locale) }}</span>
+          <span class="status" :class="`status--${sellerStatusTone(order.status)}`">
+            {{ formatSellerStatusLabel(order.status, locale) }}
+          </span>
         </div>
       </li>
     </ul>
@@ -129,12 +136,18 @@ const platIcon = resolvePlatinumIconSrc();
 .name {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   font-weight: 700;
   font-size: 13px;
 }
 .price {
   font-weight: 700;
+}
+.qty {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--lanius-text-muted);
 }
 .plat {
   width: 14px;
@@ -153,5 +166,17 @@ const platIcon = resolvePlatinumIconSrc();
   margin-top: 4px;
   font-size: 12px;
   color: var(--lanius-text-muted);
+}
+.status {
+  font-weight: 700;
+}
+.status--online {
+  color: var(--lanius-success, #5fd0b0);
+}
+.status--ingame {
+  color: var(--lanius-accent-dim, #2f8fc4);
+}
+.status--offline {
+  color: var(--lanius-text-muted, #6b7385);
 }
 </style>
