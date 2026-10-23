@@ -25,36 +25,85 @@ export function resolveWfmAssetUrl(relativePath: string | undefined | null): str
 }
 
 /**
- * 卖家状态展示文案（zh 中文化；en 保持上游英文）。
+ * 卖家状态展示文案（zh 中文化；en 保持上游英文；含 offline 以便着色扩展）。
  *
- * @param status - online / ingame
+ * @param status - online / ingame / offline
  * @param locale - 界面语言
  * @returns 展示串
  */
-export function formatSellerStatusLabel(status: MarketSellerStatus, locale: Locale): string {
+export function formatSellerStatusLabel(
+  status: MarketSellerStatus | 'offline',
+  locale: Locale,
+): string {
   if (locale === 'en') {
-    return status === 'ingame' ? 'ingame' : 'online';
+    if (status === 'ingame') {
+      return 'ingame';
+    }
+    if (status === 'offline') {
+      return 'offline';
+    }
+    return 'online';
   }
-  return status === 'ingame' ? '游戏中' : '在线';
+  if (status === 'ingame') {
+    return '游戏中';
+  }
+  if (status === 'offline') {
+    return '离线';
+  }
+  return '在线';
 }
 
 /**
- * 市场卖单价与数量分开展示（避免「n白金 X n」含糊粘连）。
+ * 卖家状态对应的视觉色调（卡片/Web 着色用）。
+ *
+ * @param status - online / ingame / offline
+ * @returns `online` | `ingame` | `offline`（与 CSS 修饰符一致）
+ */
+export function sellerStatusTone(
+  status: MarketSellerStatus | 'offline',
+): 'online' | 'ingame' | 'offline' {
+  if (status === 'ingame' || status === 'offline') {
+    return status;
+  }
+  return 'online';
+}
+
+/**
+ * 白金单价展示（不含数量，避免与「×」混淆）。
+ *
+ * @param platinum - 白金单价
+ * @param locale - 语言
+ * @returns 如 `69 白金` / `69p`
+ */
+export function formatMarketPlatinumLabel(platinum: number, locale: Locale): string {
+  return locale === 'en' ? `${platinum}p` : `${platinum} 白金`;
+}
+
+/**
+ * 可售数量展示（单独字段，不带 ×）。
+ *
+ * @param quantity - 可售数量
+ * @param locale - 语言
+ * @returns 如 `数量 20` / `qty 20`
+ */
+export function formatMarketQuantityLabel(quantity: number, locale: Locale): string {
+  return locale === 'en' ? `qty ${quantity}` : `数量 ${quantity}`;
+}
+
+/**
+ * 市场卖单价与数量分开展示（无 ×，避免「n白金 X n」歧义）。
  *
  * @param platinum - 白金单价
  * @param quantity - 可售数量
  * @param locale - 语言
- * @returns 如 `69 白金 · ×20` / `69p · ×20`
+ * @returns 如 `69 白金 · 数量 20` / `69p · qty 20`
  */
 export function formatMarketPriceQuantity(
   platinum: number,
   quantity: number,
   locale: Locale,
 ): string {
-  if (locale === 'en') {
-    return `${platinum}p · ×${quantity}`;
-  }
-  return `${platinum} 白金 · ×${quantity}`;
+  return `${formatMarketPlatinumLabel(platinum, locale)} · ${formatMarketQuantityLabel(quantity, locale)}`;
 }
 
 /**

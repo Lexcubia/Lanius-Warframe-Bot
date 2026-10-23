@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Locale, RivenOrdersDto } from '@lanius/core';
-import { formatSellerStatusLabel, pickLocalized } from '@lanius/core';
+import { formatSellerStatusLabel, pickLocalized, sellerStatusTone } from '@lanius/core';
 
 import { resolvePlatinumIconSrc } from '../lib/platinum-icon.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
@@ -63,7 +63,9 @@ const platIcon = resolvePlatinumIconSrc();
           />
           <span class="unit">{{ locale === 'en' ? 'p' : '白金' }}</span>
           <span class="seller">· {{ order.seller }}</span>
-          <span class="status">({{ formatSellerStatusLabel(order.status, locale) }})</span>
+          <span class="status" :class="`status--${sellerStatusTone(order.status)}`">
+            ({{ formatSellerStatusLabel(order.status, locale) }})
+          </span>
         </div>
         <div class="prices">
           <span>
@@ -155,11 +157,23 @@ const platIcon = resolvePlatinumIconSrc();
   flex: 0 0 auto;
 }
 .unit,
-.status,
 .seller {
   font-weight: 600;
   font-size: 11px;
   color: var(--lanius-text-muted);
+}
+.status {
+  font-weight: 700;
+  font-size: 11px;
+}
+.status--online {
+  color: var(--lanius-success, #5fd0b0);
+}
+.status--ingame {
+  color: var(--lanius-accent-dim, #2f8fc4);
+}
+.status--offline {
+  color: var(--lanius-text-muted, #6b7385);
 }
 .prices {
   display: flex;

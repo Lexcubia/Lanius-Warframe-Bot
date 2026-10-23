@@ -41,7 +41,8 @@ describe('formatMarketText', () => {
       },
       'zh',
     );
-    expect(text).toContain('69 白金 · ×20');
+    expect(text).toContain('69 白金 · 数量 20');
+    expect(text).not.toMatch(/白金\s*[×xX]/);
     expect(text).toContain('游戏中');
     expect(text).toContain('<qqbot-cmd-input');
     expect(text).toContain(encodeURIComponent('私聊1'));

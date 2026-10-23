@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatMarketPlatinumLabel,
   formatMarketPriceQuantity,
+  formatMarketQuantityLabel,
   formatMarketWhisper,
   formatSellerStatusLabel,
   resolveWfmAssetUrl,
+  sellerStatusTone,
 } from './display.js';
 
 describe('resolveWfmAssetUrl', () => {
@@ -23,15 +26,28 @@ describe('formatSellerStatusLabel', () => {
   it('localizes zh and keeps en', () => {
     expect(formatSellerStatusLabel('ingame', 'zh')).toBe('游戏中');
     expect(formatSellerStatusLabel('online', 'zh')).toBe('在线');
+    expect(formatSellerStatusLabel('offline', 'zh')).toBe('离线');
     expect(formatSellerStatusLabel('ingame', 'en')).toBe('ingame');
     expect(formatSellerStatusLabel('online', 'en')).toBe('online');
+    expect(formatSellerStatusLabel('offline', 'en')).toBe('offline');
+  });
+});
+
+describe('sellerStatusTone', () => {
+  it('maps status to color tone keys', () => {
+    expect(sellerStatusTone('online')).toBe('online');
+    expect(sellerStatusTone('ingame')).toBe('ingame');
+    expect(sellerStatusTone('offline')).toBe('offline');
   });
 });
 
 describe('formatMarketPriceQuantity', () => {
-  it('separates price and quantity', () => {
-    expect(formatMarketPriceQuantity(69, 20, 'zh')).toBe('69 白金 · ×20');
-    expect(formatMarketPriceQuantity(69, 20, 'en')).toBe('69p · ×20');
+  it('separates price and quantity without ×', () => {
+    expect(formatMarketPlatinumLabel(69, 'zh')).toBe('69 白金');
+    expect(formatMarketQuantityLabel(20, 'zh')).toBe('数量 20');
+    expect(formatMarketPriceQuantity(69, 20, 'zh')).toBe('69 白金 · 数量 20');
+    expect(formatMarketPriceQuantity(69, 20, 'en')).toBe('69p · qty 20');
+    expect(formatMarketPriceQuantity(69, 20, 'zh')).not.toMatch(/[×xX]/);
   });
 });
 
