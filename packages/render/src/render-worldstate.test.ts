@@ -4,6 +4,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { shutdownVueCardCapture } from './chromium/capture-vue-card.js';
 import {
   renderAlertsCard,
+  renderArbitrationCard,
   renderFissuresCard,
   renderInvasionsCard,
   renderNightwaveCard,
@@ -147,6 +148,17 @@ const sampleWorldstate = {
       ],
     },
   ],
+  arbitration: {
+    nodeKey: 'SolNode64',
+    node: { zh: 'Tessera（金星）', en: 'Tessera (Venus)' },
+    missionTypeKey: 'Defense',
+    missionType: { zh: '防御', en: 'Defense' },
+    enemyKey: 'Corpus',
+    enemy: { zh: 'Corpus', en: 'Corpus' },
+    activation: '2026-10-10T11:00:00.000Z',
+    expiry: '2026-10-10T12:00:00.000Z',
+    source: 'warframestat',
+  },
 };
 
 describe('module card renders', () => {
@@ -201,6 +213,15 @@ describe('module card renders', () => {
     });
     expect(empty.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     expect(empty.length).toBeGreaterThan(500);
+  }, 60_000);
+
+  it('renders arbitration PNG', async () => {
+    const png = await renderArbitrationCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(png.length).toBeGreaterThan(1000);
   }, 60_000);
 
   it('renders void trader PNG', async () => {

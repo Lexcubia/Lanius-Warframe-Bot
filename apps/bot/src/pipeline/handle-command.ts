@@ -1,6 +1,7 @@
 import { createLaniusApiClient } from '@lanius/api';
 import {
   renderAlertsCard,
+  renderArbitrationCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -44,6 +45,7 @@ import {
 } from '../formatters/traders-text.js';
 import {
   formatAlertsText,
+  formatArbitrationText,
   formatFissuresText,
   formatInvasionsText,
   formatNightwaveText,
@@ -124,13 +126,12 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 1：alerts 已接通；其余任务模块仍占坑 stub。
+  // Wave 1：alerts / arbitration 已接通；其余任务模块仍占坑 stub。
   if (
     intent.type === 'sortie' ||
     intent.type === 'archon' ||
     intent.type === 'circuit' ||
     intent.type === 'bounties' ||
-    intent.type === 'arbitration' ||
     intent.type === 'archimedea'
   ) {
     const stub =
@@ -387,7 +388,9 @@ export async function handleCommand(
           ? 'nightwave'
           : intent.type === 'alerts'
             ? 'alerts'
-            : 'worldstate';
+            : intent.type === 'arbitration'
+              ? 'arbitration'
+              : 'worldstate';
 
   let worldstate: WorldstateDto = envelope.data;
   let filterSummary: string | undefined;
@@ -415,9 +418,13 @@ export async function handleCommand(
             ? formatAlertsText(envelope.data, locale, {
                 stale: envelope.meta.stale,
               })
-            : formatWorldstateText(envelope.data, locale, {
-                stale: envelope.meta.stale,
-              });
+            : moduleKind === 'arbitration'
+              ? formatArbitrationText(envelope.data, locale, {
+                  stale: envelope.meta.stale,
+                })
+              : formatWorldstateText(envelope.data, locale, {
+                  stale: envelope.meta.stale,
+                });
 
   const renderInput = withCardSkin(
     {
@@ -458,7 +465,9 @@ export async function handleCommand(
           ? renderNightwaveCard(renderInput)
           : moduleKind === 'alerts'
             ? renderAlertsCard(renderInput)
-            : renderWorldstateCard(renderInput),
+            : moduleKind === 'arbitration'
+              ? renderArbitrationCard(renderInput)
+              : renderWorldstateCard(renderInput),
     label: moduleKind,
   });
 }

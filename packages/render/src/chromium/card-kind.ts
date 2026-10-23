@@ -7,6 +7,7 @@ export type CardKind =
   | 'invasions'
   | 'nightwave'
   | 'alerts'
+  | 'arbitration'
   | 'help'
   | 'market'
   | 'riven'

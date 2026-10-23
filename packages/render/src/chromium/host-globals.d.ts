@@ -8,6 +8,8 @@ interface Window {
       | 'fissures'
       | 'invasions'
       | 'nightwave'
+      | 'alerts'
+      | 'arbitration'
       | 'help'
       | 'market'
       | 'riven'

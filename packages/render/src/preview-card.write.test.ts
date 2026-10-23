@@ -7,6 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { shutdownVueCardCapture } from './chromium/capture-vue-card.js';
 import {
+  renderArbitrationCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -181,6 +182,17 @@ const sample = {
       },
     ],
   },
+  arbitration: {
+    nodeKey: 'SolNode64',
+    node: { zh: 'Tessera（金星）', en: 'Tessera (Venus)' },
+    missionTypeKey: 'Defense',
+    missionType: { zh: '防御', en: 'Defense' },
+    enemyKey: 'Corpus',
+    enemy: { zh: 'Corpus', en: 'Corpus' },
+    activation: new Date(Date.now() - 600_000).toISOString(),
+    expiry: new Date(Date.now() + 2_400_000).toISOString(),
+    source: 'warframestat',
+  },
 };
 
 const helpSample = {
@@ -339,6 +351,7 @@ describe('preview card write', () => {
     const fissures = await renderFissuresCard(input);
     const invasions = await renderInvasionsCard(input);
     const nightwave = await renderNightwaveCard(input);
+    const arbitration = await renderArbitrationCard(input);
     const help = await renderHelpCard({ locale: 'zh', help: helpSample });
     const market = await renderMarketCard({
       locale: 'zh',
@@ -350,6 +363,7 @@ describe('preview card write', () => {
     writeFileSync(resolve(outDir, 'preview-fissures.png'), fissures);
     writeFileSync(resolve(outDir, 'preview-invasions.png'), invasions);
     writeFileSync(resolve(outDir, 'preview-nightwave.png'), nightwave);
+    writeFileSync(resolve(outDir, 'preview-arbitration.png'), arbitration);
     writeFileSync(resolve(outDir, 'preview-help.png'), help);
     writeFileSync(resolve(outDir, 'preview-market.png'), market);
     writeFileSync(resolve(outDir, 'preview-riven.png'), riven);
@@ -360,6 +374,7 @@ describe('preview card write', () => {
     expect(fissures.length).toBeGreaterThan(1000);
     expect(invasions.length).toBeGreaterThan(1000);
     expect(nightwave.length).toBeGreaterThan(1000);
+    expect(arbitration.length).toBeGreaterThan(1000);
     expect(help.length).toBeGreaterThan(1000);
     expect(market.length).toBeGreaterThan(1000);
     expect(riven.length).toBeGreaterThan(1000);

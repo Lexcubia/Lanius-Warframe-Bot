@@ -16,6 +16,7 @@ import { createApp, type App, type Component } from 'vue';
 
 import {
   AlertsModuleCard,
+  ArbitrationModuleCard,
   CyclesModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
@@ -42,6 +43,7 @@ export type CardHostKind =
   | 'invasions'
   | 'nightwave'
   | 'alerts'
+  | 'arbitration'
   | 'help'
   | 'market'
   | 'riven'
@@ -100,6 +102,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return NightwaveModuleCard;
     case 'alerts':
       return AlertsModuleCard;
+    case 'arbitration':
+      return ArbitrationModuleCard;
     case 'help':
       return HelpModuleCard;
     case 'market':
