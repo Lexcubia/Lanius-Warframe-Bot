@@ -26,6 +26,8 @@ feature/* | fix/* | docs/* | …
             main            ← 归档 / 已发布
               ↓
           tag vX.Y.Z
+              ↓ 仅从 main tip
+           release          ← 上线指针（push → 部署）
 ```
 
 硬约束（Agent 与人类相同）：
@@ -35,10 +37,11 @@ feature/* | fix/* | docs/* | …
 3. 日常开发在职责分支上 commit；完成后开 PR，**合并进 `develop`**（日常集成目标）。
 4. **`main` 与 `develop` 均禁止直接 commit / push**——只接受 merge / PR。
 5. **`main` 不是集成分支**：仅在发布时从 `develop`（或 `release/*`）合入，并打 SemVer tag。见 [VERSIONING.md](./VERSIONING.md)。
+6. **发版链唯一**：`develop` → `main` → tag → **`main` tip → `release`**。禁止 `develop` 直推 `release`，禁止绕过 `main`。发版后若历史分叉，PR **`main` → `develop`** 回灌。
 
 PR 要求：
 
-- 默认目标分支：**`develop`**（发布 PR 目标为 `main`）。
+- 默认目标分支：**`develop`**（发布归档 PR 目标为 `main`；上线只动 `release` 指向 `main` tip）。
 - 保持聚焦：一次一件事。
 - 草稿可用于早期讨论；就绪后标 Ready。
 - 描述写清：动机、改动面、如何验证、是否触及密钥/QQ/区服。

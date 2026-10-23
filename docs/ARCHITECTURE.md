@@ -54,7 +54,7 @@ lanius-warframe-bot/
 API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/market/items` · `/v1/riven` · `/v1/void-trader` · `/v1/varzia` · `/v1/rotations/{tenet|coda}` · `/v1/subscriptions` · `/v1/push/{tick|ack}` · `/v1/admin/*`（含 **config** / **releases**）。  
 配置：`@lanius/config` 驱动，`config/default` ⊕ `config/local`；Admin 可改并热加载。  
 推送：可查询模块 → SQLite 订阅 → Bot `push/tick`；频率 `on_change|hourly|daily|weekly`。  
-发版：tag 后可选推 GHCR；长期分支 `release` / Admin 选版 → 默认 **`update-node.sh`（git + build + systemd）**；Docker pull 为可选。  
+发版硬顺序：`develop` → `main` → tag → **`main` tip → `release`**（禁止 develop 直推 release）。tag 后可选推 GHCR；`release` / Admin 选版 → 默认 **`update-node.sh`（git + build + systemd）**；Docker pull 为可选。  
 指令前导：`commandPrefix` + `commandPrefixPolicy`；接 Agent 时建议 `required`。  
 Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/admin`（公开导航不展示）。  
 **禁止**在未立项时脚手架 Tauri。  

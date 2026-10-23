@@ -19,14 +19,14 @@ Warframe 官方数据（及经文档标注的社区源）
            Nuxt / Vue 宿主
 ```
 
-| 允许                                         | 禁止                                     |
-| -------------------------------------------- | ---------------------------------------- |
-| `apps/bot` / `apps/web` 只调 Lanius API      | 客户端直连 WF 上游或第三方原始接口       |
-| `packages/core` 放 DTO / Zod / 别名 / 错误码 | 在 bot/web 内复制业务查询逻辑            |
+| 允许                                            | 禁止                                                            |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| `apps/bot` / `apps/web` 只调 Lanius API         | 客户端直连 WF 上游或第三方原始接口                              |
+| `packages/core` 放 DTO / Zod / 别名 / 错误码    | 在 bot/web 内复制业务查询逻辑                                   |
 | 规划 Vue `packages/ui` + `fetch` `packages/api` | 共享层写死仅 Nuxt / 仅浏览器假设；默认 axios；Web 用 React/Next |
-| `packages/qq-official` 仅被 `apps/bot` 使用  | api/web 引用 QQ SDK                      |
-| QQ 消息里放公开站 URL（可选导流）            | QQ 进程依赖 Web，或 Web 依赖 QQ 才能工作 |
-| 现期 Web 做响应式与可插拔（见 TODO-TAURI）   | **现在**脚手架 Tauri 或桌面专用后端      |
+| `packages/qq-official` 仅被 `apps/bot` 使用     | api/web 引用 QQ SDK                                             |
+| QQ 消息里放公开站 URL（可选导流）               | QQ 进程依赖 Web，或 Web 依赖 QQ 才能工作                        |
+| 现期 Web 做响应式与可插拔（见 TODO-TAURI）      | **现在**脚手架 Tauri 或桌面专用后端                             |
 
 ## QQ 通道
 
@@ -54,14 +54,14 @@ Warframe 官方数据（及经文档标注的社区源）
 | -------------------------------------------------- | ---------------------------------------------------------------------- |
 | **`develop`**                                      | **日常集成**目标：功能 / 修复 / 文档 PR 合入此处；**不**自动部署       |
 | **`main`**                                         | **发布归档**：仅接受发布相关合并；对应已发布快照，**不是**日常集成分支 |
-| **`release`**                                      | **长期上线指针**：push 触发 GHCR **pull** 部署（不 rebuild）           |
+| **`release`**                                      | **长期上线指针**：仅从 **`main` tip** 推进；push → 默认 Node 部署      |
 | **`feature/*` · `fix/*` · `docs/*` · `release/*`** | 按职责的工作分支（`release/x.y.z` 为可选冻结线，异于长期 `release`）   |
 
 1. **禁止随意新建分支。** 需新建时：先**询问用户**；或使用用户/任务已指定的职责名。
 2. **禁止**模糊名：`temp`、`wip`、`agent-1`、裸 `fix` 等。
 3. 功能/工作完成后：PR **合并进 `develop`**（不是 `main`）。
 4. **禁止向 `main` 直接 commit / push**；**禁止向 `develop` 直接 commit / push**——二者均只接受 **merge / PR**。Agent 只在职责分支上提交。
-5. **发布**：自 `develop`（或 `release/x.y.z`）合并进 `main`，按 SemVer 打 tag **`vX.Y.Z`**，并更新 `CHANGELOG.md` 与根 `package.json` 版本。详见 [docs/VERSIONING.md](./docs/VERSIONING.md)。
+5. **发布硬顺序**：`develop` → **`main`**（归档）→ tag **`vX.Y.Z`** → **`main` tip → `release`**（上线）。禁止 `develop` 直推 `release`；禁止绕过 `main`。发版后若分叉，PR **`main` → `develop`** 回灌。详见 [docs/VERSIONING.md](./docs/VERSIONING.md)。
 
 分支细则：[docs/CONTRIBUTING.md](./docs/CONTRIBUTING.md) §分支。
 
@@ -86,14 +86,14 @@ Warframe 官方数据（及经文档标注的社区源）
 
 ## 语言约定
 
-| 场景                                   | 语言                             |
-| -------------------------------------- | -------------------------------- |
-| 代码、标识符、API 字段（契约层）       | English                          |
-| 用户可见产品文案                       | zh / en（i18n）                  |
-| 仓库工程文档（`docs/`、README）        | 中文或中英短双语                 |
-| Commit subject / body                  | 中文或英文均可                   |
-| 函数 TSDoc（含 `@param` / `@returns`） | **中文主体**（关键词可用英文）   |
-| 行内注释                               | **中文主体**（关键词可用英文）   |
+| 场景                                   | 语言                           |
+| -------------------------------------- | ------------------------------ |
+| 代码、标识符、API 字段（契约层）       | English                        |
+| 用户可见产品文案                       | zh / en（i18n）                |
+| 仓库工程文档（`docs/`、README）        | 中文或中英短双语               |
+| Commit subject / body                  | 中文或英文均可                 |
+| 函数 TSDoc（含 `@param` / `@returns`） | **中文主体**（关键词可用英文） |
+| 行内注释                               | **中文主体**（关键词可用英文） |
 
 ## 改代码前
 

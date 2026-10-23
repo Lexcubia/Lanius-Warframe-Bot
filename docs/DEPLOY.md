@@ -29,7 +29,8 @@ Internet
 | 长期分支 **`release`** push | [deploy-release.yml](../.github/workflows/deploy-release.yml)：SSH → **`update-node.sh`（git + build + systemd）** |
 | Admin「版本」               | 默认执行 `update-node.sh`；`github.deployMode: docker` 时才走镜像                                                  |
 
-约定：先在 `main` 打好 SemVer tag，再推进 `release` 分支（或 Admin 选版）完成上线。  
+约定（硬顺序）：功能合入 `develop` → PR **`develop` → `main`** → 在 `main` 打 SemVer tag → 将 **`release` 快进到 `main` tip**（或 Admin 选版）完成上线。  
+**禁止**从 `develop` 直推 / 直合 `release`；**禁止**绕过 `main`。发版后若 `main` 非 `develop` 祖先，须 PR **`main` → `develop`** 回灌。  
 旧「仅 pull GHCR、禁止 build」流程已降级：仅当显式选 `docker` 运行时使用。
 
 Fork 安全：部署 / 推包 job 限制 `github.repository == Lexcubia/Lanius-Warframe-Bot`；`ci.yml` 无 secrets。
