@@ -37,7 +37,7 @@ function testConfig(): AppConfig {
       port: 8787,
       upstream: {
         worldstateUrl: 'https://example.test/worldState.php',
-        warframeMarketUrl: 'https://api.warframe.market/v1',
+        warframeMarketUrl: 'https://api.warframe.market/v2',
         timeoutMs: 1000,
       },
     },
@@ -72,8 +72,7 @@ function makeConfigRoot(): string {
     'site.yaml':
       "footer:\n  copyright: 'Test'\n  lines:\n    - text: '粤ICP备测试号'\n      href: 'https://beian.miit.gov.cn/'\n",
     'labels.yaml': 'factions: {}\nnodes: {}\npaths: {}\n',
-    'github.yaml':
-      "owner: 'o'\nrepo: 'r'\ndeployDir: '/tmp'\ncomposeFile: 'x.yml'\n",
+    'github.yaml': "owner: 'o'\nrepo: 'r'\ndeployDir: '/tmp'\ncomposeFile: 'x.yml'\n",
   };
   for (const [name, body] of Object.entries(files)) {
     writeFileSync(join(root, 'default', name), body);
@@ -92,11 +91,12 @@ function createTestApp(upstreamBody: unknown) {
   const cache = new MemoryCacheStore();
   const db = openLaniusDb(':memory:');
   seedDatabaseIfEmpty(db);
-  const fetchImpl = vi.fn(async () =>
-    new Response(JSON.stringify(upstreamBody), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    }),
+  const fetchImpl = vi.fn(
+    async () =>
+      new Response(JSON.stringify(upstreamBody), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
   ) as unknown as typeof fetch;
 
   const worldstateService = new WorldstateService({

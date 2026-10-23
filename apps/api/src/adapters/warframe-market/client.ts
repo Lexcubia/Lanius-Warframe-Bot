@@ -1,17 +1,23 @@
 import { upstreamUnavailableError } from '../../lib/http-error.js';
 
 /**
- * WFM 上游默认根。
+ * WFM API v2 默认根（物品 / 订单 / 紫卡武器索引）。
+ * v1 已弃用：`/v1/items`→404，`/v1/items/.../orders`→403 Deprecated。
  */
-export const WFM_API_BASE = 'https://api.warframe.market/v1';
+export const WFM_API_BASE = 'https://api.warframe.market/v2';
 
 /**
- * WFM 请求语言（物品索引 `item_name` 随 Language 变化）。
+ * 仍可用的 v1 根（紫卡拍卖搜索暂未迁到 v2）。
+ */
+export const WFM_API_V1_BASE = 'https://api.warframe.market/v1';
+
+/**
+ * WFM 展示语言（v2 物品在 `i18n` 内同时带多语种名）。
  */
 export type WfmLanguage = 'zh-hans' | 'en';
 
 /**
- * 上游物品条目（精简）。
+ * 上游物品条目（精简；对外仍用 url_name / item_name 字段名以兼容服务层）。
  */
 export type WfmItemRow = {
   url_name: string;
@@ -44,7 +50,7 @@ export type WfmRivenAttribute = {
 };
 
 /**
- * 上游拍卖行（紫卡明细）。
+ * 上游拍卖行（紫卡明细；当前仍来自 v1 auctions）。
  */
 export type WfmAuctionRow = {
   starting_price?: number;
@@ -82,10 +88,72 @@ export type WfmRivenAuctionSearchOptions = {
 };
 
 /**
+ * v2 物品 `i18n` 片段。
+ */
+type WfmV2I18nBlock = {
+  name?: string;
+  thumb?: string;
+};
+
+/**
+ * v2 `/items` / `/riven/weapons` 行。
+ */
+type WfmV2CatalogRow = {
+  slug?: string;
+  i18n?: Partial<Record<WfmLanguage | string, WfmV2I18nBlock>>;
+};
+
+/**
+ * v2 `/orders/item/{slug}` 行。
+ */
+type WfmV2OrderRow = {
+  type?: string;
+  platinum?: number;
+  quantity?: number;
+  rank?: number | null;
+  updatedAt?: string;
+  user?: {
+    ingameName?: string;
+    status?: string;
+  };
+};
+
+/**
+ * 将配置里的上游根规范为 v2（兼容仍写着 `/v1` 的旧配置）。
+ *
+ * @param raw - 配置或默认 URL
+ * @returns 无尾斜杠的 v2 根
+ */
+export function resolveWfmV2BaseUrl(raw: string): string {
+  const trimmed = raw.replace(/\/+$/, '');
+  if (/\/v1$/i.test(trimmed)) {
+    return trimmed.replace(/\/v1$/i, '/v2');
+  }
+  if (!/\/v2$/i.test(trimmed) && /api\.warframe\.market$/i.test(trimmed)) {
+    return `${trimmed}/v2`;
+  }
+  return trimmed;
+}
+
+/**
+ * 由 v2 根推导仍可用的 v1 根（拍卖）。
+ *
+ * @param v2Base - 已规范的 v2 根
+ * @returns v1 根
+ */
+function resolveWfmV1BaseUrl(v2Base: string): string {
+  if (/\/v2$/i.test(v2Base)) {
+    return v2Base.replace(/\/v2$/i, '/v1');
+  }
+  return WFM_API_V1_BASE;
+}
+
+/**
  * Warframe Market HTTP 客户端（仅被 API 层使用）。
  */
 export class WarframeMarketClient {
   private readonly baseUrl: string;
+  private readonly v1BaseUrl: string;
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
   private readonly defaultLanguage: WfmLanguage;
@@ -100,54 +168,51 @@ export class WarframeMarketClient {
     /** 默认索引语言；物品名模糊锁定用 zh-hans */
     language?: WfmLanguage;
   }) {
-    this.baseUrl = (options?.baseUrl ?? WFM_API_BASE).replace(/\/+$/, '');
+    this.baseUrl = resolveWfmV2BaseUrl(options?.baseUrl ?? WFM_API_BASE);
+    this.v1BaseUrl = resolveWfmV1BaseUrl(this.baseUrl);
     this.timeoutMs = options?.timeoutMs ?? 8000;
     this.fetchImpl = options?.fetchImpl ?? fetch;
     this.defaultLanguage = options?.language ?? 'zh-hans';
   }
 
   /**
-   * 拉取全量物品索引（宜按语言缓存）。
+   * 拉取全量物品索引（v2；按语言从 `i18n` 取名）。
    *
-   * @param language - `Language` 头；默认构造时的 zh-hans
+   * @param language - 展示名语言
    * @returns 物品行
    */
   async listItems(language: WfmLanguage = this.defaultLanguage): Promise<WfmItemRow[]> {
-    const json = await this.getJson<{ payload?: { items?: WfmItemRow[] } }>('/items', language);
-    return json.payload?.items ?? [];
+    const json = await this.getJson<{ data?: WfmV2CatalogRow[] }>('/items');
+    return mapCatalogRows(json.data ?? [], language);
   }
 
   /**
-   * 拉取可打紫卡的武器/物品列表（中文名用于 `/zk` 锁定）。
+   * 拉取可打紫卡武器列表（v2 `/riven/weapons`）。
    *
-   * @param language - `Language` 头
-   * @returns 紫卡物品行（字段与 `/items` 兼容）
+   * @param language - 展示名语言
+   * @returns 与 `/items` 同形的精简行
    */
   async listRivenItems(language: WfmLanguage = this.defaultLanguage): Promise<WfmItemRow[]> {
-    const json = await this.getJson<{ payload?: { items?: WfmItemRow[] } }>(
-      '/riven/items',
-      language,
-    );
-    return json.payload?.items ?? [];
+    const json = await this.getJson<{ data?: WfmV2CatalogRow[] }>('/riven/weapons');
+    return mapCatalogRows(json.data ?? [], language);
   }
 
   /**
-   * 拉取物品订单。
+   * 拉取物品订单（v2 `/orders/item/{slug}?platform=pc`）。
    *
-   * @param urlName - WFM url_name
+   * @param urlName - WFM slug（原 url_name）
    * @returns 订单行
    */
   async listOrders(urlName: string): Promise<WfmOrderRow[]> {
-    const json = await this.getJson<{ payload?: { orders?: WfmOrderRow[] } }>(
-      `/items/${encodeURIComponent(urlName)}/orders`,
-    );
-    return json.payload?.orders ?? [];
+    const path = `/orders/item/${encodeURIComponent(urlName)}?platform=pc`;
+    const json = await this.getJson<{ data?: WfmV2OrderRow[] }>(path);
+    return (json.data ?? []).map(mapV2OrderRow).filter((row): row is WfmOrderRow => row !== null);
   }
 
   /**
-   * 搜索紫卡拍卖（按武器 url_name，价升序）。
+   * 搜索紫卡拍卖（按武器 slug，价升序；暂走 v1，因 v2 尚无对等路由）。
    *
-   * @param weaponUrlName - 武器 url_name
+   * @param weaponUrlName - 武器 slug
    * @param options - 可选 rank/mastery（上游支持则透传）
    * @returns 拍卖行
    */
@@ -168,22 +233,28 @@ export class WarframeMarketClient {
     }
     const json = await this.getJson<{ payload?: { auctions?: WfmAuctionRow[] } }>(
       `/auctions/search?${qs.toString()}`,
+      { baseUrl: this.v1BaseUrl },
     );
     return json.payload?.auctions ?? [];
   }
 
   /**
-   * GET JSON（带 Platform / Language）。
+   * GET JSON（Platform + Language；可切 v1/v2 根）。
    *
    * @param path - 路径（含 query）
-   * @param language - 覆盖默认 Language；订单/拍卖可沿用默认
+   * @param options - 可选覆盖根 URL / Language
    * @returns 解析后的 JSON
    */
-  private async getJson<T>(path: string, language: WfmLanguage = this.defaultLanguage): Promise<T> {
+  private async getJson<T>(
+    path: string,
+    options: { baseUrl?: string; language?: WfmLanguage } = {},
+  ): Promise<T> {
+    const language = options.language ?? this.defaultLanguage;
+    const root = options.baseUrl ?? this.baseUrl;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      const response = await this.fetchImpl(`${root}${path}`, {
         headers: {
           Accept: 'application/json',
           Language: language,
@@ -204,4 +275,59 @@ export class WarframeMarketClient {
       clearTimeout(timer);
     }
   }
+}
+
+/**
+ * 将 v2 目录行映射为服务层沿用的 ItemRow。
+ *
+ * @param rows - v2 data 数组
+ * @param language - 优先语言
+ * @returns 精简行
+ */
+function mapCatalogRows(rows: WfmV2CatalogRow[], language: WfmLanguage): WfmItemRow[] {
+  const out: WfmItemRow[] = [];
+  for (const row of rows) {
+    const slug = row.slug?.trim();
+    if (!slug) {
+      continue;
+    }
+    const localized = row.i18n?.[language]?.name?.trim();
+    const fallbackEn = row.i18n?.en?.name?.trim();
+    const itemName = localized || fallbackEn || slug.replace(/_/g, ' ');
+    const thumb = row.i18n?.[language]?.thumb?.trim() || row.i18n?.en?.thumb?.trim();
+    out.push({
+      url_name: slug,
+      item_name: itemName,
+      ...(thumb ? { thumb } : {}),
+    });
+  }
+  return out;
+}
+
+/**
+ * 将 v2 订单行映射为内部 WfmOrderRow；缺价/类型则丢弃。
+ *
+ * @param row - v2 订单
+ * @returns 规范化行或 null
+ */
+function mapV2OrderRow(row: WfmV2OrderRow): WfmOrderRow | null {
+  const type = row.type === 'sell' || row.type === 'buy' ? row.type : null;
+  if (!type || typeof row.platinum !== 'number' || typeof row.quantity !== 'number') {
+    return null;
+  }
+  // quantity 须为正整数；异常上游值丢弃以免 DTO Zod 400。
+  if (!Number.isFinite(row.quantity) || row.quantity < 1) {
+    return null;
+  }
+  return {
+    order_type: type,
+    platinum: row.platinum,
+    quantity: Math.trunc(row.quantity),
+    mod_rank: typeof row.rank === 'number' && row.rank >= 0 ? row.rank : null,
+    last_update: row.updatedAt,
+    user: {
+      ingame_name: row.user?.ingameName,
+      status: row.user?.status,
+    },
+  };
 }
