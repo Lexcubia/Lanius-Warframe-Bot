@@ -2,10 +2,13 @@ import {
   PushFrequencySchema,
   SubscribableModuleIdSchema,
   findCommandByRoot,
+  isBountyMapFilterActive,
   isFissureQueryActive,
+  parseBountyMapTokens,
   parseFissureFilterTokens,
   resolveModuleToken,
   type ArchimedeaKind,
+  type BountyMapFilter,
   type FissureQueryFilter,
   type PushFrequency,
   type SubscribableModuleId,
@@ -25,7 +28,7 @@ export type BotIntent =
   | { type: 'sortie' }
   | { type: 'archon' }
   | { type: 'circuit' }
-  | { type: 'bounties' }
+  | { type: 'bounties'; mapFilter?: BountyMapFilter }
   | { type: 'arbitration' }
   | { type: 'alerts' }
   /** `kind`：精英=`lab`、时光=`hex`；裸 `/科研` 不带 kind 同时摘要两者 */
@@ -193,6 +196,16 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     };
   }
 
+  if (command.id === 'bounties') {
+    const mapFilter = parseBountyMapTokens(restTokens);
+    return {
+      matched: true,
+      intent: isBountyMapFilterActive(mapFilter)
+        ? { type: 'bounties', mapFilter }
+        : { type: 'bounties' },
+    };
+  }
+
   if (command.id === 'archimedea') {
     const kind = resolveArchimedeaKind(rootToken);
     return {
@@ -208,7 +221,6 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     command.id === 'sortie' ||
     command.id === 'archon' ||
     command.id === 'circuit' ||
-    command.id === 'bounties' ||
     command.id === 'arbitration' ||
     command.id === 'alerts' ||
     command.id === 'voidTrader' ||

@@ -1,5 +1,6 @@
 import type {
   ArchonHuntDto,
+  BountySyndicateDto,
   CatalogItemDto,
   Locale,
   SortieDto,
@@ -520,4 +521,130 @@ function remainingLabel(expiryIso: string, zh: boolean): string | undefined {
     return zh ? '已结束' : 'ended';
   }
   return formatRemaining(remainingMs, zh);
+}
+
+/**
+ * 赏金模块文本（联盟块 + Job 摘要；空 Jobs 诚实空态）。
+ *
+ * @param worldstate - DTO（可已按地图筛选）
+ * @param locale - locale
+ * @param options - stale / 筛选摘要等
+ * @returns QQ 文本
+ */
+export function formatBountiesText(
+  worldstate: WorldstateDto,
+  locale: Locale,
+  options: {
+    stale?: boolean;
+    siteUrl?: string;
+    /** 已应用的地图筛选摘要 */
+    filterSummary?: string;
+  } = {},
+): string {
+  const zh = locale !== 'en';
+  const bullet = String.fromCharCode(0xb7);
+  const lines: string[] = [];
+  lines.push(zh ? `【Lanius ${bullet} 赏金】` : `[Lanius ${bullet} Bounties]`);
+  if (options.filterSummary) {
+    lines.push(zh ? `地图：${options.filterSummary}` : `Map: ${options.filterSummary}`);
+  }
+  if (options.stale) {
+    lines.push(zh ? '（数据可能延迟）' : '(data may be delayed)');
+  }
+
+  const syndicates = worldstate.bounties;
+  if (syndicates.length === 0) {
+    lines.push(zh ? `${bullet} 暂无赏金数据` : `${bullet} no bounty data`);
+  } else {
+    for (const syndicate of syndicates.slice(0, 6)) {
+      lines.push(...formatBountySyndicateLines(syndicate, locale, bullet));
+    }
+  }
+
+  if (options.siteUrl) {
+    lines.push(options.siteUrl);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * 格式化单联盟赏金文本行。
+ *
+ * @param syndicate - 联盟赏金块
+ * @param locale - 语言
+ * @param bullet - 列表符号
+ * @returns 多行文案
+ */
+function formatBountySyndicateLines(
+  syndicate: BountySyndicateDto,
+  locale: Locale,
+  bullet: string,
+): string[] {
+  const zh = locale !== 'en';
+  const name = syndicate.name ? pickLocalized(syndicate.name, locale) : syndicate.tag;
+  const expiry = syndicate.expiry
+    ? formatBountyExpiry(syndicate.expiry, zh)
+    : zh
+      ? '刷新时间未知'
+      : 'refresh unknown';
+  const lines: string[] = [`${bullet} ${name} · ${expiry}`];
+
+  if (syndicate.jobs.length === 0) {
+    lines.push(
+      zh ? '  本轮无赏金表（仅刷新时间）' : '  No bounty table this rotation (refresh time only)',
+    );
+    return lines;
+  }
+
+  for (const job of syndicate.jobs.slice(0, 5)) {
+    const title = job.title
+      ? pickLocalized(job.title, locale)
+      : (job.jobType?.split('/').pop() ?? (zh ? '赏金' : 'Bounty'));
+    const level =
+      job.minEnemyLevel !== undefined && job.maxEnemyLevel !== undefined
+        ? ` Lv${job.minEnemyLevel}-${job.maxEnemyLevel}`
+        : '';
+    const rewardNames = job.rewards
+      .slice(0, 3)
+      .map((item) => {
+        const n = pickLocalized(item.name, locale);
+        return item.quantity != null && item.quantity > 1 ? `${n}×${item.quantity}` : n;
+      })
+      .join(zh ? '、' : ', ');
+    const rewardPart = rewardNames
+      ? ` → ${rewardNames}${job.rewards.length > 3 ? '…' : ''}`
+      : job.rewardTablePath
+        ? zh
+          ? ' → 奖励表待解析'
+          : ' → reward table unresolved'
+        : '';
+    lines.push(`  ${title}${level}${rewardPart}`);
+  }
+  if (syndicate.jobs.length > 5) {
+    lines.push(
+      zh ? `  …另有 ${syndicate.jobs.length - 5} 项` : `  …+${syndicate.jobs.length - 5} more`,
+    );
+  }
+  return lines;
+}
+
+/**
+ * 将赏金到期 ISO 时间格式化为短剩余文案。
+ *
+ * @param expiryIso - ISO8601 到期
+ * @param zh - 是否中文
+ * @returns 短文案
+ */
+function formatBountyExpiry(expiryIso: string, zh: boolean): string {
+  const ms = Date.parse(expiryIso);
+  if (!Number.isFinite(ms)) {
+    return zh ? '刷新时间未知' : 'refresh unknown';
+  }
+  const remaining = ms - Date.now();
+  if (remaining <= 0) {
+    return zh ? '已到期' : 'expired';
+  }
+  return zh
+    ? `剩余 ${formatRemaining(remaining, true)}`
+    : `${formatRemaining(remaining, false)} left`;
 }

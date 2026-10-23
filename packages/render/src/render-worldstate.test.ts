@@ -6,6 +6,7 @@ import {
   renderAlertsCard,
   renderArbitrationCard,
   renderArchimedeaCard,
+  renderBountiesCard,
   renderCircuitCard,
   renderArchonCard,
   renderFissuresCard,
@@ -229,6 +230,37 @@ const sampleWorldstate = {
       },
     ],
   },
+  bounties: [
+    {
+      tag: 'CetusSyndicate',
+      name: { zh: '希图斯平原', en: 'Cetus Plains' },
+      expiry: '2026-10-10T14:00:00.000Z',
+      jobs: [
+        {
+          jobType: '/Lotus/Types/Gameplay/Eidolon/Jobs/SabotageBountySab',
+          title: { zh: '破坏赏金', en: 'Sabotage Bounty' },
+          minEnemyLevel: 5,
+          maxEnemyLevel: 15,
+          rewardTablePath:
+            '/Lotus/Types/Game/MissionDecks/EidolonJobMissionRewards/TierATableCRewards',
+          rewards: [
+            {
+              uniqueName: '/Lotus/Types/Items/MiscItems/OrokinCatalyst',
+              name: { zh: 'Orokin 催化剂', en: 'Orokin Catalyst' },
+              iconUrl: TINY_ICON,
+              quantity: 1,
+            },
+          ],
+        },
+      ],
+    },
+    {
+      tag: 'SolarisSyndicate',
+      name: { zh: '奥布山谷', en: 'Orb Vallis' },
+      expiry: '2026-10-10T14:00:00.000Z',
+      jobs: [],
+    },
+  ],
 };
 
 describe('module card renders', () => {
@@ -321,6 +353,14 @@ describe('module card renders', () => {
 
   it('renders archon PNG', async () => {
     const png = await renderArchonCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  }, 60_000);
+
+  it('renders bounties PNG', async () => {
+    const png = await renderBountiesCard({
       locale: 'zh',
       worldstate: sampleWorldstate,
     });

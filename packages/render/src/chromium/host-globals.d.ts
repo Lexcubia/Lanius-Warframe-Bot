@@ -8,6 +8,7 @@ interface Window {
       | 'fissures'
       | 'invasions'
       | 'nightwave'
+      | 'bounties'
       | 'alerts'
       | 'arbitration'
       | 'archimedea'

@@ -6,6 +6,7 @@ export { default as QqCardShell } from './QqCardShell.vue';
 export { default as AlertsModuleCard } from './AlertsModuleCard.vue';
 export { default as ArbitrationModuleCard } from './ArbitrationModuleCard.vue';
 export { default as ArchimedeaModuleCard } from './ArchimedeaModuleCard.vue';
+export { default as BountiesModuleCard } from './BountiesModuleCard.vue';
 export { default as CircuitModuleCard } from './CircuitModuleCard.vue';
 export { default as CyclesModuleCard } from './CyclesModuleCard.vue';
 export { default as FissuresModuleCard } from './FissuresModuleCard.vue';

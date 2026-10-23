@@ -146,7 +146,7 @@ describe('mapWorldstate', () => {
     ]);
   });
 
-  it('maps Sorties / LiteSorties / alerts / archimedea / circuit', () => {
+  it('maps Sorties / LiteSorties / bounties / alerts / archimedea / circuit', () => {
     const fetchedAt = '2026-10-10T12:00:00.000Z';
     const now = Date.parse(fetchedAt);
     const dto = mapWorldstate(
@@ -218,14 +218,16 @@ describe('mapWorldstate', () => {
     expect(dto.circuit).not.toBeNull();
     expect(dto.circuit?.normalChoices.map((row) => row.key)).toEqual(['Hydroid']);
     expect(dto.circuit?.hardChoices.map((row) => row.key)).toEqual(['Dera']);
-    expect(dto.bounties).toEqual([]);
+    expect(dto.bounties).toHaveLength(1);
+    expect(dto.bounties[0]?.tag).toBe('CetusSyndicate');
+    expect(dto.bounties[0]?.jobs[0]?.rewardTablePath).toContain('TierATableARewards');
     expect(dto.arbitration).toBeNull();
+    expect(dto.archimedea).not.toBeNull();
+    expect(dto.archimedea?.seasons.map((s) => s.kind)).toEqual(['lab']);
     expect(dto.alerts).toHaveLength(1);
     expect(dto.alerts[0]?.id).toBe('alert-1');
     expect(dto.alerts[0]?.tag).toBe('TestAlert');
     expect(dto.alerts[0]?.credits).toBe(5000);
     expect(dto.alerts[0]?.missionType?.zh).toBe('移动防御');
-    expect(dto.archimedea).not.toBeNull();
-    expect(dto.archimedea?.seasons.map((s) => s.kind)).toEqual(['lab']);
   });
 });

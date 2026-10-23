@@ -6,6 +6,7 @@ export type CardKind =
   | 'fissures'
   | 'invasions'
   | 'nightwave'
+  | 'bounties'
   | 'alerts'
   | 'arbitration'
   | 'archimedea'

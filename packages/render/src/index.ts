@@ -12,6 +12,7 @@ export {
   renderAlertsCard,
   renderArbitrationCard,
   renderArchimedeaCard,
+  renderBountiesCard,
   renderCircuitCard,
   renderArchonCard,
   renderFissuresCard,

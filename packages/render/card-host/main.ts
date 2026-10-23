@@ -19,6 +19,7 @@ import {
   AlertsModuleCard,
   ArbitrationModuleCard,
   ArchimedeaModuleCard,
+  BountiesModuleCard,
   CircuitModuleCard,
   ArchonModuleCard,
   CyclesModuleCard,
@@ -47,6 +48,7 @@ export type CardHostKind =
   | 'fissures'
   | 'invasions'
   | 'nightwave'
+  | 'bounties'
   | 'alerts'
   | 'arbitration'
   | 'archimedea'
@@ -111,6 +113,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return InvasionsModuleCard;
     case 'nightwave':
       return NightwaveModuleCard;
+    case 'bounties':
+      return BountiesModuleCard;
     case 'alerts':
       return AlertsModuleCard;
     case 'arbitration':

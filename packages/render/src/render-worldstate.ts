@@ -101,6 +101,15 @@ export async function renderArbitrationCard(input: RenderWorldstateCardInput): P
 }
 
 /**
+ * 渲染「赏金」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷（含 bounties 切片）
+ * @returns PNG 字节
+ */
+export async function renderBountiesCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'bounties', ...input });
+}
+/**
  * 渲染「回廊 / Circuit」独立模块 PNG（Vue + Playwright 节点截图）。
  *
  * @param input - 世界状态载荷（读取 `circuit` 切片）
