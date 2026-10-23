@@ -1,6 +1,7 @@
 import type { CatalogItemDto, InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
 
 import { mapAlerts } from './map-alerts.js';
+import { mapArchimedea } from './map-archimedea.js';
 import { mapOpenWorldCycles } from './map-cycles.js';
 import { mapFissures } from './map-fissures.js';
 import { NIGHTWAVE_KIND_LABELS, resolveNightwaveChallengeKind } from './nightwave-kind.js';
@@ -40,7 +41,7 @@ export function mapWorldstate(
   const nowMs = Date.parse(fetchedAt);
   const snapshotNow = Number.isFinite(nowMs) ? nowMs : Date.now();
 
-  // Wave 1：alerts 已映射；仲裁由服务层社区源另行挂载；其余模块仍空安全默认。
+  // Wave 1：alerts + archimedea 已接通；仲裁由服务层社区源挂载；其余模块仍空安全默认。
   return {
     realm,
     fetchedAt,
@@ -55,7 +56,7 @@ export function mapWorldstate(
     // 官方 worldState 无仲裁；占位 null，由 WorldstateService.loadArbitration 覆盖
     arbitration: null,
     alerts: mapAlerts(raw, snapshotNow),
-    archimedea: null,
+    archimedea: mapArchimedea(raw.Conquests),
   };
 }
 

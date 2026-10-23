@@ -39,6 +39,8 @@ const MISSION_TYPE_ZH: Record<string, string> = {
   Disruption: '中断',
   MT_ASSAULT: '强袭',
   Assault: '强袭',
+  MT_ASSASSINATION: '刺杀',
+  Assassination: '刺杀',
   MT_EXCAVATE: '挖掘',
   Excavation: '挖掘',
   MT_CORRUPTION: '虚空洪流',
@@ -68,7 +70,11 @@ const ERA_LABELS: Record<FissureEra, LocalizedName> = {
  * @param fallback - 解析失败时使用的内部键
  * @returns 规范化的 `LocalizedName`
  */
-function localized(zh: string | undefined, en: string | undefined, fallback: string): LocalizedName {
+function localized(
+  zh: string | undefined,
+  en: string | undefined,
+  fallback: string,
+): LocalizedName {
   const enLabel = en && en.trim().length > 0 ? en.trim() : fallback;
   const zhLabel = zh && zh.trim().length > 0 ? zh.trim() : enLabel;
   return { zh: zhLabel, en: enLabel };
@@ -195,19 +201,14 @@ export function resolveMissionTypeLabel(
  * @param uniqueName - 可选 PublicExport 路径；缺省时仅用英文名 + labels
  * @returns 双语显示名；无覆盖时中英均为原名
  */
-export function resolveWeaponLabel(
-  weaponName: string,
-  uniqueName?: string,
-): LocalizedName {
+export function resolveWeaponLabel(weaponName: string, uniqueName?: string): LocalizedName {
   const trimmed = weaponName.trim();
   const fromPath = uniqueName ? resolvePathLabel(uniqueName) : undefined;
   const pathTail = uniqueName?.includes('/')
     ? (uniqueName.split('/').pop() ?? uniqueName)
     : uniqueName;
-  const en =
-    fromPath && fromPath.en !== pathTail ? fromPath.en : trimmed;
-  const zh =
-    fromPath && fromPath.zh !== fromPath.en ? fromPath.zh : undefined;
+  const en = fromPath && fromPath.en !== pathTail ? fromPath.en : trimmed;
+  const zh = fromPath && fromPath.zh !== fromPath.en ? fromPath.zh : undefined;
   const base = localized(zh, en, trimmed);
   return applyLabelOverride(base, lookupLabelOverride('weapons', trimmed));
 }

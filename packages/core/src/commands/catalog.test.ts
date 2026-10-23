@@ -41,5 +41,6 @@ describe('command catalog', () => {
     expect(findCommandByRoot('警报')?.id).toBe('alerts');
     expect(findCommandByRoot('科研')?.id).toBe('archimedea');
     expect(findCommandByRoot('精英科研')?.id).toBe('archimedea');
+    expect(findCommandByRoot('时光科研')?.id).toBe('archimedea');
   });
 });

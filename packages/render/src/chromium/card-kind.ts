@@ -8,6 +8,7 @@ export type CardKind =
   | 'nightwave'
   | 'alerts'
   | 'arbitration'
+  | 'archimedea'
   | 'help'
   | 'market'
   | 'riven'

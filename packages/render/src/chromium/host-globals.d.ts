@@ -10,6 +10,7 @@ interface Window {
       | 'nightwave'
       | 'alerts'
       | 'arbitration'
+      | 'archimedea'
       | 'help'
       | 'market'
       | 'riven'
@@ -19,6 +20,7 @@ interface Window {
     locale: 'zh' | 'en';
     stale?: boolean;
     worldstate?: unknown;
+    archimedeaKind?: 'lab' | 'hex';
     help?: unknown;
     market?: unknown;
     riven?: unknown;

@@ -196,17 +196,18 @@ describe('mapWorldstate', () => {
       fetchedAt,
     );
 
-    // 其余任务模块仍由 Wave 1 各 PR 填入；alerts 本 PR 已接通。
+    // alerts + archimedea 已接通；其余任务模块仍由 Wave 1 各 PR 填入。
     expect(dto.sortie).toBeNull();
     expect(dto.archon).toBeNull();
     expect(dto.circuit).toBeNull();
     expect(dto.bounties).toEqual([]);
     expect(dto.arbitration).toBeNull();
-    expect(dto.archimedea).toBeNull();
     expect(dto.alerts).toHaveLength(1);
     expect(dto.alerts[0]?.id).toBe('alert-1');
     expect(dto.alerts[0]?.tag).toBe('TestAlert');
     expect(dto.alerts[0]?.credits).toBe(5000);
     expect(dto.alerts[0]?.missionType?.zh).toBe('移动防御');
+    expect(dto.archimedea).not.toBeNull();
+    expect(dto.archimedea?.seasons.map((s) => s.kind)).toEqual(['lab']);
   });
 });
