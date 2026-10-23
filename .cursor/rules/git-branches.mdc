@@ -9,7 +9,7 @@ alwaysApply: true
 
 - **`develop`**: day-to-day **integration** branch. Feature work merges here. No auto-deploy.
 - **`main`**: **archive** snapshots only — not the daily integration target.
-- **`release`**: long-lived **production pointer**; push triggers image **pull** deploy (no rebuild). Distinct from optional freeze branches `release/x.y.z`.
+- **`release`**: long-lived **production pointer**; advance **only from `main` tip** after tag. Push triggers deploy (default Node). Distinct from optional freeze branches `release/x.y.z`.
 - **Duty branches**: `feature/<duty>`, `fix/<duty>`, `docs/<duty>`, `release/x.y.z` (or platform-prefixed equivalents that still encode duty, e.g. `Lexcubia/repo-standards-4f3f`).
 
 ## Rules
@@ -19,10 +19,11 @@ alwaysApply: true
 - Finished feature/fix/docs work → PR into **`develop`** (not `main`).
 - **No direct commits** to `main`. **No direct commits** to `develop` either — only merges/PRs (hotfix process may use short-lived branches merged via PR).
 - Agents work on duty branches; never commit/push straight to `main` or `develop`.
+- **Release chain only**: `develop` → `main` → tag → **`main` → `release`**. Never push `develop` to `release`; never skip `main`. After archive merges diverge history, PR **`main` → `develop`** to sync.
 
 ## Versioning
 
 - SemVer `MAJOR.MINOR.PATCH`; release tags **`vX.Y.Z` on `main`**.
 - Update root `package.json` version + `CHANGELOG.md` when cutting a release.
-- Optional `release/x.y.z` to freeze; then merge to `main`, tag, and ensure `develop` receives any release fixes.
+- Optional `release/x.y.z` to freeze; then merge to `main`, tag, advance `release` from **`main` tip**, and ensure `develop` receives any release / archive merge commits.
 - Full policy: `docs/VERSIONING.md`, `docs/CONTRIBUTING.md` §分支, `AGENTS.md` §分支.
