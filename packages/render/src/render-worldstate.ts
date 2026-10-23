@@ -74,6 +74,16 @@ export async function renderAlertsCard(input: RenderWorldstateCardInput): Promis
 }
 
 /**
+ * 渲染「仲裁」独立模块 PNG（Vue + Playwright 节点截图）。
+ *
+ * @param input - 世界状态载荷（含 `arbitration` 切片）
+ * @returns PNG 字节
+ */
+export async function renderArbitrationCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'arbitration', ...input });
+}
+
+/**
  * 渲染帮助卡片 PNG。
  *
  * @param input - 帮助 DTO、locale 与可选皮肤

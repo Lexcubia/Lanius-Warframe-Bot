@@ -258,3 +258,58 @@ export function formatNightwaveText(
   }
   return lines.join('\n');
 }
+
+/**
+ * 仲裁模块文本（社区源；无数据时友好空态，不暗示官方 worldState 故障）。
+ *
+ * @param worldstate - DTO
+ * @param locale - locale
+ * @param options - stale / 站点 URL
+ * @returns QQ 文本
+ */
+export function formatArbitrationText(
+  worldstate: WorldstateDto,
+  locale: Locale,
+  options: { stale?: boolean; siteUrl?: string } = {},
+): string {
+  const zh = locale !== 'en';
+  const bullet = String.fromCharCode(0xb7);
+  const lines: string[] = [];
+  lines.push(zh ? `【Lanius ${bullet} 仲裁】` : `[Lanius ${bullet} Arbitration]`);
+  if (options.stale) {
+    lines.push(zh ? '（数据可能延迟）' : '(data may be delayed)');
+  }
+
+  const arb = worldstate.arbitration;
+  if (!arb) {
+    lines.push(
+      zh
+        ? `${bullet} 暂无仲裁数据（社区源暂时不可用或当前无活跃仲裁）`
+        : `${bullet} no arbitration data (community source unavailable or none active)`,
+    );
+  } else {
+    const node = arb.node ? pickLocalized(arb.node, locale) : (arb.nodeKey ?? '—');
+    const mission = arb.missionType
+      ? pickLocalized(arb.missionType, locale)
+      : (arb.missionTypeKey ?? '—');
+    const enemy = arb.enemy ? pickLocalized(arb.enemy, locale) : arb.enemyKey;
+    const parts = [node, mission];
+    if (enemy) {
+      parts.push(enemy);
+    }
+    lines.push(`${bullet} ${parts.join(' · ')}`);
+    if (arb.expiry) {
+      const remainingMs = Math.max(0, Date.parse(arb.expiry) - Date.now());
+      lines.push(
+        zh
+          ? `剩余 ${formatRemaining(remainingMs, true)}`
+          : `left ${formatRemaining(remainingMs, false)}`,
+      );
+    }
+  }
+
+  if (options.siteUrl) {
+    lines.push(options.siteUrl);
+  }
+  return lines.join('\n');
+}

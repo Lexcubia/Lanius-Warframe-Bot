@@ -10,6 +10,7 @@ export {
 export type { CardKind } from './chromium/card-kind.js';
 export {
   renderAlertsCard,
+  renderArbitrationCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,

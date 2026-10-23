@@ -204,14 +204,21 @@ export type UpstreamConquest = {
 };
 
 /**
- * 仲裁社区源薄占位（官方 worldState **无** Arbitrations 字段）。
- * Wave 0 仅类型；完整拉取 / mapper 见 Wave 1（`warframestat.us`）。
+ * 仲裁社区源薄形状（官方 worldState **无** Arbitrations 字段）。
+ * 由 WFCD `warframestat.us` `GET /{platform}/arbitration` 归一；失败时服务层保持 DTO `null`。
  *
  * @see docs/DATA_SOURCES.md
  */
 export type UpstreamArbitration = {
+  /** SolNode 等节点键（优先用于标签解析） */
+  nodeKey?: string;
+  /** 社区源展示节点名（无 nodeKey 时回退） */
   node?: string;
+  /** 任务类型键（`MT_*` 或英文 type） */
+  typeKey?: string;
+  /** 任务类型展示名 */
   type?: string;
+  /** 敌对阵营展示名（如 Corpus / Grineer） */
   enemy?: string;
   activation?: string;
   expiry?: string;

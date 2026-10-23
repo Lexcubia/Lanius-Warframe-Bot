@@ -1,0 +1,12 @@
+{
+  "activation": "2026-10-23T09:00:00.000Z",
+  "expiry": "2026-10-23T10:00:00.000Z",
+  "enemy": "Corpus",
+  "type": "Defense",
+  "typeKey": "Defense",
+  "nodeKey": "SolNode64",
+  "node": "Tessera (Venus)",
+  "archwing": false,
+  "sharkwing": false,
+  "expired": false
+}
