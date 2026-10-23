@@ -56,9 +56,11 @@ feature/*  fix/*  docs/*  …
 
 ## 质量关卡
 
+发版硬约束：**`develop` → `main` → `release`**（`release` 只跟 `main`，不做检查）。
+
 - **本地**：husky + lint-staged 在 commit 前自动格式化与 lint 已暂存文件。
-- **CI**：`push` 到 `develop` / `main` 及所有 PR 触发 `ci.yml`（install → test → typecheck）。
-- **Release**：`release.yml` 仅负责构建推 GHCR，不再重复跑 test/typecheck（避免发布前卡预检）。
+- **CI**：仅 PR→`develop`/`main` 与 push 同分支触发 `ci.yml`（轻量 install → test → typecheck；不装 Playwright）。**不**在 `release` 上跑检查。
+- **Release**：`release.yml` 仅推 GHCR（无 test）；长期 `release` 分支只部署。
 
 ## 相关
 

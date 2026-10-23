@@ -1,6 +1,7 @@
 # 轻量 CI：install + 单测 + typecheck。
 # 不装 Playwright/Chromium（浏览器截图测默认在 CI 跳过；本地可 LANIUS_BROWSER_TESTS=1）。
-# 仅 PR→develop/main 与 push develop/main；合入 `release` 不做检查（见 deploy-release.yml）。
+# 发版硬约束：develop → main → release。仅 PR/push → develop|main 跑检查；
+# `release` 只跟 main 上线，不做检查（见 deploy-release.yml）。
 
 name: CI
 

@@ -1,6 +1,6 @@
 ﻿# 可选：构建推送 GHCR（不 SSH 部署）。生产默认走 Node，不依赖本产物。
-# 不做 test/typecheck（依赖 develop/PR 已绿）；不装 Playwright。
-# 部署见 deploy-release.yml（长期分支 release → 热启动/update）。
+# 发版硬约束：develop → main → release；本 job 不做 test/typecheck（main 已绿），不装 Playwright。
+# 上线见 deploy-release.yml（`release` 只跟 main，跳过检查）。
 # 触发：v* tag / 手动 / 由 auto-tag-on-main 经 workflow_call 调用。
 
 name: Release
