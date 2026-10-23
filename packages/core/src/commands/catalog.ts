@@ -222,60 +222,103 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
         choices: ['变更时', '每小时', '每天', '每周', 'on_change', 'hourly', 'daily', 'weekly'],
       },
     ],
-    examples: [
-      '/订阅 列表',
-      '/订阅 裂隙',
-      '/订阅 信条 每天',
-      '/订阅 退订 终幕',
-    ],
+    examples: ['/订阅 列表', '/订阅 裂隙', '/订阅 信条 每天', '/订阅 退订 终幕'],
   },
   {
     id: 'market',
     command: '/wm',
     roots: ['wm', '市场', 'market'],
     summary: {
-      zh: '查询 Warframe Market 物品行情摘要',
-      en: 'Warframe Market item price summary',
+      zh: '锁定一件 WM 物品的在线/游戏中卖单（价升序，每页 10）',
+      en: 'Lock one WM item; online/ingame sell orders (price↑, 10/page)',
     },
     usage: {
-      zh: '/wm <物品名>',
-      en: '/wm <item name>',
+      zh: '/wm <物品名> [等级=N] [p=页码]',
+      en: '/wm <item> [rank=N] [p=page]',
     },
     params: [
       {
         name: 'query',
         required: true,
         description: {
-          zh: '物品中英文名或 slug 关键词',
-          en: 'Item name (zh/en) or slug keyword',
+          zh: '物品中英文名或 slug；多命中取评分最高一件（含套装）',
+          en: 'Item name (zh/en) or slug; best single match (sets preferred)',
+        },
+      },
+      {
+        name: '等级 / rank',
+        required: false,
+        description: {
+          zh: '模组等级过滤，如 等级=5',
+          en: 'Optional mod rank filter, e.g. rank=5',
+        },
+      },
+      {
+        name: 'p / 页',
+        required: false,
+        description: {
+          zh: '页码（从 1；可用翻页按钮重放）',
+          en: 'Page number (from 1; keyboard replays filters)',
         },
       },
     ],
-    examples: ['/wm 红晶', '/wm axiom', '/市场 红晶'],
+    examples: ['/wm 红晶', '/wm Nova Prime 一套', '/wm 持续力 等级=10', '/wm axiom p=2'],
   },
   {
     id: 'riven',
     command: '/zk',
     roots: ['zk', '紫卡', 'riven'],
     summary: {
-      zh: '查询 Warframe Market 紫卡价位摘要',
-      en: 'Warframe Market riven price summary',
+      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序，每页 10）',
+      en: 'Lock one weapon; online/ingame riven auctions (price↑, 10/page)',
     },
     usage: {
-      zh: '/zk <武器名>',
-      en: '/zk <weapon name>',
+      zh: '/zk <武器名> [等级=N] [段位=N] [循环=N] [p=页码]',
+      en: '/zk <weapon> [rank=N] [mastery=N] [rerolls=N] [p=page]',
     },
     params: [
       {
         name: 'query',
         required: true,
         description: {
-          zh: '武器中英文名或 url_name',
-          en: 'Weapon name (zh/en) or url_name',
+          zh: '武器中英文名或 url_name；多命中取最佳一件',
+          en: 'Weapon name (zh/en) or url_name; best single match',
+        },
+      },
+      {
+        name: '等级 / rank',
+        required: false,
+        description: {
+          zh: '紫卡等级过滤',
+          en: 'Riven mod rank filter',
+        },
+      },
+      {
+        name: '段位 / mastery',
+        required: false,
+        description: {
+          zh: '段位需求过滤',
+          en: 'Mastery rank filter',
+        },
+      },
+      {
+        name: '循环 / rerolls',
+        required: false,
+        description: {
+          zh: '循环次数（精确）；或 minRerolls / maxRerolls',
+          en: 'Exact rerolls; or minRerolls / maxRerolls',
+        },
+      },
+      {
+        name: 'p / 页',
+        required: false,
+        description: {
+          zh: '页码（从 1；可用翻页按钮重放）',
+          en: 'Page number (from 1; keyboard replays filters)',
         },
       },
     ],
-    examples: ['/zk 拉特龙', '/zk latron', '/紫卡 拉特龙'],
+    examples: ['/zk 拉特龙', '/zk latron 等级=0 段位=8', '/zk 拉特龙 循环=2 p=2'],
   },
   {
     id: 'mode',
@@ -349,9 +392,7 @@ export function buildHelpDto(options?: {
   const lines: HelpLine[] = catalog.map((entry) => ({
     id: entry.id,
     command: entry.command,
-    aliases: entry.roots
-      .filter((root) => `/${root}` !== entry.command)
-      .map((root) => `/${root}`),
+    aliases: entry.roots.filter((root) => `/${root}` !== entry.command).map((root) => `/${root}`),
     summary: entry.summary,
     usage: entry.usage,
     params: entry.params.map((param) => ({

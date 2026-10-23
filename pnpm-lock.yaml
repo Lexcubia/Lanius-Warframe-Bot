@@ -56,6 +56,9 @@ importers:
       ioredis:
         specifier: ^6.0.0
         version: 6.0.0
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
       warframe-worldstate-data:
         specifier: 3.16.10
         version: 3.16.10
@@ -75,9 +78,6 @@ importers:
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.29)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1)
-      tsx:
-        specifier: ^4.19.2
-        version: 4.23.15
       typescript:
         specifier: ^5.7.2
         version: 5.9.3
@@ -111,6 +111,9 @@ importers:
       hono:
         specifier: ^4.6.14
         version: 4.13.13
+      tsx:
+        specifier: ^4.19.2
+        version: 4.23.15
       zod:
         specifier: ^3.24.1
         version: 3.25.76
@@ -121,9 +124,6 @@ importers:
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.29)(tsx@4.23.15)(typescript@5.9.3)(yaml@2.9.1)
-      tsx:
-        specifier: ^4.19.2
-        version: 4.23.15
       typescript:
         specifier: ^5.7.2
         version: 5.9.3

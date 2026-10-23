@@ -16,8 +16,8 @@ const PANEL_DESC_ZH: Readonly<Record<ModuleId, string>> = {
   tenetRotation: '信条武器轮换与订阅',
   codaRotation: '终幕武器轮换与订阅',
   subscribe: '订阅或退订模块推送',
-  market: 'WM 物品行情摘要',
-  riven: 'WM 紫卡价位摘要',
+  market: 'WM 在线卖单排行',
+  riven: 'WM 紫卡在线拍卖',
   mode: '切换本会话回复模式',
   help: '指令帮助与模块详解',
 };

@@ -41,6 +41,8 @@ import {
 } from '../formatters/worldstate-text.js';
 import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
 import { buildHelpShortcutKeyboard } from '../qq/build-help-keyboard.js';
+import { buildMarketPageKeyboard, marketPageMarkdownHint } from '../qq/build-market-keyboard.js';
+import { buildRivenPageKeyboard, rivenPageMarkdownHint } from '../qq/build-riven-keyboard.js';
 
 /**
  * 会话级可变偏好（MVP 进程内内存）。
@@ -137,34 +139,86 @@ export async function handleCommand(
   }
 
   if (intent.type === 'market') {
-    const envelope = await api.getMarketItems(intent.query, gateCtx);
+    const envelope = await api.getMarketItems(
+      {
+        q: intent.query,
+        page: intent.page,
+        modRank: intent.modRank,
+      },
+      gateCtx,
+    );
     if (!envelope.ok) {
       return sendFail(deps, target, locale, envelope.error.message);
     }
-    const text = formatMarketText(envelope.data, locale);
+    const data = envelope.data;
+    const text = formatMarketText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard = buildMarketPageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      botAppId: deps.config.qq.appId,
+      args: {
+        query: intent.query,
+        modRank: intent.modRank,
+        page: data.page,
+      },
+      page: data.page,
+      totalPages,
+    });
     return replyCard({
       deps,
       target,
       text,
       preferImage: deps.prefs.replyMode === 'image',
-      render: () => renderMarketCard({ market: envelope.data, locale }),
+      render: () => renderMarketCard({ market: data, locale }),
       label: 'market',
+      keyboard: keyboard ?? undefined,
+      hint: keyboard != null ? marketPageMarkdownHint(locale, data.page, totalPages) : undefined,
     });
   }
 
   if (intent.type === 'riven') {
-    const envelope = await api.getRiven(intent.query, gateCtx);
+    const envelope = await api.getRiven(
+      {
+        q: intent.query,
+        page: intent.page,
+        rank: intent.rank,
+        mastery: intent.mastery,
+        minRerolls: intent.minRerolls,
+        maxRerolls: intent.maxRerolls,
+      },
+      gateCtx,
+    );
     if (!envelope.ok) {
       return sendFail(deps, target, locale, envelope.error.message);
     }
-    const text = formatRivenText(envelope.data, locale);
+    const data = envelope.data;
+    const text = formatRivenText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard = buildRivenPageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      botAppId: deps.config.qq.appId,
+      args: {
+        query: intent.query,
+        rank: intent.rank,
+        mastery: intent.mastery,
+        minRerolls: intent.minRerolls,
+        maxRerolls: intent.maxRerolls,
+        page: data.page,
+      },
+      page: data.page,
+      totalPages,
+    });
     return replyCard({
       deps,
       target,
       text,
       preferImage: deps.prefs.replyMode === 'image',
-      render: () => renderRivenCard({ riven: envelope.data, locale }),
+      render: () => renderRivenCard({ riven: data, locale }),
       label: 'riven',
+      keyboard: keyboard ?? undefined,
+      hint: keyboard != null ? rivenPageMarkdownHint(locale, data.page, totalPages) : undefined,
     });
   }
 
