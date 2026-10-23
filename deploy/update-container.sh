@@ -4,7 +4,7 @@
 # 适用：`deploy/docker-compose.app.yml` 挂载宿主机 monorepo 源码（/opt/lanius/repo:/repo），
 # api/bot 经 tsx 直跑 TypeScript 源码的运行模式。
 #
-# 流程：git fetch + reset 到目标 ref →（lockfile 变化时 pnpm install）→
+# 流程：git fetch（含国内镜像回退）+ reset 到目标 ref →（lockfile 变化时 pnpm install）→
 #       重建 card-host（Chromium 截图所需的 ui 产物）与 web → docker compose up -d 重建容器。
 #
 # 用法（服务器上，root）：
@@ -27,9 +27,28 @@ echo "[lanius-update-container] repo=${REPO_ROOT} ref=${REF}"
 cd "${REPO_ROOT}"
 
 # 1. 对齐代码到目标 ref（tag 直接 reset；分支则对齐 origin/<branch>）
-# +refs/tags/* 强制更新本地 tag：发布时 tag 可能被 force 重打，避免 fetch 因 clobber 拒绝。
-echo "[lanius-update-container] git fetch"
-git fetch origin --prune '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+# 机房常连不上 github.com：与 update-node.sh 相同，依次尝试 origin / 直连 / 镜像。
+fetch_ok=0
+for remote in \
+  "origin" \
+  "https://github.com/Lexcubia/Lanius-Warframe-Bot.git" \
+  "https://gitclone.com/github.com/Lexcubia/Lanius-Warframe-Bot.git" \
+  "https://ghfast.top/https://github.com/Lexcubia/Lanius-Warframe-Bot.git"
+do
+  echo "[lanius-update-container] git fetch via ${remote}"
+  # +refs/tags/* 强制更新本地 tag：发布时 tag 可能被 force 重打，避免 fetch 因 clobber 拒绝。
+  if git fetch "${remote}" --prune '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*' \
+    2>/tmp/lanius-container-git-fetch.err; then
+    fetch_ok=1
+    break
+  fi
+  cat /tmp/lanius-container-git-fetch.err 2>/dev/null || true
+done
+if [[ "${fetch_ok}" != "1" ]]; then
+  echo "[lanius-update-container] git fetch failed on all remotes/mirrors" >&2
+  exit 1
+fi
+
 if git rev-parse -q --verify "refs/tags/${REF}" >/dev/null; then
   TARGET="${REF}"
 elif git rev-parse -q --verify "refs/remotes/origin/${REF}" >/dev/null; then

@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-10-23
+
+### Fixed
+
+- 容器热启动部署：`update-container.sh` 与 Deploy workflow 在机房连不上 `github.com` 时回退 git 镜像（与 `update-node.sh` 同策略）。
+
 ## [0.4.5] - 2026-10-23
 
 ### Changed
