@@ -8,6 +8,8 @@ const BROWSER_TEST_GLOBS = [
   'src/render-worldstate.test.ts',
   'src/preview-card.write.test.ts',
   'src/preview-p3.write.test.ts',
+  'src/preview-alerts.write.test.ts',
+  'src/preview-dense.write.test.ts',
 ] as const;
 
 /**

@@ -77,7 +77,7 @@ export class ItemIconService {
   }
 
   /**
-   * 为世界状态中的入侵奖励补齐官方图标。
+   * 为世界状态中的入侵 / 警报奖励补齐官方图标。
    *
    * @param worldstate - 已映射的世界状态 DTO
    * @returns 奖励字段带图标的新 DTO（其余字段浅拷贝）
@@ -94,6 +94,10 @@ export class ItemIconService {
         defenderReward: row.defenderReward
           ? this.enrichOne(row.defenderReward, catalog)
           : undefined,
+      })),
+      alerts: worldstate.alerts.map((row) => ({
+        ...row,
+        rewards: row.rewards.map((reward) => this.enrichOne(reward, catalog)),
       })),
     };
   }

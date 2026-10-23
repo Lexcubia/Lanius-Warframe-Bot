@@ -119,11 +119,7 @@ export function formatFissuresText(
   const lines: string[] = [];
   lines.push(zh ? `【Lanius ${bullet} 虚空裂隙】` : `[Lanius ${bullet} Fissures]`);
   if (options.filterSummary) {
-    lines.push(
-      zh
-        ? `筛选：${options.filterSummary}`
-        : `Filter: ${options.filterSummary}`,
-    );
+    lines.push(zh ? `筛选：${options.filterSummary}` : `Filter: ${options.filterSummary}`);
   }
   if (options.stale) {
     lines.push(zh ? '（数据可能延迟）' : '(data may be delayed)');
@@ -168,6 +164,62 @@ function formatInvasionReward(
 }
 
 /**
+ * 警报模块文本（独立于科研；空态固定「当前无警报」）。
+ *
+ * @param worldstate - DTO
+ * @param locale - locale
+ * @param options - stale 等
+ * @returns QQ 文本
+ */
+export function formatAlertsText(
+  worldstate: WorldstateDto,
+  locale: Locale,
+  options: { stale?: boolean; siteUrl?: string } = {},
+): string {
+  const zh = locale !== 'en';
+  const bullet = String.fromCharCode(0xb7);
+  const lines: string[] = [];
+  lines.push(zh ? `【Lanius ${bullet} 警报】` : `[Lanius ${bullet} Alerts]`);
+  if (options.stale) {
+    lines.push(zh ? '（数据可能延迟）' : '(data may be delayed)');
+  }
+  if (worldstate.alerts.length === 0) {
+    lines.push(zh ? `${bullet} 当前无警报` : `${bullet} no active alerts`);
+  } else {
+    for (const row of worldstate.alerts.slice(0, 10)) {
+      const node = row.node ? pickLocalized(row.node, locale) : (row.nodeKey ?? '—');
+      const mission = row.missionType
+        ? pickLocalized(row.missionType, locale)
+        : (row.missionTypeKey ?? '—');
+      const faction = row.faction ? pickLocalized(row.faction, locale) : undefined;
+      const remain = row.expiry
+        ? formatRemaining(Math.max(0, Date.parse(row.expiry) - Date.now()), zh)
+        : undefined;
+      const head = faction
+        ? `${bullet} ${mission} · ${node} · ${faction}`
+        : `${bullet} ${mission} · ${node}`;
+      lines.push(remain ? `${head} ${remain}` : head);
+      const rewardParts: string[] = [];
+      if (row.credits !== undefined && row.credits > 0) {
+        rewardParts.push(zh ? `${row.credits} 星币` : `${row.credits} credits`);
+      }
+      for (const reward of row.rewards.slice(0, 3)) {
+        rewardParts.push(
+          formatInvasionReward(reward, locale) ?? pickLocalized(reward.name, locale),
+        );
+      }
+      if (rewardParts.length > 0) {
+        lines.push(`  ${rewardParts.join(zh ? ' · ' : ' · ')}`);
+      }
+    }
+  }
+  if (options.siteUrl) {
+    lines.push(options.siteUrl);
+  }
+  return lines.join('\n');
+}
+
+/**
  * 午夜电波模块文本。
  *
  * @param worldstate - DTO
@@ -197,9 +249,7 @@ export function formatNightwaveText(
     );
     for (const challenge of worldstate.nightwave.activeChallenges.slice(0, 8)) {
       const kind = pickLocalized(challenge.kindLabel, locale);
-      const title = challenge.title
-        ? pickLocalized(challenge.title, locale)
-        : challenge.id;
+      const title = challenge.title ? pickLocalized(challenge.title, locale) : challenge.id;
       lines.push(`${bullet} [${kind}] ${title}`);
     }
   }
