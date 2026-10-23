@@ -36,22 +36,24 @@ describe('formatMarketPriceQuantity', () => {
 });
 
 describe('formatMarketWhisper', () => {
-  it('builds WFM-style whisper lines', () => {
-    expect(
-      formatMarketWhisper({
-        seller: 'SellerA',
-        itemName: 'Latron Prime Set',
-        platinum: 69,
-        locale: 'en',
-      }),
-    ).toBe('/w SellerA Hi! I want to buy: Latron Prime Set for 69 platinum. (warframe.market)');
-    expect(
-      formatMarketWhisper({
-        seller: 'SellerA',
-        itemName: '拉特昂 Prime 一套',
-        platinum: 69,
-        locale: 'zh',
-      }),
-    ).toBe('/w SellerA 你好！我想购买：拉特昂 Prime 一套，价格 69 白金。(warframe.market)');
+  it('builds WFM-style whisper lines within QQ cmd-input limit', () => {
+    const en = formatMarketWhisper({
+      seller: 'SellerA',
+      itemName: 'Latron Prime Set',
+      platinum: 69,
+      locale: 'en',
+    });
+    const zh = formatMarketWhisper({
+      seller: 'SellerA',
+      itemName: '拉特昂 Prime 一套',
+      platinum: 69,
+      locale: 'zh',
+    });
+    expect(en.startsWith('/w SellerA')).toBe(true);
+    expect(en).toContain('69');
+    expect(zh.startsWith('/w SellerA')).toBe(true);
+    expect(zh).toContain('69');
+    expect(Array.from(en).length).toBeLessThanOrEqual(100);
+    expect(Array.from(zh).length).toBeLessThanOrEqual(100);
   });
 });

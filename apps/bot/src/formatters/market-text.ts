@@ -7,9 +7,73 @@ import {
   type MarketOrdersDto,
   type RivenOrdersDto,
 } from '@lanius/core';
+import { clampQqCmdChars, qqCmdInputTag } from '@lanius/qq-official';
 
 /**
- * 将市场卖单分页 DTO 格式化为 QQ 文本。
+ * 为本页每条订单生成「私聊N」Markdown 参数指令标签（点击插入 /w，不带 @bot）。
+ *
+ * @param whispers - 已按本页顺序排好的插入文案
+ * @param locale - 语言（决定 show 标签）
+ * @returns 空串或一行由空格分隔的标签
+ */
+export function formatWhisperCmdInputLine(whispers: readonly string[], locale: Locale): string {
+  if (whispers.length === 0) {
+    return '';
+  }
+  return whispers
+    .map((whisper, index) => {
+      const n = index + 1;
+      const show = locale === 'en' ? `W${n}` : `私聊${n}`;
+      return qqCmdInputTag({
+        text: clampQqCmdChars(whisper),
+        show,
+        reference: false,
+      });
+    })
+    .join(' ');
+}
+
+/**
+ * 由市场卖单页生成本页全部 /w 插入文案。
+ *
+ * @param data - 卖单页
+ * @param locale - 语言
+ * @returns 与 orders 等长的私聊串
+ */
+export function marketWhisperLines(data: MarketOrdersDto, locale: Locale): string[] {
+  const itemName = pickLocalized(data.resolved.name, locale);
+  return data.orders.map((order) =>
+    formatMarketWhisper({
+      seller: order.seller,
+      itemName,
+      platinum: order.platinum,
+      locale,
+    }),
+  );
+}
+
+/**
+ * 由紫卡拍卖页生成本页全部 /w 插入文案。
+ *
+ * @param data - 紫卡页
+ * @param locale - 语言
+ * @returns 与 orders 等长的私聊串
+ */
+export function rivenWhisperLines(data: RivenOrdersDto, locale: Locale): string[] {
+  const weapon = pickLocalized(data.resolved.name, locale);
+  const itemName = locale === 'en' ? `${weapon} Riven` : `${weapon} 紫卡`;
+  return data.orders.map((order) =>
+    formatMarketWhisper({
+      seller: order.seller,
+      itemName,
+      platinum: order.platinum,
+      locale,
+    }),
+  );
+}
+
+/**
+ * 将市场卖单分页 DTO 格式化为 QQ 文本（含可点私聊标签）。
  *
  * @param data - 单目标卖单页
  * @param locale - 语言
@@ -47,16 +111,17 @@ export function formatMarketText(data: MarketOrdersDto, locale: Locale): string 
       : `${n}. ${price}${rank} · ${order.seller}（${status}）`;
   });
 
+  const whisperLine = formatWhisperCmdInputLine(marketWhisperLines(data, locale), locale);
   const tip =
     locale === 'en'
-      ? 'Tip: tap Whisper N to get an in-game /w paste line.'
-      : '提示：点「私聊N」可获取游戏内可粘贴的 /w 文案。';
+      ? 'Tap W# to insert /w into the chat box (no @bot). Paste into Warframe.'
+      : '点「私聊N」将 /w 文案插入输入框（不带 @）；再粘贴到游戏即可。';
 
-  return [title, header, ...lines, tip].join('\n');
+  return [title, header, ...lines, tip, whisperLine].filter(Boolean).join('\n');
 }
 
 /**
- * 将紫卡拍卖分页 DTO 格式化为 QQ 文本。
+ * 将紫卡拍卖分页 DTO 格式化为 QQ 文本（含可点私聊标签）。
  *
  * @param data - 单武器拍卖页
  * @param locale - 语言
@@ -98,16 +163,17 @@ export function formatRivenText(data: RivenOrdersDto, locale: Locale): string {
       : `${n}. ${order.platinum} 白金 · ${order.seller}（${status}）\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`;
   });
 
+  const whisperLine = formatWhisperCmdInputLine(rivenWhisperLines(data, locale), locale);
   const tip =
     locale === 'en'
-      ? 'Tip: tap Whisper N to get an in-game /w paste line.'
-      : '提示：点「私聊N」可获取游戏内可粘贴的 /w 文案。';
+      ? 'Tap W# to insert /w into the chat box (no @bot). Paste into Warframe.'
+      : '点「私聊N」将 /w 文案插入输入框（不带 @）；再粘贴到游戏即可。';
 
-  return [title, header, ...lines, tip].join('\n');
+  return [title, header, ...lines, tip, whisperLine].filter(Boolean).join('\n');
 }
 
 /**
- * 将指定卖单格式化为可复制私聊正文（供按钮触发后回复）。
+ * 将指定卖单格式化为可复制私聊正文（供手动 `私聊=N` 指令回退）。
  *
  * @param data - 市场页
  * @param indexOnPage - 本页 0-based 下标

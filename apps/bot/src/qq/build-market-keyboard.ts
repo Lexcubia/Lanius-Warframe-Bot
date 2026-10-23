@@ -1,4 +1,4 @@
-import type { QqKeyboardContent, QqKeyboardButton } from '@lanius/qq-official';
+import type { QqKeyboardButton, QqKeyboardContent } from '@lanius/qq-official';
 import { commandKeyboardButton } from '@lanius/qq-official';
 
 import { formatMarketCommandSuffix, type ParsedMarketArgs } from '../commands/parse-market-args.js';
@@ -10,18 +10,16 @@ export type BuildMarketKeyboardOptions = {
   locale: 'zh' | 'en';
   enter: boolean;
   botAppId: string;
-  /** 当前查询筛选（page / whisper 会被覆盖） */
+  /** 当前查询筛选（page 会被翻页逻辑覆盖） */
   args: ParsedMarketArgs;
   /** 当前页 */
   page: number;
   /** 总页数 */
   totalPages: number;
-  /** 本页卖单条数（用于私聊按钮；0 则不生成私聊行） */
-  orderCount: number;
 };
 
 /**
- * 组装带目标页码的 `/wm` 指令正文（不含私聊序号）。
+ * 组装带目标页码的 `/wm` 指令正文。
  *
  * @param args - 名称与筛选
  * @param page - 目标页；1 时省略 `p=`
@@ -37,76 +35,22 @@ function marketCommandForPage(args: ParsedMarketArgs, page: number, locale: 'zh'
 }
 
 /**
- * 组装本页第 n 条卖单的私聊指令（n 从 1）。
+ * 构造 `/wm` 翻页指令键盘。
+ * 私聊改为 Markdown `<qqbot-cmd-input>`（不带 @），故键盘仅保留翻页。
  *
- * @param args - 名称与筛选
- * @param page - 当前页
- * @param whisperIndex - 本页序号（1-based）
- * @param locale - 键名语言
- * @returns 指令正文
- */
-function marketWhisperCommand(
-  args: ParsedMarketArgs,
-  page: number,
-  whisperIndex: number,
-  locale: 'zh' | 'en',
-): string {
-  const suffix = formatMarketCommandSuffix(
-    {
-      ...args,
-      page: page <= 1 ? undefined : page,
-      whisperIndex,
-    },
-    locale,
-  );
-  return `wm ${suffix}`.trim();
-}
-
-/**
- * 将按钮按每行最多 5 个切分。
- *
- * @param buttons - 按钮列表
- * @returns 行数组
- */
-function chunkButtons(buttons: QqKeyboardButton[]): Array<{ buttons: QqKeyboardButton[] }> {
-  const rows: Array<{ buttons: QqKeyboardButton[] }> = [];
-  for (let i = 0; i < buttons.length; i += 5) {
-    rows.push({ buttons: buttons.slice(i, i + 5) });
-  }
-  return rows;
-}
-
-/**
- * 构造 `/wm` 私聊 + 翻页指令键盘。
- * 有卖单时始终返回（私聊按钮）；仅一页且无卖单时返回 null。
- *
- * @param options - 语言、enter、当前页与筛选、本页条数
- * @returns QQ keyboard；无可点按钮时 null
+ * @param options - 语言、enter、当前页与筛选
+ * @returns QQ keyboard；仅一页时 null
  */
 export function buildMarketPageKeyboard(
   options: BuildMarketKeyboardOptions,
 ): QqKeyboardContent | null {
-  const zh = options.locale !== 'en';
-  const rows: Array<{ buttons: QqKeyboardButton[] }> = [];
-
-  if (options.orderCount > 0) {
-    const whisperButtons: QqKeyboardButton[] = [];
-    for (let i = 1; i <= options.orderCount; i += 1) {
-      whisperButtons.push(
-        commandKeyboardButton({
-          id: `wm-w${i}`,
-          label: zh ? `私聊${i}` : `W${i}`,
-          command: marketWhisperCommand(options.args, options.page, i, options.locale),
-          enter: options.enter,
-          reply: false,
-          style: 0,
-        }),
-      );
-    }
-    rows.push(...chunkButtons(whisperButtons));
+  if (options.totalPages <= 1) {
+    return null;
   }
 
+  const zh = options.locale !== 'en';
   const pageButtons: QqKeyboardButton[] = [];
+
   if (options.page > 1) {
     pageButtons.push(
       commandKeyboardButton({
@@ -131,27 +75,24 @@ export function buildMarketPageKeyboard(
       }),
     );
   }
-  if (pageButtons.length > 0) {
-    rows.push({ buttons: pageButtons });
-  }
 
-  if (rows.length === 0) {
+  if (pageButtons.length === 0) {
     return null;
   }
 
   return {
     botAppId: options.botAppId,
-    rows,
+    rows: [{ buttons: pageButtons }],
   };
 }
 
 /**
- * 市场翻页 / 私聊 Markdown 短提示。
+ * 市场翻页 Markdown 短提示。
  *
  * @param locale - 语言
  * @param page - 当前页
  * @param totalPages - 总页数
- * @param hasWhisper - 是否含私聊按钮
+ * @param hasWhisper - 是否含私聊标签（文案提示用）
  * @returns 提示文案
  */
 export function marketPageMarkdownHint(
@@ -162,10 +103,10 @@ export function marketPageMarkdownHint(
 ): string {
   if (locale === 'en') {
     return hasWhisper
-      ? `**Market** — page ${page}/${totalPages} · Whisper N → /w paste`
+      ? `**Market** — page ${page}/${totalPages} · tap W# → insert /w (no @)`
       : `**Market** — page ${page}/${totalPages}`;
   }
   return hasWhisper
-    ? `**市场** — 第 ${page}/${totalPages} 页 · 私聊N → 游戏内 /w 文案`
+    ? `**市场** — 第 ${page}/${totalPages} 页 · 点私聊N 插入 /w（不带 @）`
     : `**市场** — 第 ${page}/${totalPages} 页`;
 }
