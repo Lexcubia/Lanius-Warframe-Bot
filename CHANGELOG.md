@@ -6,6 +6,8 @@
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-10-23
+
 ### Changed
 
 - `/wm` `/zk` 私聊：改用 Markdown `<qqbot-cmd-input>`，点击后直接把 `/w …` 插入输入框且**不带 @bot**（键盘仅保留翻页）。
