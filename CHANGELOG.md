@@ -6,6 +6,22 @@
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-23
+
+### Added
+
+- Worldstate Wave 0：任务模块地基（`sortie` / `archon` / `circuit` / `bounties` / `arbitration` / `alerts` / `archimedea` 空安全切片、目录与面板桩、MissionDeck 奖励展开）。
+- `/警报` `/alerts`：官方 `Alerts` → DTO + 文本/图卡（无警报空态）。
+- `/突击` `/执行官`（`/sortie` `/archon`）：官方 `Sorties` / `LiteSorties` 映射与图卡。
+- `/仲裁`：warframestat.us 仲裁适配；上游失败不拖垮 worldstate。
+- `/科研` `/精英科研` `/时光科研`：官方 `Conquests`（`CT_LAB` / `CT_HEX`）映射与图卡。
+- `/回廊` `/circuit`：`EndlessXpSchedule` → 常规战甲 / 钢道 Incarnon 适配器轮换。
+- `/赏金`：开放世界 `SyndicateMissions` + MissionDeck 奖励表；支持平原/金星/火卫二过滤。
+
+### Changed
+
+- QQ vue-cards 可读性：市场/紫卡默认每页 6 条；缩略图字号与行距；杜卡德货币图标；套装部件优先 `i18n.subIcon` 避免复用套装总图（#89）。
+
 ## [0.5.0] - 2026-10-23
 
 ### Added
