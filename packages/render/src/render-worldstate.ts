@@ -111,6 +111,26 @@ export async function renderCircuitCard(input: RenderWorldstateCardInput): Promi
 }
 
 /**
+ * 渲染「每日突击」独立模块 PNG。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderSortieCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'sortie', ...input });
+}
+
+/**
+ * 渲染「执行官狩猎」独立模块 PNG。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderArchonCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'archon', ...input });
+}
+
+/**
  * 渲染帮助卡片 PNG。
  *
  * @param input - 帮助 DTO、locale 与可选皮肤

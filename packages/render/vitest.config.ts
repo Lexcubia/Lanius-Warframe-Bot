@@ -10,6 +10,7 @@ const BROWSER_TEST_GLOBS = [
   'src/preview-p3.write.test.ts',
   'src/preview-alerts.write.test.ts',
   'src/preview-dense.write.test.ts',
+  'src/preview-sortie-archon.write.test.ts',
 ] as const;
 
 /**

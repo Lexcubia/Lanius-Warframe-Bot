@@ -55,4 +55,22 @@ declare module 'warframe-worldstate-data/utilities' {
    * @returns 可读任务类型名
    */
   export function nodeMissionType(nodeKey: string, locale?: string): string;
+
+  /**
+   * 将突击 / 执行官 Boss 键解析为显示名。
+   *
+   * @param bossKey - 如 `SORTIE_BOSS_CORRUPTED_VOR` / `SORTIE_BOSS_AMAR`
+   * @param locale - 字典 locale
+   * @returns 可读 Boss 名
+   */
+  export function sortieBoss(bossKey: string, locale?: string): string;
+
+  /**
+   * 将突击修正键解析为短标题。
+   *
+   * @param modifierKey - 如 `SORTIE_MODIFIER_SLASH`
+   * @param locale - 字典 locale
+   * @returns 可读修正名
+   */
+  export function sortieModifier(modifierKey: string, locale?: string): string;
 }

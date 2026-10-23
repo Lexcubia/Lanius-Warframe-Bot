@@ -6,6 +6,8 @@ import {
   missionType as resolveMissionType,
   node as resolveNodeEn,
   nodeMissionType,
+  sortieBoss as resolveSortieBoss,
+  sortieModifier as resolveSortieModifier,
 } from 'warframe-worldstate-data/utilities';
 
 import { toHuijiZh } from './huiji-zh.js';
@@ -191,6 +193,71 @@ export function resolveMissionTypeLabel(
   const zh = zhOverride ?? zhFromMt ?? en;
 
   return localized(zh, en, typeKey);
+}
+
+/**
+ * 产品侧简体 Boss 覆盖（WFCD zh 常为繁体或旧译）。
+ */
+const SORTIE_BOSS_ZH: Record<string, string> = {
+  SORTIE_BOSS_CORRUPTED_VOR: '堕落的 Vor',
+  SORTIE_BOSS_KRIL: '中尉 Lech Kril',
+  SORTIE_BOSS_TYL: 'Tyl Regor',
+  SORTIE_BOSS_JACKAL: '豺狼',
+  SORTIE_BOSS_HYENA: '鬣狗群',
+  SORTIE_BOSS_AMAR: '欺谋狼主',
+  SORTIE_BOSS_NIRA: '诡诈蛇主',
+  SORTIE_BOSS_BOREAL: '猎杀鸟主',
+};
+
+/**
+ * 产品侧简体突击修正覆盖。
+ */
+const SORTIE_MODIFIER_ZH: Record<string, string> = {
+  SORTIE_MODIFIER_SLASH: '敌人物理强化（切割）',
+  SORTIE_MODIFIER_IMPACT: '敌人物理强化（冲击）',
+  SORTIE_MODIFIER_PUNCTURE: '敌人物理强化（穿刺）',
+  SORTIE_MODIFIER_EXIMUS: '卓越者大本营',
+  SORTIE_MODIFIER_LOW_ENERGY: '能量削减',
+  SORTIE_MODIFIER_HAZARD_RADIATION: '危害：辐射',
+  SORTIE_MODIFIER_HAZARD_COLD: '危害：寒冷',
+  SORTIE_MODIFIER_HAZARD_FIRE: '危害：火焰',
+  SORTIE_MODIFIER_HAZARD_MAGNETIC: '危害：磁力',
+  SORTIE_MODIFIER_HAZARD_ICE: '危害：冰冻',
+  SORTIE_MODIFIER_HAZARD_FOG: '危害：浓雾',
+  SORTIE_MODIFIER_ARMOR: '敌人护甲强化',
+  SORTIE_MODIFIER_SHIELDS: '敌人护盾强化',
+  SORTIE_MODIFIER_AUGMENTED_ENEMY_ARMOR: '敌人护甲强化',
+  SORTIE_MODIFIER_AUGMENTED_ENEMY_SHIELDS: '敌人护盾强化',
+};
+
+/**
+ * 解析突击 / 执行官 Boss 键为双语显示名。
+ *
+ * @param bossKey - 上游 `Boss`，如 `SORTIE_BOSS_AMAR`
+ * @returns 中英 Boss 名；未知时回退为原键
+ */
+export function resolveSortieBossLabel(bossKey: string): LocalizedName {
+  const en = safeCall(() => resolveSortieBoss(bossKey, 'en'));
+  const zhRaw = safeCall(() => resolveSortieBoss(bossKey, 'zh'));
+  const zhOverride = SORTIE_BOSS_ZH[bossKey];
+  const zh = zhOverride ?? (zhRaw ? toHuijiZh(zhRaw) : undefined);
+  const base = localized(zh, en, bossKey);
+  return applyLabelOverride(base, lookupLabelOverride('paths', bossKey));
+}
+
+/**
+ * 解析突击修正键为双语显示名（执行官任务通常无修正）。
+ *
+ * @param modifierKey - 上游 `modifierType`，如 `SORTIE_MODIFIER_SLASH`
+ * @returns 中英修正名；未知时回退为原键
+ */
+export function resolveSortieModifierLabel(modifierKey: string): LocalizedName {
+  const en = safeCall(() => resolveSortieModifier(modifierKey, 'en'));
+  const zhRaw = safeCall(() => resolveSortieModifier(modifierKey, 'zh'));
+  const zhOverride = SORTIE_MODIFIER_ZH[modifierKey];
+  const zh = zhOverride ?? (zhRaw ? toHuijiZh(zhRaw) : undefined);
+  const base = localized(zh, en, modifierKey);
+  return applyLabelOverride(base, lookupLabelOverride('paths', modifierKey));
 }
 
 /**

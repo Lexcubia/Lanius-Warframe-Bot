@@ -146,7 +146,7 @@ describe('mapWorldstate', () => {
     ]);
   });
 
-  it('plumbs empty-safe mission module slices; maps alerts when present', () => {
+  it('maps Sorties / LiteSorties / alerts / archimedea / circuit', () => {
     const fetchedAt = '2026-10-10T12:00:00.000Z';
     const now = Date.parse(fetchedAt);
     const dto = mapWorldstate(
@@ -156,10 +156,22 @@ describe('mapWorldstate', () => {
           {
             _id: { $oid: 'sortie-1' },
             Boss: 'SORTIE_BOSS_CORRUPTED_VOR',
-            Variants: [{ missionType: 'MT_EXTERMINATION', node: 'SolNode1' }],
+            Variants: [
+              {
+                missionType: 'MT_EXTERMINATION',
+                modifierType: 'SORTIE_MODIFIER_SLASH',
+                node: 'SolNode66',
+              },
+            ],
           },
         ],
-        LiteSorties: [{ _id: { $oid: 'archon-1' }, Boss: 'SORTIE_BOSS_AMAR' }],
+        LiteSorties: [
+          {
+            _id: { $oid: 'archon-1' },
+            Boss: 'SORTIE_BOSS_AMAR',
+            Missions: [{ missionType: 'MT_RESCUE', node: 'SolNode11' }],
+          },
+        ],
         EndlessXpSchedule: [
           {
             CategoryChoices: [
@@ -196,9 +208,13 @@ describe('mapWorldstate', () => {
       fetchedAt,
     );
 
-    // Wave 1：alerts + archimedea + circuit 已接通；其余模块仍由并行 PR 填入。
-    expect(dto.sortie).toBeNull();
-    expect(dto.archon).toBeNull();
+    expect(dto.sortie?.id).toBe('sortie-1');
+    expect(dto.sortie?.boss?.en).toContain('Vor');
+    expect(dto.sortie?.missions).toHaveLength(1);
+    expect(dto.sortie?.missions[0]?.missionType?.zh).toBe('歼灭');
+    expect(dto.archon?.id).toBe('archon-1');
+    expect(dto.archon?.boss?.en).toContain('Amar');
+    expect(dto.archon?.missions[0]?.missionType?.zh).toBe('救援');
     expect(dto.circuit).not.toBeNull();
     expect(dto.circuit?.normalChoices.map((row) => row.key)).toEqual(['Hydroid']);
     expect(dto.circuit?.hardChoices.map((row) => row.key)).toEqual(['Dera']);

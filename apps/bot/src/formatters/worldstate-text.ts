@@ -1,4 +1,11 @@
-import type { CatalogItemDto, Locale, WorldstateDto } from '@lanius/core';
+import type {
+  ArchonHuntDto,
+  CatalogItemDto,
+  Locale,
+  SortieDto,
+  SortieMissionDto,
+  WorldstateDto,
+} from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
 
 /**
@@ -373,4 +380,144 @@ export function formatArbitrationText(
     lines.push(options.siteUrl);
   }
   return lines.join('\n');
+}
+
+/**
+ * 每日突击模块文本。
+ *
+ * @param worldstate - DTO
+ * @param locale - locale
+ * @param options - stale 等
+ * @returns QQ 文本
+ */
+export function formatSortieText(
+  worldstate: WorldstateDto,
+  locale: Locale,
+  options: { stale?: boolean; siteUrl?: string } = {},
+): string {
+  return formatSortieChainText({
+    titleZh: '突击',
+    titleEn: 'Sortie',
+    emptyZh: '暂无突击数据',
+    emptyEn: 'no sortie data',
+    chain: worldstate.sortie,
+    locale,
+    options,
+  });
+}
+
+/**
+ * 执行官狩猎模块文本。
+ *
+ * @param worldstate - DTO
+ * @param locale - locale
+ * @param options - stale 等
+ * @returns QQ 文本
+ */
+export function formatArchonText(
+  worldstate: WorldstateDto,
+  locale: Locale,
+  options: { stale?: boolean; siteUrl?: string } = {},
+): string {
+  return formatSortieChainText({
+    titleZh: '执行官',
+    titleEn: 'Archon Hunt',
+    emptyZh: '暂无执行官狩猎数据',
+    emptyEn: 'no Archon Hunt data',
+    chain: worldstate.archon,
+    locale,
+    options,
+  });
+}
+
+/**
+ * 突击 / 执行官共用的任务链文本排版。
+ *
+ * @param input - 标题、空态与切片
+ * @returns QQ 文本
+ */
+function formatSortieChainText(input: {
+  titleZh: string;
+  titleEn: string;
+  emptyZh: string;
+  emptyEn: string;
+  chain: SortieDto | ArchonHuntDto | null;
+  locale: Locale;
+  options: { stale?: boolean; siteUrl?: string };
+}): string {
+  const zh = input.locale !== 'en';
+  const bullet = String.fromCharCode(0xb7);
+  const lines: string[] = [];
+  lines.push(zh ? `【Lanius ${bullet} ${input.titleZh}】` : `[Lanius ${bullet} ${input.titleEn}]`);
+  if (input.options.stale) {
+    lines.push(zh ? '（数据可能延迟）' : '(data may be delayed)');
+  }
+  const chain = input.chain;
+  if (!chain) {
+    lines.push(zh ? `${bullet} ${input.emptyZh}` : `${bullet} ${input.emptyEn}`);
+  } else {
+    const boss = chain.boss ? pickLocalized(chain.boss, input.locale) : (chain.bossKey ?? '—');
+    lines.push(zh ? `Boss：${boss}` : `Boss: ${boss}`);
+    if (chain.expiry) {
+      const remain = remainingLabel(chain.expiry, zh);
+      if (remain) {
+        lines.push(zh ? `剩余 ${remain}` : `Ends in ${remain}`);
+      }
+    }
+    chain.missions.slice(0, 5).forEach((mission, index) => {
+      lines.push(`${bullet} ${formatSortieMissionLine(mission, index + 1, input.locale)}`);
+    });
+    if (chain.missions.length === 0) {
+      lines.push(zh ? `${bullet} 暂无任务` : `${bullet} no missions`);
+    }
+  }
+  if (input.options.siteUrl) {
+    lines.push(input.options.siteUrl);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * 格式化突击链单步：序号 · 任务 · 节点 · 可选修正。
+ *
+ * @param mission - 单步 DTO
+ * @param index - 1-based 序号
+ * @param locale - 语言
+ * @returns 单行文案
+ */
+function formatSortieMissionLine(mission: SortieMissionDto, index: number, locale: Locale): string {
+  const parts: string[] = [`${index}.`];
+  if (mission.missionType) {
+    parts.push(pickLocalized(mission.missionType, locale));
+  } else if (mission.missionTypeKey) {
+    parts.push(mission.missionTypeKey);
+  }
+  if (mission.node) {
+    parts.push(pickLocalized(mission.node, locale));
+  } else if (mission.nodeKey) {
+    parts.push(mission.nodeKey);
+  }
+  if (mission.modifier) {
+    parts.push(pickLocalized(mission.modifier, locale));
+  }
+  return parts.join(' · ');
+}
+
+/**
+ * 由过期 ISO 时间生成剩余短文案。
+ *
+ * @param expiryIso - ISO8601 过期时间
+ * @param zh - 是否中文
+ * @returns 剩余时间；已过期或无效时 `undefined`
+ */
+function remainingLabel(expiryIso: string, zh: boolean): string | undefined {
+  const expiryMs = Date.parse(expiryIso);
+  if (!Number.isFinite(expiryMs)) {
+    return undefined;
+  }
+  const remainingMs = expiryMs - Date.now();
+  if (remainingMs <= 0) {
+    return zh ? '已结束' : 'ended';
+  }
+  return formatRemaining(remainingMs, zh);
 }
