@@ -9,6 +9,7 @@ import type { CardSkinId } from './skins.js';
 
 /**
  * 警报 QQ 截图模块卡（独立于科研；空态「当前无警报」）。
+ * 任务类型|倒计时、节点|阵营键值行铺满；正文字号偏大。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -130,10 +131,13 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   list-style: none;
   margin: 0;
   padding: 0;
+  width: 100%;
 }
 .alerts__row {
-  padding: 6px 2px 7px;
+  padding: 5px 0 6px;
   border-bottom: 1px solid var(--lanius-border);
+  width: 100%;
+  box-sizing: border-box;
 }
 .alerts__row--zebra {
   background: var(--lanius-zebra);
@@ -142,40 +146,47 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
-  font-size: 14px;
+  gap: 12px;
+  font-size: var(--lanius-type-body, 14px);
   margin-bottom: 2px;
+  width: 100%;
 }
 .alerts__head strong {
   color: var(--lanius-brand);
   min-width: 0;
+  font-size: var(--lanius-type-lead, 16px);
 }
 .alerts__remain {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
-  font-size: 12px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text-muted);
   flex-shrink: 0;
 }
 .alerts__meta {
-  margin: 0 0 4px;
-  font-size: 12px;
+  margin: 0 0 3px;
+  font-size: var(--lanius-type-body, 14px);
   color: var(--lanius-text);
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
 }
 .alerts__faction {
   color: var(--lanius-text-muted);
   font-weight: 700;
+  flex-shrink: 0;
+  text-align: right;
 }
 .alerts__rewards {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 10px;
-  font-size: 12px;
+  gap: 4px 12px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text);
+  width: 100%;
 }
 .alerts__credits {
   font-weight: 700;
@@ -193,7 +204,7 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 }
 .alerts__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--lanius-type-body, 14px);
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 0;

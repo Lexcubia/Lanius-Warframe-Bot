@@ -16,7 +16,7 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "test:browser": "LANIUS_BROWSER_TESTS=1 vitest run src/render-worldstate.test.ts src/preview-card.write.test.ts src/preview-p3.write.test.ts src/preview-alerts.write.test.ts src/preview-sortie-archon.write.test.ts",
+    "test:browser": "LANIUS_BROWSER_TESTS=1 vitest run src/render-worldstate.test.ts src/preview-card.write.test.ts src/preview-p3.write.test.ts src/preview-alerts.write.test.ts src/preview-sortie-archon.write.test.ts src/preview-fill-layout.write.test.ts",
     "preview": "node ./scripts/preview-card.mjs",
     "build:card-host": "vite build --config vite.card-host.config.ts",
     "browsers:install": "playwright install chromium"

@@ -8,7 +8,7 @@ import QqCardShell from './QqCardShell.vue';
 import type { CardSkinId } from './skins.js';
 
 /**
- * 回廊 / Circuit QQ 截图卡：普通战甲 + 钢路 Incarnon 两节列表。
+ * 回廊 / Circuit QQ 截图卡：普通战甲 + 钢路 Incarnon 并排两栏铺满。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -81,33 +81,35 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
     <template v-if="circuit">
       <p v-if="remainLine" class="circuit__meta">{{ remainLine }}</p>
 
-      <section class="circuit__group">
-        <h4 class="circuit__group-title" data-kind="normal">
-          {{ locale === 'en' ? 'Normal · Warframes' : '普通 · 可选战甲' }}
-        </h4>
-        <ul v-if="circuit.normalChoices.length" class="circuit__list">
-          <li v-for="row in circuit.normalChoices" :key="`n-${row.key}`" class="circuit__row">
-            <span class="circuit__name">{{ choiceLabel(row) }}</span>
-          </li>
-        </ul>
-        <p v-else class="circuit__empty-inline">
-          {{ locale === 'en' ? 'No warframe choices' : '暂无战甲选项' }}
-        </p>
-      </section>
+      <div class="circuit__cols">
+        <section class="circuit__group">
+          <h4 class="circuit__group-title" data-kind="normal">
+            {{ locale === 'en' ? 'Normal · Warframes' : '普通 · 战甲' }}
+          </h4>
+          <ul v-if="circuit.normalChoices.length" class="circuit__list">
+            <li v-for="row in circuit.normalChoices" :key="`n-${row.key}`" class="circuit__row">
+              <span class="circuit__name">{{ choiceLabel(row) }}</span>
+            </li>
+          </ul>
+          <p v-else class="circuit__empty-inline">
+            {{ locale === 'en' ? 'No warframe choices' : '暂无战甲选项' }}
+          </p>
+        </section>
 
-      <section class="circuit__group">
-        <h4 class="circuit__group-title" data-kind="hard">
-          {{ locale === 'en' ? 'Steel Path · Incarnon' : '钢路 · Incarnon 适配器' }}
-        </h4>
-        <ul v-if="circuit.hardChoices.length" class="circuit__list">
-          <li v-for="row in circuit.hardChoices" :key="`h-${row.key}`" class="circuit__row">
-            <span class="circuit__name">{{ choiceLabel(row) }}</span>
-          </li>
-        </ul>
-        <p v-else class="circuit__empty-inline">
-          {{ locale === 'en' ? 'No Incarnon adapters' : '暂无 Incarnon 适配器' }}
-        </p>
-      </section>
+        <section class="circuit__group">
+          <h4 class="circuit__group-title" data-kind="hard">
+            {{ locale === 'en' ? 'Steel Path · Incarnon' : '钢路 · Incarnon' }}
+          </h4>
+          <ul v-if="circuit.hardChoices.length" class="circuit__list">
+            <li v-for="row in circuit.hardChoices" :key="`h-${row.key}`" class="circuit__row">
+              <span class="circuit__name">{{ choiceLabel(row) }}</span>
+            </li>
+          </ul>
+          <p v-else class="circuit__empty-inline">
+            {{ locale === 'en' ? 'No Incarnon adapters' : '暂无 Incarnon 适配器' }}
+          </p>
+        </section>
+      </div>
     </template>
     <p v-else class="circuit__empty">
       {{ locale === 'en' ? 'No Circuit rotation data' : '暂无回廊轮换数据' }}
@@ -117,21 +119,25 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 
 <style scoped>
 .circuit__meta {
-  margin: 0 0 6px;
-  font-size: 11px;
+  margin: 0 0 4px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text-muted);
 }
-.circuit__group {
-  margin-bottom: 6px;
+.circuit__cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 10px;
+  width: 100%;
+  align-items: start;
 }
-.circuit__group:last-child {
-  margin-bottom: 0;
+.circuit__group {
+  min-width: 0;
 }
 .circuit__group-title {
   margin: 0 0 2px;
-  font-size: 11px;
+  font-size: var(--lanius-type-meta, 12px);
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: var(--lanius-text-muted);
 }
 .circuit__group-title[data-kind='normal'] {
@@ -147,24 +153,28 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   border-top: 1px solid var(--lanius-border);
 }
 .circuit__row {
-  padding: 4px 2px;
+  padding: 4px 0;
   border-bottom: 1px solid var(--lanius-border);
-  font-size: 13px;
+  font-size: var(--lanius-type-body, 14px);
 }
 .circuit__name {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--lanius-text);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .circuit__empty-inline,
 .circuit__empty {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 8px 0;
 }
 .circuit__empty-inline {
   text-align: left;
-  padding: 4px 2px;
+  padding: 4px 0;
 }
 </style>
