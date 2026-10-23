@@ -35,10 +35,10 @@ lanius-warframe-bot/
 │   ├── desktop/             # 后期 Tauri 2 Windows（现不建）
 │   └── mobile/              # 后期 Tauri 2 移动（现不建）
 ├── packages/
-│   ├── core/                # DTO、Zod schema、别名、错误码、realm/locale
+│   ├── core/                # DTO、Zod schema、别名、错误码、realm/locale、指令目录
 │   ├── api/                 # 可注入 baseUrl + fetch 的 Lanius HTTP 客户端（不默认 axios）
-│   ├── ui/                  # Vue SFC / 与路由解耦的共享展示组件
-│   ├── render/              # 图片模式：DTO → PNG/WebP
+│   ├── ui/                  # Web / 后期 Tauri：Vue 展示块（看板、面板）；非 QQ 出图卡
+│   ├── render/              # QQ 出图：截图壳、dense ModuleCard、DTO → PNG/WebP
 │   └── qq-official/         # 验签、事件、发文本/发图
 ├── config.example.yaml
 ├── config.local.yaml        # gitignore
@@ -56,9 +56,23 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 推送：可查询模块 → SQLite 订阅 → Bot `push/tick`；频率 `on_change|hourly|daily|weekly`。  
 发版硬顺序：`develop` → `main` → tag → **`main` tip → `release`**（禁止 develop 直推 release）。tag 后可选推 GHCR；`release` / Admin 选版 → 默认 **`update-node.sh`（git + build + systemd）**；Docker pull 为可选。  
 指令前导：`commandPrefix` + `commandPrefixPolicy`；接 Agent 时建议 `required`。  
-Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/admin`（公开导航不展示）。  
+管理入口仅手输 `/admin`（公开导航不展示）。  
 **禁止**在未立项时脚手架 Tauri。  
 **Web 栈已锁定 Nuxt/Vue**；勿再引入 Next.js / React / shadcn / next-intl 作为 Web 默认。
+
+### 2.0 Web UI ⊥ QQ 出图 UI（硬边界）
+
+主站（公开站 / Admin / 后期 Tauri）与 QQ **截图出图** UI **完全剥离、互不干涉**。两端只共用底层 **Lanius 自定义 API** + `@lanius/core`（DTO / Zod / 别名 / 指令目录等）。色板等品牌 token 可对齐，但**不得**用同一套 ModuleCard / Shell 绑两端布局。
+
+| 侧 | 包 / 应用 | 职责 | 禁止 |
+| -- | --------- | ---- | ---- |
+| **Web / Tauri** | `packages/ui` + `apps/web`（后期 `apps/desktop` 等） | 响应式看板、面板、站点主题；可插拔 Vue 展示 | `import` QQ ModuleCard / `QqCardShell`；把截图密度当站点布局 |
+| **QQ 出图** | `packages/render` + `apps/bot` | Playwright 截图壳、dense 卡、固定宽（如 640/560）、会话 `cardSkin` | 向 Web 导出出图卡；公开站直接渲染 QQ 卡片 |
+| **共享契约** | `@lanius/api` / `@lanius/core` | HTTP 业务入口与 DTO | 客户端直连 WF / 社区上游 |
+
+**QQ 皮肤（仅会话，非站点主题）：** Bot 指令 `/皮肤`（及英文等价别名，见指令目录）在会话内切换 `light` \| `dark`，经 `SessionPrefs.cardSkin` 传入 `render*Card` / capture；默认 `bot.defaultCardSkin: light`。站点主题与此无关，禁止把 `cardSkin` 挂到 `apps/web`。
+
+运行时仍遵守：QQ ↔ Web **无进程耦合**；QQ 消息中的公开站 URL 仅展示导流。
 
 ### 2.1 Web 公开路由（`apps/web`）
 
@@ -80,17 +94,17 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
 | ------------------------------ | -------------------------------------------------- | ------------------------------------------------- |
 | `packages/core`                | 无业务应用依赖                                     | 依赖 api/bot/web                                  |
 | `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`                 | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
-| `packages/ui`                  | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app` | React；假设 `window` 必存在且无适配               |
+| `packages/ui`                  | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app` | React；假设 `window` 必存在且无适配；**QQ 出图 ModuleCard / Shell** |
 | `apps/api` (`@lanius/server`)  | `core`；上游 HTTP 客户端                           | 依赖 bot/web；把 QQ SDK 塞进 API                  |
-| `apps/bot`                     | `@lanius/api`；`qq-official`；可选 `render`        | 直连 WF 上游；依赖 Nuxt/Web                       |
-| `apps/web`                     | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）   | 直连上游；依赖 bot 进程；默认 axios               |
+| `apps/bot`                     | `@lanius/api`；`qq-official`；`render`（出图）     | 直连 WF 上游；依赖 Nuxt/Web / `packages/ui` 出图卡 |
+| `apps/web`                     | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）   | 直连上游；依赖 bot 进程；默认 axios；**引用 QQ ModuleCard** |
 | `qq-official`                  | 仅 bot                                             | 被 api/web 引用                                   |
-| `packages/render`              | bot（MVP）；可选 server 管理预览                   | 公开站直接渲染 QQ 卡片                            |
+| `packages/render`              | bot（MVP）；可选 server 管理预览；自有 dense 卡壳  | 公开站直接渲染 QQ 卡片；把出图卡当 Web 共享组件   |
 
 ## 4. Tauri 可插拔（现期）
 
 - **当前宿主**：Nuxt 4（Vue 3）。后期：**Tauri 2**（Windows 优先，移动另阶段）。
-- Web 须：**响应式**、触控可用；业务 UI/API 调用倾向进 `packages/ui`（Vue）+ `packages/api`（fetch）。
+- Web 须：**响应式**、触控可用；业务 UI/API 调用倾向进 `packages/ui`（Vue，**Web/Tauri 展示**）+ `packages/api`（fetch）。QQ dense 出图卡属 `packages/render`，**不**进入 Tauri 复用面。
 - Nuxt 专有能力（SSR SEO、route middleware、Nitro BFF、HttpOnly cookie 桥）留在 `apps/web`。
 - 清单：[TODO-TAURI.md](./TODO-TAURI.md)。Context 详案：`tauri-roadmap.md`。
 
@@ -121,6 +135,7 @@ Web 与 QQ 卡片共用 `packages/ui` 视觉 token；管理入口仅手输 `/adm
 
 - 非官方 QQ 协议栈
 - QQ ↔ Web 运行时耦合
+- Web 与 QQ **出图 UI 同源 ModuleCard / Shell**（布局必须分离；仅 API + core 共享）
 - 客户端旁路 Lanius API
 - MVP 上线国服数据
 - 多租户 / 多 IM 中台

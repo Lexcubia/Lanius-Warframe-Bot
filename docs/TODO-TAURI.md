@@ -7,8 +7,8 @@
 ## 目标（后期）
 
 - Windows 桌面 +（能力成熟后）移动 APP，经 **Tauri 2** 承载。
-- 与 Web **共用**规划中的 `packages/ui`（**Vue**）+ `packages/api`（**fetch**）；业务仍只调 **Lanius API**。
-- **不**替代官方 QQ Bot；**不**直连 Warframe 上游。
+- 与 Web **共用**规划中的 `packages/ui`（**Vue**，Web/Tauri 展示块）+ `packages/api`（**fetch**）；业务仍只调 **Lanius API**。
+- **不**替代官方 QQ Bot；**不**直连 Warframe 上游；**不**复用 QQ 出图 dense ModuleCard（属 `packages/render` / `apps/bot`，见 [ARCHITECTURE.md](./ARCHITECTURE.md) §2.0）。
 
 ## Phase 0 — Web MVP（现在）
 
@@ -20,7 +20,7 @@
 ## Phase 1 — 共享包（仍无 Tauri）
 
 - [ ] `packages/api`：基于 `packages/core`；可注入 `fetch` / `baseUrl`
-- [ ] `packages/ui`：**Vue** 搜索、结果、世界状态等展示块
+- [ ] `packages/ui`：**Vue** 搜索、结果、世界状态等 **Web/Tauri** 展示块（非 QQ 截图卡）
 - [ ] `apps/web` 改为组合上述包；SEO / middleware / Nitro BFF 留在 Nuxt 壳
 
 ## Phase 2 — Windows（Tauri 2）
