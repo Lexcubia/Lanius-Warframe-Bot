@@ -18,6 +18,7 @@ import {
 import type { CacheStore } from '../cache/types.js';
 import { realmNotAvailableError, upstreamUnavailableError } from '../lib/http-error.js';
 import type { ItemIconService } from './item-icon-service.js';
+import type { MissionDeckService } from './mission-deck-service.js';
 
 /**
  * Default worldstate cache TTL (60s), within the documented 60–120s band.
@@ -38,8 +39,10 @@ export type WorldstateServiceDeps = {
   timeoutMs: number;
   logger: Logger;
   fetchImpl?: typeof fetch;
-  /** 可选：为入侵奖励填充官方图标 */
+  /** 可选：为入侵 / 警报 / 赏金奖励填充官方图标 */
   itemIconService?: ItemIconService;
+  /** 可选：赏金 Jobs 的 MissionDeck 奖励表 */
+  missionDeckService?: MissionDeckService;
   /**
    * warframestat.us 基址（仲裁社区源）；缺省官方文档默认。
    * 失败时仅 `arbitration=null`，不拖垮 `/v1/worldstate`。
@@ -88,6 +91,7 @@ export class WorldstateService {
   private readonly logger: Logger;
   private readonly fetchImpl?: typeof fetch;
   private readonly itemIconService?: ItemIconService;
+  private readonly missionDeckService?: MissionDeckService;
   private readonly warframestatBaseUrl: string;
 
   /**
@@ -102,6 +106,7 @@ export class WorldstateService {
     this.logger = deps.logger;
     this.fetchImpl = deps.fetchImpl;
     this.itemIconService = deps.itemIconService;
+    this.missionDeckService = deps.missionDeckService;
     this.warframestatBaseUrl = deps.warframestatBaseUrl ?? DEFAULT_WARFRAMESTAT_BASE_URL;
   }
 
@@ -132,7 +137,10 @@ export class WorldstateService {
     }
 
     const upstream = await this.loadUpstream(realm);
-    const mapped = mapWorldstate(realm, upstream.raw, upstream.fetchedAt);
+    const missionDeck = this.missionDeckService
+      ? await this.missionDeckService.getCatalog()
+      : undefined;
+    const mapped = mapWorldstate(realm, upstream.raw, upstream.fetchedAt, { missionDeck });
     const arbitration = await this.loadArbitration(realm);
     const withArbitration: WorldstateDto = { ...mapped, arbitration };
     const data = this.itemIconService

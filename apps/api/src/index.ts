@@ -16,6 +16,7 @@ import { seedDatabaseIfEmpty } from './db/seed.js';
 import { createLogger } from './lib/logger.js';
 import { ItemIconService } from './services/item-icon-service.js';
 import { MarketService } from './services/market-service.js';
+import { MissionDeckService } from './services/mission-deck-service.js';
 import { PushService } from './services/push-service.js';
 import { RivenService } from './services/riven-service.js';
 import { RotationService } from './services/rotation-service.js';
@@ -120,12 +121,26 @@ async function main(): Promise<void> {
       'item icon catalog warm-up failed',
     );
   });
+  const missionDeckService = new MissionDeckService({ cache, logger });
+  // 预热赏金奖励表，避免首个 /v1/worldstate 阻塞下载 ExportRewards。
+  void missionDeckService.getCatalog().catch((error: unknown) => {
+    logger.warn(
+      {
+        err:
+          error instanceof Error
+            ? { name: error.name, message: error.message }
+            : { name: 'UnknownError', message: String(error) },
+      },
+      'mission deck catalog warm-up failed',
+    );
+  });
   const worldstateService = new WorldstateService({
     cache,
     worldstateUrl: config.api.upstream.worldstateUrl,
     timeoutMs: config.api.upstream.timeoutMs,
     logger,
     itemIconService,
+    missionDeckService,
   });
   const marketService = new MarketService({ cache, client: wfm });
   const rivenService = new RivenService({ cache, client: wfm });

@@ -226,3 +226,10 @@ export {
   type FissureMissionOption,
   type FissureQueryFilter,
 } from './fissures/filter-fissures.js';
+
+export {
+  applyBountyMapFilter,
+  isBountyMapFilterActive,
+  parseBountyMapTokens,
+  type BountyMapFilter,
+} from './bounties/filter-bounties.js';

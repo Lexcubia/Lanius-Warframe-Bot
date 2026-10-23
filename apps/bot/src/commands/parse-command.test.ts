@@ -42,6 +42,14 @@ describe('parseCommand', () => {
     expect(parseCommand('/执行官').intent).toEqual({ type: 'archon' });
     expect(parseCommand('/回廊').intent).toEqual({ type: 'circuit' });
     expect(parseCommand('/赏金').intent).toEqual({ type: 'bounties' });
+    expect(parseCommand('/赏金 平原').intent).toEqual({
+      type: 'bounties',
+      mapFilter: { tags: ['CetusSyndicate'] },
+    });
+    expect(parseCommand('/bounties vallis').intent).toEqual({
+      type: 'bounties',
+      mapFilter: { tags: ['SolarisSyndicate'] },
+    });
     expect(parseCommand('/仲裁').intent).toEqual({ type: 'arbitration' });
     expect(parseCommand('/警报').intent).toEqual({ type: 'alerts' });
     expect(parseCommand('/科研').intent).toEqual({ type: 'archimedea' });
