@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-23
+
+### Fixed
+
+- 容器热启动部署强制 `--force-recreate` + `restart`，避免 `compose up -d` 未换进程导致超长 `uptimeSec` 与旧代码继续对外服务。
+- Deploy release 健康检查拒绝 `uptimeSec > 120`，防止「Actions 绿但现网未换码」。
+
 ## [0.4.1] - 2026-10-23
 
 ### Added

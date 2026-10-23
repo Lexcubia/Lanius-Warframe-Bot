@@ -51,8 +51,13 @@ pnpm --filter @lanius/render build:card-host
 echo "[lanius-update-container] build web (nuxt)"
 pnpm --filter @lanius/web build
 
-# 5. 重建并重启容器（env/挂载变化时 up -d 会重建；否则 restart 即可）
-echo "[lanius-update-container] docker compose up -d"
-docker compose -f "${COMPOSE_FILE}" up -d
+# 5. 强制重建容器：源码挂载 + tsx 长驻时，普通 `up -d` 可能不换进程，
+#    表现为 health 仍报超长 uptimeSec、业务仍跑旧代码。
+echo "[lanius-update-container] docker compose up -d --force-recreate"
+docker compose -f "${COMPOSE_FILE}" up -d --force-recreate --remove-orphans
+
+# 6. 再显式 restart，确保 supervisord 子进程（api/bot/web）全部拉起
+echo "[lanius-update-container] docker compose restart lanius-app"
+docker compose -f "${COMPOSE_FILE}" restart lanius-app
 
 echo "[lanius-update-container] done"
