@@ -1,0 +1,63 @@
+/**
+ * QQ 卡片 dense 间距与 light/dark 皮肤变量。
+ * 仅挂在 `[data-lanius-skin]`（QqCardShell 根）上，不影响 Web 站点主题。
+ */
+
+[data-lanius-skin] {
+  --lanius-card-padding: 8px;
+  --lanius-card-gap: 4px;
+  --lanius-card-radius: 10px;
+  --lanius-font-display: 'Zen Maru Gothic', 'Noto Sans SC', sans-serif;
+  --lanius-font-body: 'Noto Sans SC', 'Source Sans 3', sans-serif;
+  --lanius-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+}
+
+[data-lanius-skin='light'] {
+  --lanius-void: #fff8f2;
+  --lanius-panel: #ffffff;
+  --lanius-panel-raised: #fff4eb;
+  --lanius-border: #e4d5c8;
+  --lanius-border-bright: #c9b8a8;
+  --lanius-text: #2a3142;
+  --lanius-text-muted: #6b7385;
+  --lanius-accent: #4eb7e8;
+  --lanius-accent-dim: #2f8fc4;
+  --lanius-warn: #f0b429;
+  --lanius-danger: #ff7a6e;
+  --lanius-success: #5fd0b0;
+  --lanius-brand: #2a3142;
+  --lanius-highlight: #ff7a6e;
+  --lanius-bar-attack: #4eb7e8;
+  --lanius-bar-defend: #ffb38a;
+  --lanius-zebra: rgba(62, 78, 110, 0.04);
+  --lanius-shell-shadow: 0 8px 20px rgba(62, 78, 110, 0.1);
+  --lanius-shell-bg:
+    radial-gradient(420px 180px at 6% -20%, rgba(78, 183, 232, 0.18), transparent 60%),
+    radial-gradient(360px 160px at 96% 0%, rgba(255, 122, 110, 0.14), transparent 55%),
+    linear-gradient(180deg, var(--lanius-panel-raised) 0%, var(--lanius-void) 100%);
+}
+
+[data-lanius-skin='dark'] {
+  --lanius-void: #141822;
+  --lanius-panel: #1c2230;
+  --lanius-panel-raised: #1a2030;
+  --lanius-border: #2e3648;
+  --lanius-border-bright: #3d4660;
+  --lanius-text: #e8ecf4;
+  --lanius-text-muted: #9aa3b5;
+  --lanius-accent: #5ec4ef;
+  --lanius-accent-dim: #4eb7e8;
+  --lanius-warn: #f0b429;
+  --lanius-danger: #ff8a7e;
+  --lanius-success: #5fd0b0;
+  --lanius-brand: #f0f3fa;
+  --lanius-highlight: #ff8a7e;
+  --lanius-bar-attack: #4eb7e8;
+  --lanius-bar-defend: #ffb38a;
+  --lanius-zebra: rgba(255, 255, 255, 0.03);
+  --lanius-shell-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  --lanius-shell-bg:
+    radial-gradient(420px 180px at 6% -20%, rgba(78, 183, 232, 0.12), transparent 60%),
+    radial-gradient(360px 160px at 96% 0%, rgba(255, 122, 110, 0.1), transparent 55%),
+    linear-gradient(180deg, #1a2030 0%, #12161f 100%);
+}

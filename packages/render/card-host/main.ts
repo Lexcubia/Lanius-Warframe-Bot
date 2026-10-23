@@ -8,6 +8,12 @@ import type {
   WeaponRotationDto,
   WorldstateDto,
 } from '@lanius/core';
+import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
+import '@fontsource/noto-sans-sc/chinese-simplified-700.css';
+import '@fontsource/noto-sans-sc/latin-400.css';
+import '@fontsource/noto-sans-sc/latin-700.css';
+import { createApp, type App, type Component } from 'vue';
+
 import {
   CyclesModuleCard,
   FissuresModuleCard,
@@ -15,17 +21,14 @@ import {
   InvasionsModuleCard,
   MarketModuleCard,
   NightwaveModuleCard,
+  resolveCardSkin,
   RivenModuleCard,
   VarziaModuleCard,
   VoidTraderModuleCard,
   WeaponRotationModuleCard,
-} from '@lanius/ui';
-import '@lanius/ui/tokens.css';
-import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
-import '@fontsource/noto-sans-sc/chinese-simplified-700.css';
-import '@fontsource/noto-sans-sc/latin-400.css';
-import '@fontsource/noto-sans-sc/latin-700.css';
-import { createApp, type App, type Component } from 'vue';
+  type CardSkinId,
+} from '../src/vue-cards/index.js';
+import '../src/vue-cards/dense-tokens.css';
 
 import './host.css';
 
@@ -51,6 +54,8 @@ export type CardHostPayload = {
   kind: CardHostKind;
   locale: Locale;
   stale?: boolean;
+  /** QQ 皮肤 id（非法值回落 light） */
+  skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
   help?: HelpDto;
   market?: MarketSearchDto;
@@ -127,9 +132,11 @@ function mountCard(payload: CardHostPayload): void {
     activeApp = null;
   }
   const Card = resolveCardComponent(payload.kind);
+  const skin = resolveCardSkin(payload.skin);
   const props: Record<string, unknown> = {
     locale: payload.locale,
     stale: payload.stale ?? false,
+    skin,
   };
   if (payload.kind === 'help') {
     props.help = payload.help;
