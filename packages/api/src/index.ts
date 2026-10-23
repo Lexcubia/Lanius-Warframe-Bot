@@ -7,5 +7,7 @@ export {
   LaniusApiClientError,
   createLaniusApiClient,
   type LaniusApiClientOptions,
+  type MarketOrdersClientQuery,
   type PublicQueryInput,
+  type RivenOrdersClientQuery,
 } from './client.js';

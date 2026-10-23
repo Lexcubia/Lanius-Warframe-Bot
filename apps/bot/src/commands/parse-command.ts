@@ -10,6 +10,8 @@ import {
   type SubscribableModuleId,
 } from '@lanius/core';
 
+import { parseMarketArgs, parseRivenArgs } from './parse-market-args.js';
+
 /**
  * MVP 切片支持的 Bot 命令意图。
  */
@@ -18,8 +20,21 @@ export type BotIntent =
   | { type: 'fissures'; filter?: FissureQueryFilter }
   | { type: 'invasions' }
   | { type: 'nightwave' }
-  | { type: 'market'; query: string }
-  | { type: 'riven'; query: string }
+  | {
+      type: 'market';
+      query: string;
+      modRank?: number;
+      page?: number;
+    }
+  | {
+      type: 'riven';
+      query: string;
+      rank?: number;
+      mastery?: number;
+      minRerolls?: number;
+      maxRerolls?: number;
+      page?: number;
+    }
   | { type: 'voidTrader' }
   | { type: 'varzia' }
   | { type: 'tenetRotation' }
@@ -71,34 +86,24 @@ export type ParseCommandOptions = {
  * @param options - 前导符与策略（可配置；接 Agent 时常用 `required`）
  * @returns 是否命中指令根，以及解析出的意图
  */
-export function parseCommand(
-  text: string,
-  options: ParseCommandOptions = {},
-): ParsedCommand {
+export function parseCommand(text: string, options: ParseCommandOptions = {}): ParsedCommand {
   const prefix = options.prefix ?? '/';
   const prefixPolicy = options.prefixPolicy ?? 'optional';
 
-  const normalized = text
-    .replace(/@\S+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+  const normalized = text.replace(/@\S+/g, ' ').replace(/\s+/g, ' ').trim();
 
   if (!normalized) {
     return { matched: false, reason: 'empty' };
   }
 
-  const hasPrefix =
-    prefix.length > 0 ? normalized.startsWith(prefix) : false;
+  const hasPrefix = prefix.length > 0 ? normalized.startsWith(prefix) : false;
 
   // required：无前导则不进指令管线，留给自然语言 / Agent
   if (prefixPolicy === 'required' && prefix.length > 0 && !hasPrefix) {
     return { matched: false, reason: 'prefix_required' };
   }
 
-  const body =
-    hasPrefix && prefix.length > 0
-      ? normalized.slice(prefix.length).trim()
-      : normalized;
+  const body = hasPrefix && prefix.length > 0 ? normalized.slice(prefix.length).trim() : normalized;
   if (!body) {
     return { matched: false, reason: 'empty' };
   }
@@ -113,10 +118,7 @@ export function parseCommand(
     // optional + 带前导：明确「想下指令但写错了」→ unknown（帮助）
     // required 同理（已保证有前导）
     // bare：未识别一律 unmatched，避免 `/瞎写` 抢 Agent
-    if (
-      (prefixPolicy === 'optional' || prefixPolicy === 'required') &&
-      hasPrefix
-    ) {
+    if ((prefixPolicy === 'optional' || prefixPolicy === 'required') && hasPrefix) {
       return { matched: true, intent: { type: 'unknown', raw: body } };
     }
     return { matched: false, reason: 'no_root' };
@@ -144,17 +146,38 @@ export function parseCommand(
   }
 
   if (command.id === 'market') {
-    if (!rest) {
+    const parsed = parseMarketArgs(restTokens);
+    if (!parsed.query) {
       return { matched: true, intent: { type: 'unknown', raw: body } };
     }
-    return { matched: true, intent: { type: 'market', query: rest } };
+    return {
+      matched: true,
+      intent: {
+        type: 'market',
+        query: parsed.query,
+        ...(parsed.modRank !== undefined ? { modRank: parsed.modRank } : {}),
+        ...(parsed.page !== undefined ? { page: parsed.page } : {}),
+      },
+    };
   }
 
   if (command.id === 'riven') {
-    if (!rest) {
+    const parsed = parseRivenArgs(restTokens);
+    if (!parsed.query) {
       return { matched: true, intent: { type: 'unknown', raw: body } };
     }
-    return { matched: true, intent: { type: 'riven', query: rest } };
+    return {
+      matched: true,
+      intent: {
+        type: 'riven',
+        query: parsed.query,
+        ...(parsed.rank !== undefined ? { rank: parsed.rank } : {}),
+        ...(parsed.mastery !== undefined ? { mastery: parsed.mastery } : {}),
+        ...(parsed.minRerolls !== undefined ? { minRerolls: parsed.minRerolls } : {}),
+        ...(parsed.maxRerolls !== undefined ? { maxRerolls: parsed.maxRerolls } : {}),
+        ...(parsed.page !== undefined ? { page: parsed.page } : {}),
+      },
+    };
   }
 
   if (command.id === 'subscribe') {
@@ -165,9 +188,7 @@ export function parseCommand(
     const filter = parseFissureFilterTokens(restTokens);
     return {
       matched: true,
-      intent: isFissureQueryActive(filter)
-        ? { type: 'fissures', filter }
-        : { type: 'fissures' },
+      intent: isFissureQueryActive(filter) ? { type: 'fissures', filter } : { type: 'fissures' },
     };
   }
 

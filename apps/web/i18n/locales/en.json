@@ -79,20 +79,27 @@
   "market": {
     "eyebrow": "Market",
     "title": "Market",
-    "intro": "Query Warframe Market items via the Lanius API.",
+    "intro": "Fuzzy-lock one item, then list online/ingame sell orders (price↑, 10 per page).",
     "placeholder": "Item name / alias…",
+    "modRankPlaceholder": "Rank (optional)",
     "emptyHint": "Enter a keyword to search.",
     "loading": "Searching…",
-    "error": "Failed to load market results"
+    "error": "Failed to load market results",
+    "prevPage": "Previous",
+    "nextPage": "Next"
   },
   "riven": {
     "eyebrow": "Riven",
     "title": "Riven",
-    "intro": "Look up riven-related info by weapon name.",
+    "intro": "Fuzzy-lock one weapon, then list online/ingame riven auctions (price↑, 10 per page).",
     "placeholder": "Weapon name…",
+    "rankPlaceholder": "Rank",
+    "masteryPlaceholder": "Mastery",
     "emptyHint": "Enter a weapon name to search.",
     "loading": "Searching…",
-    "error": "Failed to load riven results"
+    "error": "Failed to load riven results",
+    "prevPage": "Previous",
+    "nextPage": "Next"
   },
   "traders": {
     "eyebrow": "Traders",

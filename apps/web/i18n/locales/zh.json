@@ -79,20 +79,27 @@
   "market": {
     "eyebrow": "Market",
     "title": "市场",
-    "intro": "经 Lanius API 查询 Warframe Market 物品与挂单概览。",
+    "intro": "中文模糊锁定一件物品后，展示在线/游戏中卖单（价升序，每页 10 条）。",
     "placeholder": "物品名 / 别名…",
+    "modRankPlaceholder": "等级（可选）",
     "emptyHint": "输入关键词开始搜索。",
     "loading": "搜索中…",
-    "error": "无法加载市场结果"
+    "error": "无法加载市场结果",
+    "prevPage": "上一页",
+    "nextPage": "下一页"
   },
   "riven": {
     "eyebrow": "Riven",
     "title": "紫卡",
-    "intro": "按武器名查询紫卡相关信息。",
+    "intro": "中文模糊锁定一件武器后，展示在线/游戏中紫卡拍卖（价升序，每页 10 条）。",
     "placeholder": "武器名…",
+    "rankPlaceholder": "等级",
+    "masteryPlaceholder": "段位",
     "emptyHint": "输入武器名开始搜索。",
     "loading": "搜索中…",
-    "error": "无法加载紫卡结果"
+    "error": "无法加载紫卡结果",
+    "prevPage": "上一页",
+    "nextPage": "下一页"
   },
   "traders": {
     "eyebrow": "Traders",

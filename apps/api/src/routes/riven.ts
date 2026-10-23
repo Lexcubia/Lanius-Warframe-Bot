@@ -1,4 +1,4 @@
-import { RivenSearchDtoSchema } from '@lanius/core';
+import { RivenOrdersDtoSchema, RivenOrdersQuerySchema } from '@lanius/core';
 import { Hono } from 'hono';
 
 import type { AppVariables } from '../app-context.js';
@@ -18,9 +18,19 @@ export function rivenRoutes() {
   app.get('/riven', async (c) => {
     const started = Date.now();
     const ctx = c.get('app');
-    const q = c.req.query('q')?.trim() ?? '';
-    if (!q) {
-      throw validationError('q is required');
+    const parsed = RivenOrdersQuerySchema.safeParse({
+      q: c.req.query('q'),
+      page: c.req.query('page') ?? undefined,
+      pageSize: c.req.query('pageSize') ?? undefined,
+      rank: c.req.query('rank') ?? undefined,
+      mastery: c.req.query('mastery') ?? undefined,
+      minRerolls: c.req.query('minRerolls') ?? undefined,
+      maxRerolls: c.req.query('maxRerolls') ?? undefined,
+    });
+    if (!parsed.success) {
+      throw validationError('invalid riven query', {
+        issues: parsed.error.flatten(),
+      });
     }
 
     const scene = (c.req.query('scene') as 'group' | 'c2c' | 'web') || 'web';
@@ -34,7 +44,17 @@ export function rivenRoutes() {
         userId,
         moduleId: 'riven',
       });
-      const data = RivenSearchDtoSchema.parse(await ctx.rivenService.search(q));
+      const data = RivenOrdersDtoSchema.parse(
+        await ctx.rivenService.searchOrders({
+          query: parsed.data.q,
+          page: parsed.data.page,
+          pageSize: parsed.data.pageSize,
+          rank: parsed.data.rank,
+          mastery: parsed.data.mastery,
+          minRerolls: parsed.data.minRerolls,
+          maxRerolls: parsed.data.maxRerolls,
+        }),
+      );
       writeAuditEvent(ctx.db, {
         scene,
         targetId,

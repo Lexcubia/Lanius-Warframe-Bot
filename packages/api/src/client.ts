@@ -2,10 +2,10 @@ import {
   FailureEnvelopeSchema,
   HealthDtoSchema,
   HelpDtoSchema,
-  MarketSearchDtoSchema,
+  MarketOrdersDtoSchema,
   MetaDtoSchema,
   PushDispatchDtoSchema,
-  RivenSearchDtoSchema,
+  RivenOrdersDtoSchema,
   SiteDtoSchema,
   SubscriptionDtoSchema,
   VarziaDtoSchema,
@@ -16,12 +16,12 @@ import {
   type HealthDto,
   type HelpDto,
   type Locale,
-  type MarketSearchDto,
+  type MarketOrdersDto,
   type MetaDto,
   type PushDispatchDto,
   type PushFrequency,
   type Realm,
-  type RivenSearchDto,
+  type RivenOrdersDto,
   type SiteDto,
   type SubscribableModuleId,
   type SubscriptionDto,
@@ -90,8 +90,7 @@ export class LaniusApiClient {
   constructor(options: LaniusApiClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
     // 浏览器原生 fetch 作为方法引用会丢 `this`，触发 Illegal invocation；须 bind。
-    this.fetchImpl =
-      options.fetchImpl ?? globalThis.fetch.bind(globalThis);
+    this.fetchImpl = options.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.adminToken = options.adminToken;
   }
 
@@ -123,46 +122,67 @@ export class LaniusApiClient {
    * @throws LaniusApiClientError 当响应非 JSON 或 schema 校验失败时抛出
    */
   async getHelp(moduleToken?: string): Promise<ApiEnvelope<HelpDto>> {
-    const suffix = moduleToken
-      ? `?module=${encodeURIComponent(moduleToken)}`
-      : '';
+    const suffix = moduleToken ? `?module=${encodeURIComponent(moduleToken)}` : '';
     return this.getJson(`/v1/help${suffix}`, HelpDtoSchema);
   }
 
   /**
-   * 调用 `GET /v1/market/items?q=`。
+   * 调用 `GET /v1/market/items`（单目标在线卖单分页）。
    *
-   * @param query - 物品关键词
+   * @param input - 关键词与可选 page / modRank
    * @param context - 可选场景 ACL 上下文
-   * @returns 市场搜索包络
+   * @returns 市场卖单包络
    */
   async getMarketItems(
-    query: string,
+    input: string | MarketOrdersClientQuery,
     context: { scene?: string; targetId?: string; userId?: string } = {},
-  ): Promise<ApiEnvelope<MarketSearchDto>> {
-    const params = new URLSearchParams({ q: query });
+  ): Promise<ApiEnvelope<MarketOrdersDto>> {
+    const query = typeof input === 'string' ? { q: input } : input;
+    const params = new URLSearchParams({ q: query.q });
+    if (query.page !== undefined) params.set('page', String(query.page));
+    if (query.pageSize !== undefined) {
+      params.set('pageSize', String(query.pageSize));
+    }
+    if (query.modRank !== undefined) {
+      params.set('modRank', String(query.modRank));
+    }
     if (context.scene) params.set('scene', context.scene);
     if (context.targetId) params.set('targetId', context.targetId);
     if (context.userId) params.set('userId', context.userId);
-    return this.getJson(`/v1/market/items?${params}`, MarketSearchDtoSchema);
+    return this.getJson(`/v1/market/items?${params}`, MarketOrdersDtoSchema);
   }
 
   /**
-   * 调用 `GET /v1/riven?q=`。
+   * 调用 `GET /v1/riven`（单武器在线拍卖分页）。
    *
-   * @param query - 武器名
+   * @param input - 武器名与可选筛选/分页
    * @param context - 可选场景 ACL 上下文
-   * @returns 紫卡搜索包络
+   * @returns 紫卡拍卖包络
    */
   async getRiven(
-    query: string,
+    input: string | RivenOrdersClientQuery,
     context: { scene?: string; targetId?: string; userId?: string } = {},
-  ): Promise<ApiEnvelope<RivenSearchDto>> {
-    const params = new URLSearchParams({ q: query });
+  ): Promise<ApiEnvelope<RivenOrdersDto>> {
+    const query = typeof input === 'string' ? { q: input } : input;
+    const params = new URLSearchParams({ q: query.q });
+    if (query.page !== undefined) params.set('page', String(query.page));
+    if (query.pageSize !== undefined) {
+      params.set('pageSize', String(query.pageSize));
+    }
+    if (query.rank !== undefined) params.set('rank', String(query.rank));
+    if (query.mastery !== undefined) {
+      params.set('mastery', String(query.mastery));
+    }
+    if (query.minRerolls !== undefined) {
+      params.set('minRerolls', String(query.minRerolls));
+    }
+    if (query.maxRerolls !== undefined) {
+      params.set('maxRerolls', String(query.maxRerolls));
+    }
     if (context.scene) params.set('scene', context.scene);
     if (context.targetId) params.set('targetId', context.targetId);
     if (context.userId) params.set('userId', context.userId);
-    return this.getJson(`/v1/riven?${params}`, RivenSearchDtoSchema);
+    return this.getJson(`/v1/riven?${params}`, RivenOrdersDtoSchema);
   }
 
   /**
@@ -182,9 +202,7 @@ export class LaniusApiClient {
    * @returns Parsed success or failure envelope for worldstate.
    * @throws LaniusApiClientError when the response is not JSON or fails schema checks.
    */
-  async getWorldstate(
-    query: PublicQueryInput = {},
-  ): Promise<ApiEnvelope<WorldstateDto>> {
+  async getWorldstate(query: PublicQueryInput = {}): Promise<ApiEnvelope<WorldstateDto>> {
     const params = new URLSearchParams();
     if (query.realm) {
       params.set('realm', query.realm);
@@ -207,10 +225,7 @@ export class LaniusApiClient {
     query: PublicQueryInput = {},
     context: GateContext = {},
   ): Promise<ApiEnvelope<VoidTraderDto>> {
-    return this.getJson(
-      `/v1/void-trader${buildQuery(query, context)}`,
-      VoidTraderDtoSchema,
-    );
+    return this.getJson(`/v1/void-trader${buildQuery(query, context)}`, VoidTraderDtoSchema);
   }
 
   /**
@@ -296,11 +311,7 @@ export class LaniusApiClient {
     targetId: string;
     moduleId: SubscribableModuleId;
   }): Promise<ApiEnvelope<{ ok: boolean }>> {
-    return this.postJson(
-      '/v1/subscriptions/disable',
-      input,
-      z.object({ ok: z.boolean() }),
-    );
+    return this.postJson('/v1/subscriptions/disable', input, z.object({ ok: z.boolean() }));
   }
 
   /**
@@ -423,11 +434,7 @@ export class LaniusApiClient {
     ) {
       const failure = FailureEnvelopeSchema.safeParse(body);
       if (!failure.success) {
-        throw new LaniusApiClientError(
-          'Invalid failure envelope',
-          response.status,
-          body,
-        );
+        throw new LaniusApiClientError('Invalid failure envelope', response.status, body);
       }
       return failure.data;
     }
@@ -448,16 +455,37 @@ export class LaniusApiClient {
 
     const parsed = successSchema.safeParse(body);
     if (!parsed.success) {
-      throw new LaniusApiClientError(
-        'Invalid success envelope',
-        response.status,
-        body,
-      );
+      throw new LaniusApiClientError('Invalid success envelope', response.status, body);
     }
 
     return parsed.data as ApiEnvelope<T>;
   }
 }
+
+/**
+ * `getMarketItems` 结构化查询（字符串重载仍支持仅 `q`）。
+ */
+export type MarketOrdersClientQuery = {
+  /** 物品关键词 */
+  q: string;
+  page?: number;
+  pageSize?: number;
+  modRank?: number;
+};
+
+/**
+ * `getRiven` 结构化查询。
+ */
+export type RivenOrdersClientQuery = {
+  /** 武器关键词 */
+  q: string;
+  page?: number;
+  pageSize?: number;
+  rank?: number;
+  mastery?: number;
+  minRerolls?: number;
+  maxRerolls?: number;
+};
 
 /**
  * QQ/Web 门禁上下文查询参数。
