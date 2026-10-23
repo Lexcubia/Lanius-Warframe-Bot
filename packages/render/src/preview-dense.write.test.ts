@@ -121,15 +121,6 @@ const helpSample = {
       examples: [],
     },
     {
-      id: 'mode',
-      command: '/模式',
-      aliases: ['/mode'],
-      summary: { zh: '回复模式', en: 'Reply mode' },
-      usage: { zh: '/模式 <文本|图片>', en: '/mode <text|image>' },
-      params: [],
-      examples: [],
-    },
-    {
       id: 'help',
       command: '/帮助',
       aliases: ['/help'],

@@ -13,11 +13,8 @@ export default defineConfig({
   sourcemap: true,
   noExternal: [/^@lanius\//],
   external: [
-    '@resvg/resvg-js',
-    'satori',
-    '@fontsource/ibm-plex-sans',
+    // 出图宿主仍经 Playwright + Vite 加载 card-host；字体仅 Noto 打包进宿主
     '@fontsource/noto-sans-sc',
-    '@fontsource/rajdhani',
     'playwright',
     'vite',
     '@vitejs/plugin-vue',

@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+### Removed
+
+- `packages/ui` 中遗留的 QQ `*ModuleCard` / `QqCardShell`（公开站仅用 Board；出图卡仅在 `packages/render/vue-cards`）。
+- `packages/render` 未再使用的 Satori 建树 / `rasterizeCard` 路径（出图仅 Vue + Playwright）。
+
+### Changed
+
+- 文档与帮助文案：回复模式 / 卡片皮肤仅后台配置；不再提及用户侧 `/模式` `/皮肤`。
+
 ## [0.4.8] - 2026-10-23
 
 ### Changed

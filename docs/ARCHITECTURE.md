@@ -64,13 +64,13 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 
 主站（公开站 / Admin / 后期 Tauri）与 QQ **截图出图** UI **完全剥离、互不干涉**。两端只共用底层 **Lanius 自定义 API** + `@lanius/core`（DTO / Zod / 别名 / 指令目录等）。色板等品牌 token 可对齐，但**不得**用同一套 ModuleCard / Shell 绑两端布局。
 
-| 侧 | 包 / 应用 | 职责 | 禁止 |
-| -- | --------- | ---- | ---- |
-| **Web / Tauri** | `packages/ui` + `apps/web`（后期 `apps/desktop` 等） | 响应式看板、面板、站点主题；可插拔 Vue 展示 | `import` QQ ModuleCard / `QqCardShell`；把截图密度当站点布局 |
-| **QQ 出图** | `packages/render` + `apps/bot` | Playwright 截图壳、dense 卡、固定宽（如 640/560）、会话 `cardSkin` | 向 Web 导出出图卡；公开站直接渲染 QQ 卡片 |
-| **共享契约** | `@lanius/api` / `@lanius/core` | HTTP 业务入口与 DTO | 客户端直连 WF / 社区上游 |
+| 侧              | 包 / 应用                                            | 职责                                                                 | 禁止                                                         |
+| --------------- | ---------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Web / Tauri** | `packages/ui` + `apps/web`（后期 `apps/desktop` 等） | 响应式看板、面板、站点主题；可插拔 Vue 展示                          | `import` QQ ModuleCard / `QqCardShell`；把截图密度当站点布局 |
+| **QQ 出图**     | `packages/render` + `apps/bot`                       | Playwright 截图壳、dense 卡、固定宽（如 640/560）、进程级 `cardSkin` | 向 Web 导出出图卡；公开站直接渲染 QQ 卡片                    |
+| **共享契约**    | `@lanius/api` / `@lanius/core`                       | HTTP 业务入口与 DTO                                                  | 客户端直连 WF / 社区上游                                     |
 
-**QQ 皮肤（仅会话，非站点主题）：** Bot 指令 `/皮肤`（及英文等价别名，见指令目录）在会话内切换 `light` \| `dark`，经 `SessionPrefs.cardSkin` 传入 `render*Card` / capture；默认 `bot.defaultCardSkin: light`。站点主题与此无关，禁止把 `cardSkin` 挂到 `apps/web`。
+**QQ 回复模式 / 皮肤（仅后台，非站点主题、非 QQ 用户指令）：** `bot.defaultReplyMode`（默认 `image`）与 `bot.defaultCardSkin`（默认 `light`）经 Admin Config / yaml 配置，启动时写入进程级 `SessionPrefs` 并传入 `render*Card` / capture。**禁止**再提供用户侧 `/模式` `/皮肤`。站点主题与此无关，禁止把 `cardSkin` 挂到 `apps/web`。
 
 运行时仍遵守：QQ ↔ Web **无进程耦合**；QQ 消息中的公开站 URL 仅展示导流。
 
@@ -90,16 +90,16 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 
 ## 3. 依赖规则
 
-| 包 / 应用                      | 可依赖                                             | 禁止                                              |
-| ------------------------------ | -------------------------------------------------- | ------------------------------------------------- |
-| `packages/core`                | 无业务应用依赖                                     | 依赖 api/bot/web                                  |
-| `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`                 | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作 |
+| 包 / 应用                      | 可依赖                                             | 禁止                                                                |
+| ------------------------------ | -------------------------------------------------- | ------------------------------------------------------------------- |
+| `packages/core`                | 无业务应用依赖                                     | 依赖 api/bot/web                                                    |
+| `packages/api` (`@lanius/api`) | `core`；可注入 `fetch` / `baseUrl`                 | 直连 WF 上游；默认 axios；仅能在 Nuxt server 工作                   |
 | `packages/ui`                  | Vue 展示向依赖；**避免**硬绑 `vue-router` / `#app` | React；假设 `window` 必存在且无适配；**QQ 出图 ModuleCard / Shell** |
-| `apps/api` (`@lanius/server`)  | `core`；上游 HTTP 客户端                           | 依赖 bot/web；把 QQ SDK 塞进 API                  |
-| `apps/bot`                     | `@lanius/api`；`qq-official`；`render`（出图）     | 直连 WF 上游；依赖 Nuxt/Web / `packages/ui` 出图卡 |
-| `apps/web`                     | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）   | 直连上游；依赖 bot 进程；默认 axios；**引用 QQ ModuleCard** |
-| `qq-official`                  | 仅 bot                                             | 被 api/web 引用                                   |
-| `packages/render`              | bot（MVP）；可选 server 管理预览；自有 dense 卡壳  | 公开站直接渲染 QQ 卡片；把出图卡当 Web 共享组件   |
+| `apps/api` (`@lanius/server`)  | `core`；上游 HTTP 客户端                           | 依赖 bot/web；把 QQ SDK 塞进 API                                    |
+| `apps/bot`                     | `@lanius/api`；`qq-official`；`render`（出图）     | 直连 WF 上游；依赖 Nuxt/Web / `packages/ui` 出图卡                  |
+| `apps/web`                     | `@lanius/api` / `ui` + Nuxt 壳（SEO/BFF/cookie）   | 直连上游；依赖 bot 进程；默认 axios；**引用 QQ ModuleCard**         |
+| `qq-official`                  | 仅 bot                                             | 被 api/web 引用                                                     |
+| `packages/render`              | bot（MVP）；可选 server 管理预览；自有 dense 卡壳  | 公开站直接渲染 QQ 卡片；把出图卡当 Web 共享组件                     |
 
 ## 4. Tauri 可插拔（现期）
 

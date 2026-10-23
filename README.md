@@ -7,19 +7,19 @@
 
 ## 当前状态
 
-已落地 API + Bot + Web 骨架：共享视觉 token（`packages/ui`）同时驱动公开站与 QQ 卡片图。
+已落地 API + Bot + Web：公开站用 `packages/ui` 看板；QQ 出图用 `packages/render` dense 卡；两端只共 token / API / core。
 
-| 表面            | 路径                      | MVP / 状态                                                                |
-| --------------- | ------------------------- | ------------------------------------------------------------------------- |
-| Lanius API      | `apps/api`（Hono）        | health / meta / help / worldstate（国际服）                               |
-| 共享契约        | `packages/core`           | DTO / Zod / 错误码 / realm·locale                                         |
-| HTTP 客户端     | `packages/api`（`fetch`） | health / meta / help / worldstate                                         |
-| 视觉 / UI       | `packages/ui`             | token + WorldstateBoard（Web）                                            |
-| QQ 卡片         | `packages/render`         | worldstate PNG（与 Web 同色板）                                           |
-| QQ 官方封装     | `packages/qq-official`    | 验签 + dry-run 发送                                                       |
-| QQ 官方适配     | `apps/bot`                | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/模式` `/帮助`；文本+图片降级 |
-| 公开站 + 管理壳 | `apps/web`（Nuxt）        | 首页 / 世界状态 / 帮助 /admin；zh/en                                      |
-| 桌面 / 移动     | Tauri 2（后期）           | **现不脚手架**；见 `docs/TODO-TAURI.md`                                   |
+| 表面            | 路径                      | MVP / 状态                                                                               |
+| --------------- | ------------------------- | ---------------------------------------------------------------------------------------- |
+| Lanius API      | `apps/api`（Hono）        | health / meta / help / worldstate（国际服）                                              |
+| 共享契约        | `packages/core`           | DTO / Zod / 错误码 / realm·locale                                                        |
+| HTTP 客户端     | `packages/api`（`fetch`） | health / meta / help / worldstate                                                        |
+| 视觉 / UI       | `packages/ui`             | token + WorldstateBoard（Web）                                                           |
+| QQ 卡片         | `packages/render`         | worldstate PNG（与 Web 同色板）                                                          |
+| QQ 官方封装     | `packages/qq-official`    | 验签 + dry-run 发送                                                                      |
+| QQ 官方适配     | `apps/bot`                | 独立根命令 `/世界状态` `/入侵` `/午夜电波` `/帮助` 等；默认图片回复；模式/皮肤仅后台配置 |
+| 公开站 + 管理壳 | `apps/web`（Nuxt）        | 首页 / 世界状态 / 帮助 /admin；zh/en                                                     |
+| 桌面 / 移动     | Tauri 2（后期）           | **现不脚手架**；见 `docs/TODO-TAURI.md`                                                  |
 
 ## 本地运行
 

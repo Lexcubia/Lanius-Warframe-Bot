@@ -1,5 +1,5 @@
 /**
- * `@lanius/ui` — 共享 Vue 展示组件与视觉 token。
+ * `@lanius/ui` — Web / 后期 Tauri 共享 Vue 展示组件与视觉 token（不含 QQ 出图卡）。
  */
 
 export { laniusTokens, tokensAsCssVariables, type LaniusTokens } from './tokens.js';
@@ -29,10 +29,7 @@ export { default as NightwaveBoard } from './components/NightwaveBoard.vue';
 export { default as MarketBoard } from './components/MarketBoard.vue';
 export { default as RivenBoard } from './components/RivenBoard.vue';
 export { default as HelpBoard } from './components/HelpBoard.vue';
-export { default as QqCardShell } from './components/QqCardShell.vue';
-export { default as CyclesModuleCard } from './components/CyclesModuleCard.vue';
 export { default as OpenWorldCycleIcon } from './components/OpenWorldCycleIcon.vue';
-export { default as FissuresModuleCard } from './components/FissuresModuleCard.vue';
 export { default as FissuresFilters } from './components/FissuresFilters.vue';
 export { default as FissuresPanel } from './components/FissuresPanel.vue';
 export { default as OfficialItemIcon } from './components/OfficialItemIcon.vue';
@@ -40,11 +37,3 @@ export { default as DamageTypeIcon } from './components/DamageTypeIcon.vue';
 export { default as ValenceBonusBar } from './components/ValenceBonusBar.vue';
 export { resolveValenceElementIconSrc } from './lib/valence-element-icon.js';
 export { resolvePlatinumIconSrc } from './lib/platinum-icon.js';
-export { default as InvasionsModuleCard } from './components/InvasionsModuleCard.vue';
-export { default as NightwaveModuleCard } from './components/NightwaveModuleCard.vue';
-export { default as HelpModuleCard } from './components/HelpModuleCard.vue';
-export { default as MarketModuleCard } from './components/MarketModuleCard.vue';
-export { default as RivenModuleCard } from './components/RivenModuleCard.vue';
-export { default as VoidTraderModuleCard } from './components/VoidTraderModuleCard.vue';
-export { default as VarziaModuleCard } from './components/VarziaModuleCard.vue';
-export { default as WeaponRotationModuleCard } from './components/WeaponRotationModuleCard.vue';
