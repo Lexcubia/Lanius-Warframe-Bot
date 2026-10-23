@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HelpModuleCard } from '@lanius/ui';
+import { HelpBoard } from '@lanius/ui';
 import { pickLocalized } from '@lanius/core';
 
 const { t, locale } = useI18n();
@@ -83,7 +83,7 @@ const { data, pending, error, refresh } = await useAsyncData(
     </div>
 
     <template v-else-if="data">
-      <HelpModuleCard
+      <HelpBoard
         v-if="moduleToken"
         class="help__card-view"
         :help="data"

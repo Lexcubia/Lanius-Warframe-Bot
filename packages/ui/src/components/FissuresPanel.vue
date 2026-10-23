@@ -7,12 +7,13 @@ import {
   filterFissures,
   type FissureFilterState,
 } from '../lib/filter-fissures.js';
+import FissuresBoard from './FissuresBoard.vue';
 import FissuresFilters from './FissuresFilters.vue';
-import FissuresModuleCard from './FissuresModuleCard.vue';
 
 /**
- * 可筛选的虚空裂隙面板（筛选条 + 模块卡片）。
+ * 可筛选的虚空裂隙面板（筛选条 + Web 看板）。
  * 供公开站首页 / 裂隙页复用；筛选状态仅本地，不改上游 DTO。
+ * 不嵌套 QQ ModuleCard / Shell。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -26,7 +27,7 @@ const filter = ref<FissureFilterState>(emptyFissureFilter());
 /**
  * 应用筛选后的 worldstate（仅替换 fissures）。
  *
- * @returns 供卡片渲染的快照
+ * @returns 供 Web 看板渲染的快照
  */
 const filteredWorldstate = computed((): WorldstateDto => ({
   ...props.worldstate,
@@ -49,7 +50,7 @@ const matchCount = computed(() => filteredWorldstate.value.fissures.length);
       :locale="locale"
       :match-count="matchCount"
     />
-    <FissuresModuleCard
+    <FissuresBoard
       :worldstate="filteredWorldstate"
       :locale="locale"
       :stale="stale"
@@ -65,12 +66,5 @@ const matchCount = computed(() => filteredWorldstate.value.fissures.length);
   width: 100%;
   min-width: 0;
   background: transparent;
-  /* Web 看板铺满；QQ 截图宿主未设此变量时仍用默认 640px */
-  --lanius-card-width: 100%;
-}
-
-.fissures-panel :deep(.lanius-qq-shell) {
-  width: 100%;
-  max-width: none;
 }
 </style>
