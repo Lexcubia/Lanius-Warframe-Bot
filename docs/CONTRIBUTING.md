@@ -13,8 +13,9 @@
 
 ## CI（开源）
 
-- PR（含 fork）与推送到 `develop`/`main`：只跑测试，**不使用任何部署 secrets**。
-- 推送本仓库 tag `vX.Y.Z`：可选推 GHCR；实际上线靠长期分支 `release` → Node `update-node.sh`（维护者流程；贡献者无需配置）。
+- PR（目标 `develop`/`main`，含 fork）与推送到 `develop`/`main`：轻量检查（`pnpm install` + 单测 + typecheck），**不装 Playwright/浏览器**，**不使用任何部署 secrets**。依赖 Chromium 的 render 截图测仅本地 / `LANIUS_BROWSER_TESTS=1`。
+- 合入长期分支 **`release`**：**不再跑 CI 检查**（已在 develop/PR 验证），仅 [deploy-release.yml](../.github/workflows/deploy-release.yml) 部署。
+- 推送本仓库 tag `vX.Y.Z`：可选推 GHCR（无 test）；实际上线靠 `release` → 部署脚本（维护者流程；贡献者无需配置）。
 
 ## 分支
 

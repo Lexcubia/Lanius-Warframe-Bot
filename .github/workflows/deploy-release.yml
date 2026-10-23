@@ -1,4 +1,5 @@
 # 长期分支 `release`：SSH 自动部署（默认 docker 容器热启动）。
+# 不做 CI 检查（test/typecheck 已在 develop/PR 完成）；本 workflow 只部署/换版。
 # 机房直连 github.com 常失败：docker 路径 SSH 到服务器执行 deploy/update-container.sh
 # （git 对齐 ref + 重建 card-host/web + docker compose up -d）。
 # 可选 runtime=node 走 systemd 路径（Actions 预构建 dist + apply-node-release.sh）。
