@@ -7,9 +7,11 @@ import {
   renderArbitrationCard,
   renderArchimedeaCard,
   renderCircuitCard,
+  renderArchonCard,
   renderFissuresCard,
   renderInvasionsCard,
   renderNightwaveCard,
+  renderSortieCard,
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
@@ -177,6 +179,56 @@ const sampleWorldstate = {
       { key: 'Sicarus', name: { zh: '席卡鲁斯', en: 'Sicarus' } },
     ],
   },
+  sortie: {
+    id: 'sortie-1',
+    bossKey: 'SORTIE_BOSS_CORRUPTED_VOR',
+    boss: { zh: '堕落的 Vor', en: 'Corrupted Vor' },
+    expiry: '2026-10-11T12:00:00.000Z',
+    missions: [
+      {
+        missionTypeKey: 'MT_EXTERMINATION',
+        missionType: { zh: '歼灭', en: 'Extermination' },
+        modifierKey: 'SORTIE_MODIFIER_SLASH',
+        modifier: { zh: '敌人物理强化（切割）', en: 'Slash Enhancement' },
+        node: { zh: 'Ukko（虚空）', en: 'Ukko (Void)' },
+      },
+      {
+        missionTypeKey: 'MT_TERRITORY',
+        missionType: { zh: '拦截', en: 'Interception' },
+        modifier: { zh: '卓越者大本营', en: 'Eximus Stronghold' },
+        node: { zh: 'Oxomoco（虚空）', en: 'Oxomoco (Void)' },
+      },
+      {
+        missionTypeKey: 'MT_MOBILE_DEFENSE',
+        missionType: { zh: '移动防御', en: 'Mobile Defense' },
+        modifier: { zh: '能量削减', en: 'Energy Reduction' },
+        node: { zh: 'Teshub（虚空）', en: 'Teshub (Void)' },
+      },
+    ],
+  },
+  archon: {
+    id: 'archon-1',
+    bossKey: 'SORTIE_BOSS_AMAR',
+    boss: { zh: '欺谋狼主', en: 'Archon Amar' },
+    expiry: '2026-10-17T12:00:00.000Z',
+    missions: [
+      {
+        missionTypeKey: 'MT_RESCUE',
+        missionType: { zh: '救援', en: 'Rescue' },
+        node: { zh: 'Tessera（金星）', en: 'Tessera (Venus)' },
+      },
+      {
+        missionTypeKey: 'MT_TERRITORY',
+        missionType: { zh: '拦截', en: 'Interception' },
+        node: { zh: 'Vesper（金星）', en: 'Vesper (Venus)' },
+      },
+      {
+        missionTypeKey: 'MT_ASSASSINATION',
+        missionType: { zh: '刺杀', en: 'Assassination' },
+        node: { zh: 'Huvas（金星）', en: 'Huvas (Venus)' },
+      },
+    ],
+  },
 };
 
 describe('module card renders', () => {
@@ -252,6 +304,23 @@ describe('module card renders', () => {
 
   it('renders circuit PNG', async () => {
     const png = await renderCircuitCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(png.length).toBeGreaterThan(1000);
+  }, 60_000);
+
+  it('renders sortie PNG', async () => {
+    const png = await renderSortieCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  }, 60_000);
+
+  it('renders archon PNG', async () => {
+    const png = await renderArchonCard({
       locale: 'zh',
       worldstate: sampleWorldstate,
     });

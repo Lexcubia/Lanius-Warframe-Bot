@@ -13,6 +13,8 @@ export { default as HelpModuleCard } from './HelpModuleCard.vue';
 export { default as InvasionsModuleCard } from './InvasionsModuleCard.vue';
 export { default as MarketModuleCard } from './MarketModuleCard.vue';
 export { default as NightwaveModuleCard } from './NightwaveModuleCard.vue';
+export { default as SortieModuleCard } from './SortieModuleCard.vue';
+export { default as ArchonModuleCard } from './ArchonModuleCard.vue';
 export { default as RivenModuleCard } from './RivenModuleCard.vue';
 export { default as VarziaModuleCard } from './VarziaModuleCard.vue';
 export { default as VoidTraderModuleCard } from './VoidTraderModuleCard.vue';

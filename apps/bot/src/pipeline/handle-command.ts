@@ -4,12 +4,14 @@ import {
   renderArbitrationCard,
   renderArchimedeaCard,
   renderCircuitCard,
+  renderArchonCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
   renderMarketCard,
   renderNightwaveCard,
   renderRivenCard,
+  renderSortieCard,
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
@@ -50,9 +52,11 @@ import {
   formatAlertsText,
   formatArbitrationText,
   formatCircuitText,
+  formatArchonText,
   formatFissuresText,
   formatInvasionsText,
   formatNightwaveText,
+  formatSortieText,
   formatWorldstateText,
 } from '../formatters/worldstate-text.js';
 import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
@@ -130,10 +134,8 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 1：alerts / arbitration / archimedea / circuit 已接通；其余仍 stub。
+  // Wave 1：sortie / archon / alerts / arbitration / archimedea / circuit 已接通；其余仍 stub。
   if (
-    intent.type === 'sortie' ||
-    intent.type === 'archon' ||
     intent.type === 'bounties'
   ) {
     const stub =
@@ -447,7 +449,11 @@ export async function handleCommand(
             ? 'alerts'
             : intent.type === 'arbitration'
               ? 'arbitration'
-              : 'worldstate';
+              : intent.type === 'sortie'
+                ? 'sortie'
+                : intent.type === 'archon'
+                  ? 'archon'
+                  : 'worldstate';
 
   let worldstate: WorldstateDto = envelope.data;
   let filterSummary: string | undefined;
@@ -479,9 +485,17 @@ export async function handleCommand(
               ? formatArbitrationText(envelope.data, locale, {
                   stale: envelope.meta.stale,
                 })
-              : formatWorldstateText(envelope.data, locale, {
-                  stale: envelope.meta.stale,
-                });
+              : moduleKind === 'sortie'
+                ? formatSortieText(envelope.data, locale, {
+                    stale: envelope.meta.stale,
+                  })
+                : moduleKind === 'archon'
+                  ? formatArchonText(envelope.data, locale, {
+                      stale: envelope.meta.stale,
+                    })
+                  : formatWorldstateText(envelope.data, locale, {
+                      stale: envelope.meta.stale,
+                    });
 
   const renderInput = withCardSkin(
     {
@@ -524,7 +538,11 @@ export async function handleCommand(
             ? renderAlertsCard(renderInput)
             : moduleKind === 'arbitration'
               ? renderArbitrationCard(renderInput)
-              : renderWorldstateCard(renderInput),
+              : moduleKind === 'sortie'
+                ? renderSortieCard(renderInput)
+                : moduleKind === 'archon'
+                  ? renderArchonCard(renderInput)
+                  : renderWorldstateCard(renderInput),
     label: moduleKind,
   });
 }

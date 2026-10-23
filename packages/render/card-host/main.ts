@@ -20,6 +20,7 @@ import {
   ArbitrationModuleCard,
   ArchimedeaModuleCard,
   CircuitModuleCard,
+  ArchonModuleCard,
   CyclesModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
@@ -28,6 +29,7 @@ import {
   NightwaveModuleCard,
   resolveCardSkin,
   RivenModuleCard,
+  SortieModuleCard,
   VarziaModuleCard,
   VoidTraderModuleCard,
   WeaponRotationModuleCard,
@@ -49,6 +51,8 @@ export type CardHostKind =
   | 'arbitration'
   | 'archimedea'
   | 'circuit'
+  | 'sortie'
+  | 'archon'
   | 'help'
   | 'market'
   | 'riven'
@@ -115,6 +119,10 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return ArchimedeaModuleCard;
     case 'circuit':
       return CircuitModuleCard;
+    case 'sortie':
+      return SortieModuleCard;
+    case 'archon':
+      return ArchonModuleCard;
     case 'help':
       return HelpModuleCard;
     case 'market':
