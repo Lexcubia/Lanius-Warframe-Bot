@@ -22,8 +22,32 @@ export type WfmLanguage = 'zh-hans' | 'en';
 export type WfmItemRow = {
   url_name: string;
   item_name: string;
+  /** WFM 物品 id（套装 setParts 引用） */
+  id?: string;
   /** 相对或绝对 thumb；服务层可转绝对 URL */
   thumb?: string;
+  /** 杜卡德价值；非 Prime 等可能缺失 */
+  ducats?: number | null;
+  /** 上游 tags（如 prime / set / component） */
+  tags?: string[];
+};
+
+/**
+ * 上游单物品详情（v2 `/item/{slug}`；含套装部件 id 列表）。
+ */
+export type WfmItemDetail = {
+  url_name: string;
+  item_name: string;
+  id?: string;
+  thumb?: string;
+  ducats?: number | null;
+  tags?: string[];
+  /** 是否套装根节点 */
+  setRoot?: boolean;
+  /** 套装内物品 id 列表（含自身） */
+  setParts?: string[];
+  /** 组成一套所需本部件数量 */
+  quantityInSet?: number;
 };
 
 /**
@@ -48,6 +72,8 @@ export type WfmOrderRow = {
   user?: {
     ingame_name?: string;
     status?: string;
+    /** WFM 用户声誉 */
+    reputation?: number;
   };
 };
 
@@ -71,11 +97,13 @@ export type WfmAuctionRow = {
   owner?: {
     ingame_name?: string;
     status?: string;
+    reputation?: number;
   };
   /** 部分响应仍用 user；与 owner 并存时优先 owner */
   user?: {
     ingame_name?: string;
     status?: string;
+    reputation?: number;
   };
   item?: {
     weapon_url_name?: string;
@@ -111,7 +139,13 @@ type WfmV2I18nBlock = {
  * v2 `/items` / `/riven/weapons` 行。
  */
 type WfmV2CatalogRow = {
+  id?: string;
   slug?: string;
+  ducats?: number | null;
+  tags?: string[];
+  setRoot?: boolean;
+  setParts?: string[];
+  quantityInSet?: number;
   i18n?: Partial<Record<WfmLanguage | string, WfmV2I18nBlock>>;
 };
 
@@ -135,6 +169,7 @@ type WfmV2OrderRow = {
   user?: {
     ingameName?: string;
     status?: string;
+    reputation?: number;
   };
 };
 
@@ -258,6 +293,32 @@ export class WarframeMarketClient {
   }
 
   /**
+   * 拉取单物品详情（v2 `/item/{slug}`；含 ducats / setParts）。
+   *
+   * @param urlName - WFM slug
+   * @param language - 展示名语言
+   * @returns 详情；上游无 data 时抛错由 getJson 处理
+   */
+  async getItem(
+    urlName: string,
+    language: WfmLanguage = this.defaultLanguage,
+  ): Promise<WfmItemDetail> {
+    const slug = urlName.trim();
+    if (!slug) {
+      throw upstreamUnavailableError('Warframe Market item slug is empty');
+    }
+    const json = await this.getJson<{ data?: WfmV2CatalogRow }>(
+      `/item/${encodeURIComponent(slug)}`,
+      { language },
+    );
+    const mapped = mapCatalogRowToDetail(json.data, language);
+    if (!mapped) {
+      throw upstreamUnavailableError(`Warframe Market item not found: ${slug}`);
+    }
+    return mapped;
+  }
+
+  /**
    * 搜索紫卡拍卖（按武器 slug，价升序；暂走 v1，因 v2 尚无对等路由）。
    *
    * @param weaponUrlName - 武器 slug
@@ -340,21 +401,81 @@ export class WarframeMarketClient {
 function mapCatalogRows(rows: WfmV2CatalogRow[], language: WfmLanguage): WfmItemRow[] {
   const out: WfmItemRow[] = [];
   for (const row of rows) {
-    const slug = row.slug?.trim();
-    if (!slug) {
-      continue;
+    const mapped = mapCatalogRowToItem(row, language);
+    if (mapped) {
+      out.push(mapped);
     }
-    const localized = row.i18n?.[language]?.name?.trim();
-    const fallbackEn = row.i18n?.en?.name?.trim();
-    const itemName = localized || fallbackEn || slug.replace(/_/g, ' ');
-    const thumb = row.i18n?.[language]?.thumb?.trim() || row.i18n?.en?.thumb?.trim();
-    out.push({
-      url_name: slug,
-      item_name: itemName,
-      ...(thumb ? { thumb } : {}),
-    });
   }
   return out;
+}
+
+/**
+ * 将单条 v2 目录/详情行映射为索引 ItemRow。
+ *
+ * @param row - v2 行
+ * @param language - 优先语言
+ * @returns 精简行或 null
+ */
+function mapCatalogRowToItem(
+  row: WfmV2CatalogRow | undefined,
+  language: WfmLanguage,
+): WfmItemRow | null {
+  const slug = row?.slug?.trim();
+  if (!slug || !row) {
+    return null;
+  }
+  const localized = row.i18n?.[language]?.name?.trim();
+  const fallbackEn = row.i18n?.en?.name?.trim();
+  const itemName = localized || fallbackEn || slug.replace(/_/g, ' ');
+  const thumb = row.i18n?.[language]?.thumb?.trim() || row.i18n?.en?.thumb?.trim();
+  const id = row.id?.trim();
+  const tags = Array.isArray(row.tags)
+    ? row.tags.filter((tag): tag is string => typeof tag === 'string' && tag.length > 0)
+    : undefined;
+  const ducats =
+    typeof row.ducats === 'number' && row.ducats >= 0 && Number.isFinite(row.ducats)
+      ? Math.trunc(row.ducats)
+      : null;
+  return {
+    url_name: slug,
+    item_name: itemName,
+    ...(id ? { id } : {}),
+    ...(thumb ? { thumb } : {}),
+    ducats,
+    ...(tags && tags.length > 0 ? { tags } : {}),
+  };
+}
+
+/**
+ * 将 v2 单物品详情映射为 WfmItemDetail。
+ *
+ * @param row - v2 data
+ * @param language - 优先语言
+ * @returns 详情或 null
+ */
+function mapCatalogRowToDetail(
+  row: WfmV2CatalogRow | undefined,
+  language: WfmLanguage,
+): WfmItemDetail | null {
+  const base = mapCatalogRowToItem(row, language);
+  if (!base || !row) {
+    return null;
+  }
+  const setParts = Array.isArray(row.setParts)
+    ? row.setParts.filter((id): id is string => typeof id === 'string' && id.length > 0)
+    : undefined;
+  const quantityInSet =
+    typeof row.quantityInSet === 'number' &&
+    row.quantityInSet >= 1 &&
+    Number.isFinite(row.quantityInSet)
+      ? Math.trunc(row.quantityInSet)
+      : undefined;
+  return {
+    ...base,
+    setRoot: row.setRoot === true,
+    ...(setParts && setParts.length > 0 ? { setParts } : {}),
+    ...(quantityInSet !== undefined ? { quantityInSet } : {}),
+  };
 }
 
 /**
@@ -372,6 +493,12 @@ function mapV2OrderRow(row: WfmV2OrderRow): WfmOrderRow | null {
   if (!Number.isFinite(row.quantity) || row.quantity < 1) {
     return null;
   }
+  const reputation =
+    typeof row.user?.reputation === 'number' &&
+    row.user.reputation >= 0 &&
+    Number.isFinite(row.user.reputation)
+      ? Math.trunc(row.user.reputation)
+      : undefined;
   return {
     order_type: type,
     platinum: row.platinum,
@@ -381,6 +508,7 @@ function mapV2OrderRow(row: WfmV2OrderRow): WfmOrderRow | null {
     user: {
       ingame_name: row.user?.ingameName,
       status: row.user?.status,
+      ...(reputation !== undefined ? { reputation } : {}),
     },
   };
 }

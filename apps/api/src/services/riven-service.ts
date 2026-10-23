@@ -223,8 +223,8 @@ export class RivenService {
     attrNames: Map<string, RivenAttrNames>,
   ): Promise<RivenListingDto[]> {
     const filterKey = [upstreamFilter.rank ?? 'any', upstreamFilter.mastery ?? 'any'].join(':');
-    // 属性名映射变更时 bump 缓存键，避免旧 slug 文案残留。
-    const key = `wfm:v2:riven:auctions:attrs2:${weaponUrlName}:${filterKey}`;
+    // 属性名 / 声誉字段变更时 bump 缓存键，避免旧文案或缺 reputation 残留。
+    const key = `wfm:v2:riven:auctions:attrs3:${weaponUrlName}:${filterKey}`;
     const cached = await this.cache.getFresh<RivenListingDto[]>(key);
     if (cached) {
       return cached.value;
@@ -300,9 +300,23 @@ function mapAuctionRow(
     rerolls: typeof item?.re_rolls === 'number' ? item.re_rolls : 0,
     polarity: item?.polarity?.trim() || null,
     seller: owner?.ingame_name?.trim() || 'unknown',
+    sellerReputation: normalizeReputation(owner?.reputation),
     status,
     updatedAt: row.updated ? new Date(row.updated).toISOString() : new Date().toISOString(),
   };
+}
+
+/**
+ * 规范化 WFM 声誉为非负整数；缺失按 0。
+ *
+ * @param raw - 上游 reputation
+ * @returns 非负整数
+ */
+function normalizeReputation(raw: number | undefined): number {
+  if (typeof raw === 'number' && Number.isFinite(raw) && raw >= 0) {
+    return Math.trunc(raw);
+  }
+  return 0;
 }
 
 /**

@@ -1,6 +1,8 @@
 import {
+  formatDucatsLabel,
   formatMarketPriceQuantity,
   formatMarketWhisper,
+  formatSellerReputationLabel,
   formatSellerStatusLabel,
   pickLocalized,
   type Locale,
@@ -88,12 +90,31 @@ export function formatMarketText(data: MarketOrdersDto, locale: Locale): string 
       ? `Locked: ${name} · page ${data.page}/${totalPages} · sell online/ingame · price↑`
       : `已锁定：${name} · 第 ${data.page}/${totalPages} 页 · 在线/游戏中卖单 · 价↑`;
 
+  const detailLines: string[] = [];
+  if (data.resolved.ducats != null) {
+    detailLines.push(formatDucatsLabel(data.resolved.ducats, locale));
+  }
+  if (data.resolved.isSet && (data.resolved.components?.length ?? 0) > 0) {
+    detailLines.push(locale === 'en' ? 'Set components:' : '套装部件：');
+    for (const part of data.resolved.components ?? []) {
+      const partName = pickLocalized(part.name, locale);
+      const ducat = part.ducats != null ? ` · ${formatDucatsLabel(part.ducats, locale)}` : '';
+      const qty =
+        part.quantityInSet != null
+          ? locale === 'en'
+            ? ` ×${part.quantityInSet}`
+            : ` ×${part.quantityInSet}`
+          : '';
+      detailLines.push(`· ${partName}${qty}${ducat}`);
+    }
+  }
+
   if (data.total === 0) {
     const empty =
       locale === 'en'
         ? `No online/ingame sell orders for ${name}.`
         : `已锁定 ${name}，暂无在线/游戏中卖单`;
-    return [title, header, empty].join('\n');
+    return [title, header, ...detailLines, empty].join('\n');
   }
 
   const lines = data.orders.map((order, index) => {
@@ -104,11 +125,13 @@ export function formatMarketText(data: MarketOrdersDto, locale: Locale): string 
           ? ` r${order.modRank}`
           : ` 等级${order.modRank}`;
     const status = formatSellerStatusLabel(order.status, locale);
+    const rep = formatSellerReputationLabel(order.sellerReputation, locale);
     const n = (data.page - 1) * data.pageSize + index + 1;
+    // 售价与数量两段分开，避免连写歧义。
     const price = formatMarketPriceQuantity(order.platinum, order.quantity, locale);
     return locale === 'en'
-      ? `${n}. ${price}${rank} · ${order.seller} (${status})`
-      : `${n}. ${price}${rank} · ${order.seller}（${status}）`;
+      ? `${n}. ${price}${rank} · ${order.seller} (${rep}, ${status})`
+      : `${n}. ${price}${rank} · ${order.seller}（${rep}，${status}）`;
   });
 
   const whisperLine = formatWhisperCmdInputLine(marketWhisperLines(data, locale), locale);
@@ -117,7 +140,7 @@ export function formatMarketText(data: MarketOrdersDto, locale: Locale): string 
       ? 'Tap W# to insert /w into the chat box (no @bot). Paste into Warframe.'
       : '点「私聊N」将 /w 文案插入输入框（不带 @）；再粘贴到游戏即可。';
 
-  return [title, header, ...lines, tip, whisperLine].filter(Boolean).join('\n');
+  return [title, header, ...detailLines, ...lines, tip, whisperLine].filter(Boolean).join('\n');
 }
 
 /**
@@ -158,9 +181,10 @@ export function formatRivenText(data: RivenOrdersDto, locale: Locale): string {
         ? `MR${order.mastery} · rank ${order.rank} · rerolls ${order.rerolls}`
         : `段位${order.mastery} · 等级${order.rank} · 循环${order.rerolls}`;
     const status = formatSellerStatusLabel(order.status, locale);
+    const rep = formatSellerReputationLabel(order.sellerReputation, locale);
     return locale === 'en'
-      ? `${n}. ${order.platinum}p · ${order.seller} (${status})\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`
-      : `${n}. ${order.platinum} 白金 · ${order.seller}（${status}）\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`;
+      ? `${n}. ${order.platinum}p · ${order.seller} (${rep}, ${status})\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`
+      : `${n}. ${order.platinum} 白金 · ${order.seller}（${rep}，${status}）\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`;
   });
 
   const whisperLine = formatWhisperCmdInputLine(rivenWhisperLines(data, locale), locale);
