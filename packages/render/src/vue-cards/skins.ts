@@ -35,7 +35,7 @@ export const DEFAULT_CARD_SKIN: CardSkinId = 'light';
 /**
  * 将任意输入解析为合法皮肤 id；非法或空值回落 light。
  *
- * @param raw - 用户输入、配置或会话偏好（大小写不敏感）
+ * @param raw - 后台配置或 capture 入参（大小写不敏感；兼容中文别名）
  * @returns 合法 `CardSkinId`
  */
 export function resolveCardSkin(raw: string | null | undefined): CardSkinId {
@@ -53,7 +53,7 @@ export function resolveCardSkin(raw: string | null | undefined): CardSkinId {
 }
 
 /**
- * 列出皮肤 id（供 `/皮肤` 帮助与校验）。
+ * 列出已注册皮肤 id（供后台配置校验）。
  *
  * @returns 已注册皮肤 id 数组
  */

@@ -140,7 +140,7 @@
     "eyebrow": "Commands",
     "loading": "Loading help…",
     "error": "Failed to load help",
-    "qqHint": "Each QQ command is its own root (e.g. /worldstate, /mode image). A leading / is optional.",
+    "qqHint": "Each QQ command is its own root (e.g. /worldstate, /help). A leading / is optional. Reply mode and card skin are set in the admin console.",
     "aliases": "Aliases",
     "params": "Parameters",
     "required": "required",
