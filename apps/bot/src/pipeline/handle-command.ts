@@ -58,11 +58,11 @@ import { buildRivenPageKeyboard, rivenPageMarkdownHint } from '../qq/build-riven
 export type CardSkin = 'light' | 'dark';
 
 /**
- * 会话级可变偏好（MVP 进程内内存）。
+ * 进程级回复偏好（由 `bot.defaultReplyMode` / `bot.defaultCardSkin` 初始化；无 QQ 指令切换）。
  */
 export type SessionPrefs = {
   replyMode: 'text' | 'image';
-  /** 图片模式卡片亮/暗色皮肤 */
+  /** 图片模式卡片亮/暗色皮肤（后台配置） */
   cardSkin: CardSkin;
   locale: Locale;
 };
@@ -121,44 +121,6 @@ export async function handleCommand(
     realm: deps.config.defaults.realm,
     locale,
   };
-
-  if (intent.type === 'mode') {
-    deps.prefs.replyMode = intent.mode;
-    const msg =
-      locale === 'en'
-        ? `Reply mode set to ${intent.mode}.`
-        : `已切换为${intent.mode === 'image' ? '图片' : '文本'}模式。`;
-    const sent = await deps.qq.sendText(target, msg);
-    if (!sent.ok) {
-      return `send-failed:${sent.detail ?? 'unknown'}`;
-    }
-    return msg;
-  }
-
-  if (intent.type === 'skin') {
-    if (intent.cardSkin) {
-      deps.prefs.cardSkin = intent.cardSkin;
-      const msg =
-        locale === 'en'
-          ? `Card skin set to ${intent.cardSkin}.`
-          : `已切换为${intent.cardSkin === 'dark' ? '暗色' : '亮色'}皮肤。`;
-      const sent = await deps.qq.sendText(target, msg);
-      if (!sent.ok) {
-        return `send-failed:${sent.detail ?? 'unknown'}`;
-      }
-      return msg;
-    }
-    const current = deps.prefs.cardSkin;
-    const msg =
-      locale === 'en'
-        ? `Current card skin: ${current}. Use /skin light|dark to switch.`
-        : `当前卡片皮肤：${current === 'dark' ? '暗色' : '亮色'}。发送 /皮肤 亮色|暗色 切换。`;
-    const sent = await deps.qq.sendText(target, msg);
-    if (!sent.ok) {
-      return `send-failed:${sent.detail ?? 'unknown'}`;
-    }
-    return msg;
-  }
 
   if (intent.type === 'help' || intent.type === 'unknown') {
     const envelope = await api

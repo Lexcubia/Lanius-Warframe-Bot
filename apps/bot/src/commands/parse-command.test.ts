@@ -73,46 +73,23 @@ describe('parseCommand', () => {
     });
   });
 
-  it('parses reply mode with required argument', () => {
+  it('does not treat mode or skin as user commands', () => {
     expect(parseCommand('/模式 图片').intent).toEqual({
-      type: 'mode',
-      mode: 'image',
+      type: 'unknown',
+      raw: '模式 图片',
     });
-    expect(parseCommand('mode text').intent).toEqual({
-      type: 'mode',
-      mode: 'text',
-    });
-  });
-
-  it('parses card skin show / set / shortcuts', () => {
-    expect(parseCommand('/皮肤').intent).toEqual({ type: 'skin' });
-    expect(parseCommand('/皮肤 亮色').intent).toEqual({
-      type: 'skin',
-      cardSkin: 'light',
-    });
-    expect(parseCommand('/skin dark').intent).toEqual({
-      type: 'skin',
-      cardSkin: 'dark',
+    expect(parseCommand('mode text').matched).toBe(false);
+    expect(parseCommand('/皮肤').intent).toEqual({
+      type: 'unknown',
+      raw: '皮肤',
     });
     expect(parseCommand('/亮色').intent).toEqual({
-      type: 'skin',
-      cardSkin: 'light',
-    });
-    expect(parseCommand('暗色').intent).toEqual({
-      type: 'skin',
-      cardSkin: 'dark',
+      type: 'unknown',
+      raw: '亮色',
     });
   });
 
   it('returns unknown for slash commands with bad args or unknown roots', () => {
-    expect(parseCommand('/模式').intent).toEqual({
-      type: 'unknown',
-      raw: '模式',
-    });
-    expect(parseCommand('/皮肤 彩虹').intent).toEqual({
-      type: 'unknown',
-      raw: '皮肤 彩虹',
-    });
     expect(parseCommand('/价格 洛基').intent).toEqual({
       type: 'unknown',
       raw: '价格 洛基',

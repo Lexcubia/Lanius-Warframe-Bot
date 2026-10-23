@@ -6,6 +6,7 @@ import { createBotApp } from './create-app.js';
 
 /**
  * 构造 dry-run Bot 配置（跳过验签，便于本地注入回调）。
+ * 单测用 `text` 回复以避免拉起 Playwright；生产默认见 `bot.defaultReplyMode: image`。
  *
  * @returns BotConfig
  */
@@ -65,11 +66,11 @@ describe('createBotApp webhook', () => {
   it('ACKs with OpCode 12 before command finishes and still replies', async () => {
     const logger = createLaniusLogger({ service: 'lanius-bot-test', level: 'silent' });
     const { app, qq, drainBackgroundWork } = createBotApp(sampleConfig(), logger);
-    const sendText = vi.spyOn(qq, 'sendText');
+    const sendMarkdown = vi.spyOn(qq, 'sendMarkdown');
 
     const response = await app.request('/qq/callback', {
       method: 'POST',
-      body: groupAtBody('模式 文本', 'msg-ack-1'),
+      body: groupAtBody('帮助', 'msg-ack-1'),
       headers: { 'content-type': 'application/json' },
     });
 
@@ -80,16 +81,16 @@ describe('createBotApp webhook', () => {
     expect(ack.op_code).toBe(12);
 
     await drainBackgroundWork();
-    expect(sendText).toHaveBeenCalled();
-    const [, content] = sendText.mock.calls[0] as [unknown, string];
-    expect(content).toContain('文本');
+    expect(sendMarkdown).toHaveBeenCalled();
+    const [, content] = sendMarkdown.mock.calls[0] as [unknown, string];
+    expect(content.length).toBeGreaterThan(0);
   });
 
   it('dedupes redelivered msg_id after accept', async () => {
     const logger = createLaniusLogger({ service: 'lanius-bot-test', level: 'silent' });
     const { app, qq, drainBackgroundWork } = createBotApp(sampleConfig(), logger);
-    const sendText = vi.spyOn(qq, 'sendText');
-    const body = groupAtBody('模式 图片', 'msg-dup-1');
+    const sendMarkdown = vi.spyOn(qq, 'sendMarkdown');
+    const body = groupAtBody('帮助', 'msg-dup-1');
 
     const first = await app.request('/qq/callback', {
       method: 'POST',
@@ -104,7 +105,7 @@ describe('createBotApp webhook', () => {
     expect(first.status).toBe(200);
     expect(second.status).toBe(200);
     await drainBackgroundWork();
-    expect(sendText).toHaveBeenCalledTimes(1);
+    expect(sendMarkdown).toHaveBeenCalledTimes(1);
   });
 
   it('ACKs ignored non-message events', async () => {

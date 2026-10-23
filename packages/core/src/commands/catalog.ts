@@ -348,56 +348,6 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     ],
   },
   {
-    id: 'mode',
-    command: '/模式',
-    roots: ['模式', 'mode'],
-    summary: {
-      zh: '切换本会话 QQ 回复模式',
-      en: 'Switch QQ reply mode for this session',
-    },
-    usage: {
-      zh: '/模式 <文本|图片>',
-      en: '/mode <text|image>',
-    },
-    params: [
-      {
-        name: 'mode',
-        required: true,
-        description: {
-          zh: '回复形态：`文本` 纯文字，`图片` 优先发卡片图（失败降级文本）',
-          en: 'Reply shape: `text` for plain text, `image` for card PNG (falls back to text)',
-        },
-        choices: ['文本', '图片', 'text', 'image'],
-      },
-    ],
-    examples: ['/模式 文本', '/模式 图片', '/mode text', '/mode image'],
-  },
-  {
-    id: 'skin',
-    command: '/皮肤',
-    roots: ['皮肤', 'skin', '亮色', '暗色'],
-    summary: {
-      zh: '查看或切换本会话 QQ 卡片皮肤（亮色 / 暗色）',
-      en: 'Show or switch QQ card skin for this session (light / dark)',
-    },
-    usage: {
-      zh: '/皮肤 [亮色|暗色]',
-      en: '/skin [light|dark]',
-    },
-    params: [
-      {
-        name: 'skin',
-        required: false,
-        description: {
-          zh: '卡片皮肤：`亮色` / `暗色`；省略则显示当前皮肤。亦可直接发 `/亮色` 或 `/暗色`',
-          en: 'Card skin: `light` / `dark`; omit to show current. Shortcuts: `/亮色` or `/暗色`',
-        },
-        choices: ['亮色', '暗色', 'light', 'dark'],
-      },
-    ],
-    examples: ['/皮肤', '/皮肤 亮色', '/皮肤 暗色', '/skin light', '/亮色', '/暗色'],
-  },
-  {
     id: 'help',
     command: '/帮助',
     roots: ['帮助', 'help'],

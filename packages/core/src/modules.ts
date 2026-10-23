@@ -16,8 +16,6 @@ export const ModuleIdSchema = z.enum([
   'codaRotation',
   'subscribe',
   'help',
-  'mode',
-  'skin',
 ]);
 
 /**
@@ -26,7 +24,8 @@ export const ModuleIdSchema = z.enum([
 export type ModuleId = z.infer<typeof ModuleIdSchema>;
 
 /**
- * 默认可被 ACL / 开关管控的模块（不含 `mode` / `skin` 会话偏好）。
+ * 默认可被 ACL / 开关管控的模块。
+ * 回复模式与卡片皮肤由后台 `bot.defaultReplyMode` / `bot.defaultCardSkin` 配置，不作为用户指令模块。
  */
 export const GATED_MODULE_IDS = [
   'worldstate',

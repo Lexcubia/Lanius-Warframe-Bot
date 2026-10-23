@@ -8,28 +8,27 @@ describe('command catalog', () => {
     expect(findCommandByRoot('WS')?.id).toBe('worldstate');
     expect(findCommandByRoot('裂隙')?.id).toBe('fissures');
     expect(findCommandByRoot('fissures')?.id).toBe('fissures');
-    expect(findCommandByRoot('模式')?.id).toBe('mode');
-    expect(findCommandByRoot('皮肤')?.id).toBe('skin');
-    expect(findCommandByRoot('亮色')?.id).toBe('skin');
     expect(findCommandByRoot('help')?.id).toBe('help');
     expect(findCommandByRoot('wm')?.id).toBe('market');
     expect(findCommandByRoot('zk')?.id).toBe('riven');
     expect(findCommandByRoot('wf')).toBeUndefined();
   });
 
-  it('builds help dto with params for mode command', () => {
+  it('does not expose mode or skin as user commands', () => {
+    expect(findCommandByRoot('模式')).toBeUndefined();
+    expect(findCommandByRoot('mode')).toBeUndefined();
+    expect(findCommandByRoot('皮肤')).toBeUndefined();
+    expect(findCommandByRoot('skin')).toBeUndefined();
+    expect(findCommandByRoot('亮色')).toBeUndefined();
+    expect(findCommandByRoot('暗色')).toBeUndefined();
     const help = buildHelpDto();
-    expect(help.intro.zh.length).toBeGreaterThan(0);
-    const mode = help.lines.find((line) => line.id === 'mode');
-    expect(mode?.params[0]?.choices).toContain('图片');
-    expect(mode?.usage.zh).toContain('文本');
+    expect(help.lines.some((line) => line.id === 'mode')).toBe(false);
+    expect(help.lines.some((line) => line.id === 'skin')).toBe(false);
   });
 
-  it('builds help dto with optional skin params', () => {
+  it('builds help dto with overview intro', () => {
     const help = buildHelpDto();
-    const skin = help.lines.find((line) => line.id === 'skin');
-    expect(skin?.params[0]?.required).toBe(false);
-    expect(skin?.params[0]?.choices).toContain('亮色');
-    expect(skin?.examples).toContain('/皮肤');
+    expect(help.intro.zh.length).toBeGreaterThan(0);
+    expect(help.lines.some((line) => line.id === 'help')).toBe(true);
   });
 });

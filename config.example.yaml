@@ -5,5 +5,6 @@
 #
 # 若仍使用本单体文件命名为 config.local.yaml，API/Bot 启动时会拆分写入 config/local/。
 #
-# Bot 会话卡片皮肤默认（等价字段）：
-#   bot.defaultCardSkin: light   # light | dark；QQ `/皮肤` 可覆盖本会话
+# Bot 回复形态与卡片皮肤（仅后台 / 配置；不对 QQ 用户暴露指令）：
+#   bot.defaultReplyMode: image   # text | image（默认 image）
+#   bot.defaultCardSkin: light    # light | dark（默认 light）
