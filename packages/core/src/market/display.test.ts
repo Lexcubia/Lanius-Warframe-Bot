@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatDucatsLabel,
   formatMarketPlatinumLabel,
   formatMarketPriceQuantity,
   formatMarketQuantityLabel,
   formatMarketWhisper,
+  formatSellerReputationLabel,
   formatSellerStatusLabel,
   resolveWfmAssetUrl,
   sellerStatusTone,
@@ -48,6 +50,20 @@ describe('formatMarketPriceQuantity', () => {
     expect(formatMarketPriceQuantity(69, 20, 'zh')).toBe('69 白金 · 数量 20');
     expect(formatMarketPriceQuantity(69, 20, 'en')).toBe('69p · qty 20');
     expect(formatMarketPriceQuantity(69, 20, 'zh')).not.toMatch(/[×xX]/);
+  });
+});
+
+describe('formatSellerReputationLabel', () => {
+  it('formats WFM reputation', () => {
+    expect(formatSellerReputationLabel(42, 'zh')).toBe('声誉 42');
+    expect(formatSellerReputationLabel(42, 'en')).toBe('rep 42');
+  });
+});
+
+describe('formatDucatsLabel', () => {
+  it('formats ducats', () => {
+    expect(formatDucatsLabel(15, 'zh')).toBe('杜卡德 15');
+    expect(formatDucatsLabel(60, 'en')).toBe('60 ducats');
   });
 });
 

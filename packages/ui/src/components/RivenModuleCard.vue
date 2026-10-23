@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import type { Locale, RivenOrdersDto } from '@lanius/core';
-import { formatSellerStatusLabel, pickLocalized, sellerStatusTone } from '@lanius/core';
+import {
+  formatSellerReputationLabel,
+  formatSellerStatusLabel,
+  pickLocalized,
+  sellerStatusTone,
+} from '@lanius/core';
 
 import { resolvePlatinumIconSrc } from '../lib/platinum-icon.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
@@ -17,26 +22,28 @@ const platIcon = resolvePlatinumIconSrc();
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'Riven' : '紫卡'"
-    :subtitle="pickLocalized(riven.resolved.name, locale)"
+    :subtitle="
+      locale === 'en'
+        ? `page ${riven.page}/${Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1)}`
+        : `第 ${riven.page}/${Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1)} 页`
+    "
     :locale="locale"
   >
-    <div class="head">
+    <!-- 武器详情：名称与图标同在正文，避免挤在右上角看不清 -->
+    <div class="item">
       <OfficialItemIcon
-        class="head__icon"
+        class="item__icon"
         :icon-url="riven.resolved.iconUrl"
         :alt="pickLocalized(riven.resolved.name, locale)"
-        :size="40"
+        :size="64"
       />
-      <p class="meta">
-        <template v-if="locale === 'en'">
-          page {{ riven.page }}/{{ Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1) }}
-          · auctions online/ingame · price↑
-        </template>
-        <template v-else>
-          第 {{ riven.page }}/{{ Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1) }} 页 ·
-          在线/游戏中拍卖 · 价↑
-        </template>
-      </p>
+      <div class="item__body">
+        <h2 class="item__name">{{ pickLocalized(riven.resolved.name, locale) }}</h2>
+        <p class="item__meta">
+          <template v-if="locale === 'en'">auctions online/ingame · price↑</template>
+          <template v-else>在线/游戏中拍卖 · 价↑</template>
+        </p>
+      </div>
     </div>
     <p v-if="riven.total === 0" class="empty">
       {{
@@ -51,20 +58,24 @@ const platIcon = resolvePlatinumIconSrc();
         :key="`${order.seller}-${order.platinum}-${index}`"
         class="row"
       >
-        <div class="name">
-          <span class="price">{{ order.platinum }}</span>
-          <img
-            class="plat"
-            :src="platIcon"
-            alt=""
-            width="14"
-            height="14"
-            data-lanius-icon="platinum"
-          />
-          <span class="unit">{{ locale === 'en' ? 'p' : '白金' }}</span>
-          <span class="seller">· {{ order.seller }}</span>
+        <div class="deal">
+          <span class="deal__plat">
+            <img
+              class="plat"
+              :src="platIcon"
+              alt=""
+              width="16"
+              height="16"
+              data-lanius-icon="platinum"
+            />
+            <span class="deal__plat-num">{{ order.platinum }}</span>
+          </span>
+          <span class="seller__name">{{ order.seller }}</span>
+          <span class="seller__rep">{{
+            formatSellerReputationLabel(order.sellerReputation, locale)
+          }}</span>
           <span class="status" :class="`status--${sellerStatusTone(order.status)}`">
-            ({{ formatSellerStatusLabel(order.status, locale) }})
+            {{ formatSellerStatusLabel(order.status, locale) }}
           </span>
         </div>
         <div class="prices">
@@ -95,16 +106,33 @@ const platIcon = resolvePlatinumIconSrc();
 </template>
 
 <style scoped>
-.head {
+.item {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin-bottom: 8px;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--lanius-border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.55);
 }
-.head__icon {
+.item__icon {
   flex: 0 0 auto;
 }
-.meta {
+.item__body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.item__name {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.3;
+  font-family: var(--lanius-font-display);
+  color: var(--lanius-text);
+  word-break: break-word;
+}
+.item__meta {
   margin: 0;
   font-size: 11px;
   color: var(--lanius-text-muted);
@@ -142,22 +170,37 @@ const platIcon = resolvePlatinumIconSrc();
     transform: translateY(-1px);
   }
 }
-.name {
+.deal {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px 6px;
+  gap: 8px 10px;
   font-weight: 700;
   font-size: 13px;
 }
+.deal__plat {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 8px;
+  background: rgba(255, 122, 110, 0.12);
+}
+.deal__plat-num {
+  font-variant-numeric: tabular-nums;
+}
 .plat {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   object-fit: contain;
   flex: 0 0 auto;
 }
-.unit,
-.seller {
+.seller__name {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--lanius-text);
+}
+.seller__rep {
   font-weight: 600;
   font-size: 11px;
   color: var(--lanius-text-muted);

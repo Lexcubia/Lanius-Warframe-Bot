@@ -103,7 +103,7 @@ describe('RivenService.searchOrders', () => {
         return [
           {
             buyout_price: 200,
-            owner: { ingame_name: 'SellerA', status: 'online' },
+            owner: { ingame_name: 'SellerA', status: 'online', reputation: 77 },
             item: {
               weapon_url_name: 'latron',
               mod_rank: 0,
@@ -148,6 +148,8 @@ describe('RivenService.searchOrders', () => {
     expect(result.resolved.urlName).toBe('latron');
     expect(result.total).toBe(2);
     expect(result.orders[0]?.platinum).toBe(180);
+    expect(result.orders[0]?.sellerReputation).toBe(0);
+    expect(result.orders[1]?.sellerReputation).toBe(77);
     expect(result.orders[1]?.attributes).toHaveLength(2);
     expect(result.orders[1]?.attributes[0]?.name.zh).toBe('暴击几率');
     expect(result.orders[1]?.attributes[1]?.name.zh).toBe('对 Corpus 伤害');

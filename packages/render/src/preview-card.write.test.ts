@@ -210,12 +210,42 @@ const helpSample = {
 };
 
 const marketSample = {
-  query: 'primed continuity',
+  query: 'latron prime',
   resolved: {
-    urlName: 'primed_continuity',
-    name: { zh: '持久力 Prime', en: 'Primed Continuity' },
+    urlName: 'latron_prime_set',
+    name: { zh: '拉特昂 Prime 一套', en: 'Latron Prime Set' },
     iconUrl:
-      'https://warframe.market/static/assets/items/images/en/thumbs/primed_continuity.thumb.png',
+      'https://warframe.market/static/assets/items/images/en/thumbs/latron_prime_set.5c8b8009acbdb97fd49177ba155ecfbe.128x128.png',
+    ducats: 60,
+    isSet: true,
+    components: [
+      {
+        urlName: 'latron_prime_barrel',
+        name: { zh: '拉特昂 Prime 枪管', en: 'Latron Prime Barrel' },
+        iconUrl:
+          'https://warframe.market/static/assets/items/images/en/thumbs/latron_prime_barrel.5c8b8009acbdb97fd49177ba155ecfbe.128x128.png',
+        ducats: 15,
+        quantityInSet: 1,
+      },
+      {
+        urlName: 'latron_prime_receiver',
+        name: { zh: '拉特昂 Prime 枪机', en: 'Latron Prime Receiver' },
+        ducats: 15,
+        quantityInSet: 1,
+      },
+      {
+        urlName: 'latron_prime_stock',
+        name: { zh: '拉特昂 Prime 枪托', en: 'Latron Prime Stock' },
+        ducats: 15,
+        quantityInSet: 1,
+      },
+      {
+        urlName: 'latron_prime_blueprint',
+        name: { zh: '拉特昂 Prime 蓝图', en: 'Latron Prime Blueprint' },
+        ducats: 15,
+        quantityInSet: 1,
+      },
+    ],
   },
   page: 1,
   pageSize: 10,
@@ -224,23 +254,25 @@ const marketSample = {
     {
       platinum: 45,
       quantity: 1,
-      modRank: 10,
+      modRank: null,
       seller: 'SellerA',
+      sellerReputation: 42,
       status: 'ingame' as const,
       updatedAt: new Date().toISOString(),
     },
     {
       platinum: 48,
       quantity: 2,
-      modRank: 10,
+      modRank: null,
       seller: 'SellerB',
+      sellerReputation: 8,
       status: 'online' as const,
       updatedAt: new Date().toISOString(),
     },
   ],
   statusFilter: 'online|ingame' as const,
   sort: 'price_asc' as const,
-  modRank: 10,
+  modRank: null,
   updatedAt: new Date().toISOString(),
 };
 
@@ -276,6 +308,7 @@ const rivenSample = {
       rerolls: 2,
       polarity: 'madurai',
       seller: 'RivenSeller',
+      sellerReputation: 15,
       status: 'online' as const,
       updatedAt: new Date().toISOString(),
     },

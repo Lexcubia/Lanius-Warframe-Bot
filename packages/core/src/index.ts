@@ -92,6 +92,7 @@ export {
   MarketResolvedTargetSchema,
   MarketSearchDtoSchema,
   MarketSellerStatusSchema,
+  MarketSetComponentSchema,
   RivenAttributeDtoSchema,
   RivenListingDtoSchema,
   RivenOrdersDtoSchema,
@@ -103,6 +104,7 @@ export {
   type MarketResolvedTarget,
   type MarketSearchDto,
   type MarketSellerStatus,
+  type MarketSetComponent,
   type RivenAttributeDto,
   type RivenListingDto,
   type RivenOrdersDto,
@@ -121,10 +123,12 @@ export {
 
 export {
   WFM_STATIC_ASSET_BASE,
+  formatDucatsLabel,
   formatMarketPlatinumLabel,
   formatMarketPriceQuantity,
   formatMarketQuantityLabel,
   formatMarketWhisper,
+  formatSellerReputationLabel,
   formatSellerStatusLabel,
   resolveWfmAssetUrl,
   sellerStatusTone,
