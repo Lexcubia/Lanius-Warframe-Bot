@@ -1,4 +1,6 @@
 # 长期分支 `release`：SSH 自动部署（默认 docker 容器热启动）。
+# 发版硬约束：develop → main → release；`release` 只跟 main，不做 CI 检查
+# （test/typecheck 已在 develop/main 完成）；本 workflow 只部署/换版。
 # 机房直连 github.com 常失败：docker 路径 SSH 到服务器执行 deploy/update-container.sh
 # （git 对齐 ref + 重建 card-host/web + docker compose up -d）。
 # 可选 runtime=node 走 systemd 路径（Actions 预构建 dist + apply-node-release.sh）。
@@ -193,5 +195,16 @@ jobs:
             export LANIUS_UPDATE_REF="${REF}"
             bash ./update-container.sh
             docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
-            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
-              curl -fsS "http://127.0.0.1/api/lanius/v1/health"
+            # 部署后必须换新进程：uptimeSec 过大说明未真正重启
+            HEALTH_JSON="$(curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" \
+              || curl -fsS "http://127.0.0.1/api/lanius/v1/health")"
+            echo "${HEALTH_JSON}"
+            node -e '
+              const j = JSON.parse(process.argv[1]);
+              const u = j?.data?.uptimeSec;
+              if (typeof u !== "number" || u > 120) {
+                console.error("deploy health uptimeSec too high:", u);
+                process.exit(1);
+              }
+              console.log("deploy health ok, uptimeSec=", u);
+            ' "${HEALTH_JSON}"

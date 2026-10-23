@@ -28,14 +28,23 @@ feature/*  fix/*  docs/*  …
             |
        tag vX.Y.Z    ← Actions：可选推 GHCR（不 SSH）
             |
-         release     ← 长期「上线指针」；push → Node：git + build + systemd
+         release     ← 长期「上线指针」；仅从 main tip 推进
+                         push → Node：git + build + systemd
 ```
+
+**硬顺序（唯一合法发版链）**：功能先合 **`develop`** → PR **`develop` → `main`** → 在 `main` 打 **`vX.Y.Z`** → 将 **`release` 快进/推到与 `main` tip（发版提交）一致**。
+
+| 允许                                                              | 禁止                                          |
+| ----------------------------------------------------------------- | --------------------------------------------- |
+| `develop` → `main`（发布归档 PR）                                 | `develop` 直推 / 直合 **`release`**           |
+| `main` tip → `release`（FF 或推 tip；上线）                       | 绕过 `main` 上线；从 feature 分支推 `release` |
+| 发版后若 `main` 非 `develop` 祖先：PR **`main` → `develop`** 回灌 | 让 `develop` / `main` 长期分叉不处理          |
 
 - **日常功能**合入 `develop`，**不**因每个 PR 打 tag，**不**自动部署。
 - **发布归档**：`develop` → `main`；Actions 按 CHANGELOG 打 **`vX.Y.Z`**；`release.yml` **可选**推 GHCR（镜像交付降级为可选产物）。
-- **上线 / 回退（默认）**：更新长期分支 **`release`**（或 Admin 选版 / `deploy/update-node.sh`）→ 宿主机 checkout tag → `pnpm build` → systemd 重启。
+- **上线 / 回退（默认）**：仅把长期分支 **`release`** 推进到 **`main` 上已打 tag 的提交**（或 Admin 选版 / `deploy/update-node.sh`）→ 宿主机 checkout tag → `pnpm build` → systemd 重启。
 - **可选 Docker 路径**：`github.deployMode: docker` 或 deploy workflow 选 `docker` → `update-image.sh`（pull，不 rebuild）。
-- Hotfix：从 tag / `main` 拉 `fix/...` → 合回 `main` 与 `develop`；需要上线时再推进 `release`。
+- Hotfix：从 tag / `main` 拉 `fix/...` → 合回 `main` 与 `develop`；需要上线时再推进 `release`（仍须经 `main`）。
 
 ## CHANGELOG
 
@@ -48,17 +57,20 @@ feature/*  fix/*  docs/*  …
 ## 发布检查清单（简）
 
 1. `develop` 稳定；把 `CHANGELOG` 的 Unreleased **提升**为 `## [X.Y.Z] - YYYY-MM-DD`（Unreleased 不留条目）。
-2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）。
-3. PR：`develop` → `main`（或经 `release/x.y.z`）。
+2. 更新根 `package.json` `"version"` → `X.Y.Z`（必须与 CHANGELOG 最新节一致）；该 bump 经 PR 合入 **`develop`**。
+3. PR：**`develop` → `main`**（或经可选冻结线 `release/x.y.z` 再进 `main`）。**禁止**跳过 `main`。
 4. 合并进 `main` 后，`Auto tag on main` 自动：若 `vX.Y.Z` 尚不存在则打 tag，并 `workflow_call` → `Release`（可选推 GHCR，无预检）。
-5. 将 `release` 分支快进到目标提交（或 Admin / `update-node.sh vX.Y.Z`）完成 **Node** 上线；仅当仍用镜像时才需等 GHCR 就绪并走 `update-image.sh`。
-6. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
+5. 将 **`release` 快进到 `main` tip**（与 tag 指向的发版提交一致；或 Admin / `update-node.sh vX.Y.Z`）完成 **Node** 上线；仅当仍用镜像时才需等 GHCR 就绪并走 `update-image.sh`。**禁止**从 `develop` 直推 `release`。
+6. 若 `main` 合入产生了 `develop` 尚未包含的 merge 提交：立刻开 PR **`main` → `develop`**（或等价干净 merge）回灌，消除分叉。
+7. 若该版本 tag 已存在（重复合入 / 无版本 bump），自动跳过打 tag；勿再手工重复打同一 tag（补推镜像可用 `Release` 的 `workflow_dispatch`）。
 
 ## 质量关卡
 
+发版硬约束：**`develop` → `main` → `release`**（`release` 只跟 `main`，不做检查）。
+
 - **本地**：husky + lint-staged 在 commit 前自动格式化与 lint 已暂存文件。
-- **CI**：`push` 到 `develop` / `main` 及所有 PR 触发 `ci.yml`（install → test → typecheck）。
-- **Release**：`release.yml` 仅负责构建推 GHCR，不再重复跑 test/typecheck（避免发布前卡预检）。
+- **CI**：仅 PR→`develop`/`main` 与 push 同分支触发 `ci.yml`（轻量 install → test → typecheck；不装 Playwright）。**不**在 `release` 上跑检查。
+- **Release**：`release.yml` 仅推 GHCR（无 test）；长期 `release` 分支只部署。
 
 ## 相关
 
