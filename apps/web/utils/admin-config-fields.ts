@@ -93,9 +93,20 @@ export const ADMIN_CONFIG_FIELDS: Record<string, AdminConfigFieldDef[]> = {
       path: 'defaultReplyMode',
       label: '默认回复模式',
       control: 'select',
+      description: '新会话初始模式；仅后台可改（默认 image）',
       options: [
         { label: 'text', value: 'text' },
         { label: 'image', value: 'image' },
+      ],
+    },
+    {
+      path: 'defaultCardSkin',
+      label: '默认卡片皮肤',
+      control: 'select',
+      description: '新会话初始皮肤；仅后台可改（默认 light）',
+      options: [
+        { label: 'light', value: 'light' },
+        { label: 'dark', value: 'dark' },
       ],
     },
     {
