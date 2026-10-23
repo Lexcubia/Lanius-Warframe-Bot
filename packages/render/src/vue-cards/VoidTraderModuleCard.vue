@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Locale, VoidTraderDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
-import { formatRemain, formatTimestamp, OfficialItemIcon } from '@lanius/ui';
+import { formatRemain, formatTimestamp, OfficialItemIcon, resolveDucatsIconSrc } from '@lanius/ui';
 import { computed } from 'vue';
 
 import QqCardShell from './QqCardShell.vue';
@@ -17,6 +17,8 @@ const props = defineProps<{
   maxItems?: number;
   skin?: CardSkinId;
 }>();
+
+const ducatIcon = resolveDucatsIconSrc();
 
 /**
  * 取双语字段。
@@ -34,7 +36,7 @@ function label(name: { zh: string; en: string }): string {
  * @returns 商人货架行
  */
 const items = computed(() => {
-  const limit = props.maxItems ?? 20;
+  const limit = props.maxItems ?? 12;
   return props.voidTrader.inventory.slice(0, limit);
 });
 
@@ -78,12 +80,22 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
         class="trader__row"
         :class="{ 'trader__row--zebra': idx % 2 === 1 }"
       >
-        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="24" />
+        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="28" />
         <span class="trader__name">{{ label(item.name) }}</span>
         <span v-if="item.credits != null" class="trader__credits">
           {{ Math.round(item.credits / 1000) }}k
         </span>
-        <span v-if="item.ducats != null" class="trader__ducats">{{ item.ducats }}d</span>
+        <span v-if="item.ducats != null" class="trader__ducats">
+          <img
+            class="trader__ducat-icon"
+            :src="ducatIcon"
+            alt=""
+            width="14"
+            height="14"
+            data-lanius-icon="ducats"
+          />
+          <span>{{ item.ducats }}</span>
+        </span>
       </li>
     </ul>
     <p v-else class="trader__empty">
@@ -95,7 +107,7 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
 <style scoped>
 .trader__meta {
   margin: 0 0 4px;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--lanius-text-muted);
 }
 .trader__list {
@@ -108,7 +120,7 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 2px;
+  padding: 4px 2px;
   border-bottom: 1px solid var(--lanius-border);
   min-width: 0;
 }
@@ -118,7 +130,7 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
 .trader__name {
   flex: 1;
   min-width: 0;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--lanius-text);
   overflow: hidden;
@@ -127,21 +139,29 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
 }
 .trader__credits {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--lanius-text-muted);
   font-variant-numeric: tabular-nums;
 }
 .trader__ducats {
   flex-shrink: 0;
   margin-left: 4px;
-  font-size: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--lanius-accent-dim);
   font-variant-numeric: tabular-nums;
 }
+.trader__ducat-icon {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+}
 .trader__empty {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 0;

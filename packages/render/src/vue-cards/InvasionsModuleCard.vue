@@ -51,7 +51,7 @@ function rewardText(reward: CatalogItemDto | undefined): string {
  * @returns 截断后的入侵行
  */
 const items = computed((): InvasionDto[] => {
-  const limit = props.maxItems ?? 8;
+  const limit = props.maxItems ?? 6;
   return props.worldstate.invasions.filter((row) => !row.expired).slice(0, limit);
 });
 
@@ -136,7 +136,7 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  font-size: 12px;
+  font-size: 14px;
   margin-bottom: 3px;
 }
 .invasions__head strong {
@@ -167,7 +167,7 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 }
 .invasions__side {
   margin: 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--lanius-text);
   display: flex;
   align-items: center;
@@ -191,7 +191,7 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 }
 .invasions__empty {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 0;

@@ -11,6 +11,7 @@ import {
   sellerStatusTone,
 } from '@lanius/core';
 
+import { resolveDucatsIconSrc } from '../lib/ducats-icon.js';
 import { resolvePlatinumIconSrc } from '../lib/platinum-icon.js';
 import OfficialItemIcon from './OfficialItemIcon.vue';
 
@@ -25,6 +26,7 @@ const props = defineProps<{
 }>();
 
 const platIcon = resolvePlatinumIconSrc();
+const ducatIcon = resolveDucatsIconSrc();
 
 /**
  * 按当前 locale 选择中/英标签。
@@ -102,8 +104,20 @@ function ducatBarPercent(ducats: number | null | undefined): number {
             {{ locale === 'en' ? ` · rank ${market.modRank}` : ` · 等级 ${market.modRank}` }}
           </span>
         </p>
-        <p v-if="market.resolved.ducats != null" class="lanius-mb__ducats">
-          {{ formatDucatsLabel(market.resolved.ducats, locale) }}
+        <p
+          v-if="market.resolved.ducats != null"
+          class="lanius-mb__ducats"
+          :aria-label="formatDucatsLabel(market.resolved.ducats, locale)"
+        >
+          <img
+            class="lanius-mb__ducat-icon"
+            :src="ducatIcon"
+            alt=""
+            width="16"
+            height="16"
+            data-lanius-icon="ducats"
+          />
+          <span>{{ market.resolved.ducats }}</span>
         </p>
       </div>
     </div>
@@ -127,8 +141,20 @@ function ducatBarPercent(ducats: number | null | undefined): number {
               <span v-if="part.quantityInSet != null" class="lanius-mb__part-qty">
                 ×{{ part.quantityInSet }}
               </span>
-              <span v-if="part.ducats != null" class="lanius-mb__part-ducats">
-                {{ formatDucatsLabel(part.ducats, locale) }}
+              <span
+                v-if="part.ducats != null"
+                class="lanius-mb__part-ducats"
+                :aria-label="formatDucatsLabel(part.ducats, locale)"
+              >
+                <img
+                  class="lanius-mb__ducat-icon lanius-mb__ducat-icon--sm"
+                  :src="ducatIcon"
+                  alt=""
+                  width="14"
+                  height="14"
+                  data-lanius-icon="ducats"
+                />
+                <span>{{ part.ducats }}</span>
               </span>
             </div>
             <div class="lanius-mb__part-bar" aria-hidden="true">
@@ -170,7 +196,9 @@ function ducatBarPercent(ducats: number | null | undefined): number {
             />
             <span class="lanius-mb__plat-num">{{ order.platinum }}</span>
           </span>
-          <span class="lanius-mb__qty">{{ formatMarketQuantityLabel(order.quantity, locale) }}</span>
+          <span class="lanius-mb__qty">{{
+            formatMarketQuantityLabel(order.quantity, locale)
+          }}</span>
           <span v-if="order.modRank !== null" class="lanius-mb__rank">
             {{ locale === 'en' ? `r${order.modRank}` : `等级${order.modRank}` }}
           </span>
@@ -180,7 +208,10 @@ function ducatBarPercent(ducats: number | null | undefined): number {
           <span class="lanius-mb__seller-rep">{{
             formatSellerReputationLabel(order.sellerReputation, locale)
           }}</span>
-          <span class="lanius-mb__status" :class="`lanius-mb__status--${sellerStatusTone(order.status)}`">
+          <span
+            class="lanius-mb__status"
+            :class="`lanius-mb__status--${sellerStatusTone(order.status)}`"
+          >
             {{ formatSellerStatusLabel(order.status, locale) }}
           </span>
         </div>
@@ -255,9 +286,25 @@ function ducatBarPercent(ducats: number | null | undefined): number {
 
 .lanius-mb__ducats {
   margin: 0.45rem 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
   font-size: 0.95rem;
   font-weight: 700;
   color: var(--lanius-accent-dim, #2f8fc4);
+  font-variant-numeric: tabular-nums;
+}
+
+.lanius-mb__ducat-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.lanius-mb__ducat-icon--sm {
+  width: 14px;
+  height: 14px;
 }
 
 .lanius-mb__parts {
@@ -321,9 +368,13 @@ function ducatBarPercent(ducats: number | null | undefined): number {
 
 .lanius-mb__part-ducats {
   margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--lanius-accent-dim, #2f8fc4);
+  font-variant-numeric: tabular-nums;
 }
 
 .lanius-mb__part-bar {

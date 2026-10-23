@@ -85,7 +85,7 @@ withDefaults(
 
 .lanius-qq-shell__title {
   margin: 0;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--lanius-brand);
   font-family: var(--lanius-font-display);
@@ -94,14 +94,14 @@ withDefaults(
 
 .lanius-qq-shell__sub {
   margin: 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--lanius-text-muted);
   flex-shrink: 0;
 }
 
 .lanius-qq-shell__stale {
   margin: 0 0 4px;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--lanius-warn);
 }
 

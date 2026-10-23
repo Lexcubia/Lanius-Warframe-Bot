@@ -34,7 +34,7 @@ function label(name: { zh: string; en: string }): string {
  * @returns 瓦奇娅货架行
  */
 const items = computed(() => {
-  const limit = props.maxItems ?? 20;
+  const limit = props.maxItems ?? 12;
   return props.varzia.inventory.slice(0, limit);
 });
 

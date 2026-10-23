@@ -222,33 +222,36 @@ const marketSample = {
       {
         urlName: 'latron_prime_barrel',
         name: { zh: '拉特昂 Prime 枪管', en: 'Latron Prime Barrel' },
-        iconUrl:
-          'https://warframe.market/static/assets/items/images/en/thumbs/latron_prime_barrel.5c8b8009acbdb97fd49177ba155ecfbe.128x128.png',
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/weapon/prime_barrel_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_receiver',
         name: { zh: '拉特昂 Prime 枪机', en: 'Latron Prime Receiver' },
+        iconUrl:
+          'https://warframe.market/static/assets/sub_icons/weapon/prime_receiver_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_stock',
         name: { zh: '拉特昂 Prime 枪托', en: 'Latron Prime Stock' },
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/weapon/prime_stock_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
       {
         urlName: 'latron_prime_blueprint',
         name: { zh: '拉特昂 Prime 蓝图', en: 'Latron Prime Blueprint' },
+        iconUrl: 'https://warframe.market/static/assets/sub_icons/blueprint_128x128.png',
         ducats: 15,
         quantityInSet: 1,
       },
     ],
   },
   page: 1,
-  pageSize: 10,
+  pageSize: 6,
   total: 2,
   orders: [
     {
@@ -284,7 +287,7 @@ const rivenSample = {
     iconUrl: 'https://warframe.market/static/assets/items/images/en/thumbs/lanka.thumb.png',
   },
   page: 1,
-  pageSize: 10,
+  pageSize: 6,
   total: 1,
   orders: [
     {

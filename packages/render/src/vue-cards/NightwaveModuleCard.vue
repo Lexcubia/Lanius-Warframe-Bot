@@ -43,7 +43,7 @@ const nw = computed(() => props.worldstate.nightwave);
  * @returns 挑战行
  */
 const challenges = computed((): NightwaveChallengeDto[] => {
-  const limit = props.maxItems ?? 12;
+  const limit = props.maxItems ?? 8;
   return nw.value?.activeChallenges.slice(0, limit) ?? [];
 });
 

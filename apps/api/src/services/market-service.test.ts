@@ -55,6 +55,8 @@ describe('MarketService.searchOrders', () => {
               item_name: 'Latron Prime Barrel',
               id: 'barrel-id',
               ducats: 15,
+              thumb: 'items/images/en/thumbs/latron_prime_barrel.png',
+              subIcon: 'sub_icons/weapon/prime_barrel_128x128.png',
             },
           ];
         }
@@ -74,6 +76,7 @@ describe('MarketService.searchOrders', () => {
             id: 'barrel-id',
             ducats: 15,
             thumb: 'items/images/en/thumbs/latron_prime_barrel.png',
+            subIcon: 'sub_icons/weapon/prime_barrel_128x128.png',
           },
         ];
       },
@@ -97,6 +100,8 @@ describe('MarketService.searchOrders', () => {
             ducats: 15,
             quantityInSet: 1,
             tags: ['component', 'prime'],
+            thumb: 'items/images/en/thumbs/latron_prime_barrel.png',
+            subIcon: 'sub_icons/weapon/prime_barrel_128x128.png',
           };
         }
         return {
@@ -132,8 +137,11 @@ describe('MarketService.searchOrders', () => {
         ducats: 15,
         quantityInSet: 1,
         name: { zh: '拉特昂 Prime 枪管', en: 'Latron Prime Barrel' },
+        iconUrl: expect.stringContaining('sub_icons/weapon/prime_barrel_128x128.png'),
       }),
     ]);
+    expect(page.resolved.iconUrl).toContain('latron_prime_set');
+    expect(page.resolved.components?.[0]?.iconUrl).not.toContain('latron_prime_set');
     expect(page.orders[0]?.sellerReputation).toBe(12);
     await expect(
       service.searchOrders({ query: '拉特龙', page: 1, pageSize: 10 }),

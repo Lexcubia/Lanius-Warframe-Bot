@@ -78,7 +78,7 @@ function pathTag(path: FissurePath): string {
  * @returns 截断后的裂隙行
  */
 const items = computed((): FissureDto[] => {
-  const limit = props.maxItems ?? 14;
+  const limit = props.maxItems ?? 10;
   const ranked = [...props.worldstate.fissures].sort(
     (a, b) => PATH_ORDER.indexOf(a.path) - PATH_ORDER.indexOf(b.path),
   );
@@ -174,12 +174,12 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   white-space: nowrap;
 }
 .fissures__era {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--lanius-brand);
 }
 .fissures__path {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 700;
   padding: 0 4px;
   border-radius: 3px;
@@ -198,7 +198,7 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
 }
 .fissures__mission {
   margin: 1px 0 0;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--lanius-text);
   overflow-wrap: break-word;
 }
@@ -206,14 +206,14 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   flex: 0 0 auto;
   margin-left: auto;
   padding-left: 4px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--lanius-accent);
   font-family: var(--lanius-font-display);
 }
 .fissures__empty {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 0;
