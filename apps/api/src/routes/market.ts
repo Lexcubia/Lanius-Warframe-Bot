@@ -1,4 +1,4 @@
-import { MarketSearchDtoSchema } from '@lanius/core';
+import { MarketOrdersDtoSchema, MarketOrdersQuerySchema } from '@lanius/core';
 import { Hono } from 'hono';
 
 import type { AppVariables } from '../app-context.js';
@@ -18,9 +18,16 @@ export function marketRoutes() {
   app.get('/market/items', async (c) => {
     const started = Date.now();
     const ctx = c.get('app');
-    const q = c.req.query('q')?.trim() ?? '';
-    if (!q) {
-      throw validationError('q is required');
+    const parsed = MarketOrdersQuerySchema.safeParse({
+      q: c.req.query('q'),
+      page: c.req.query('page') ?? undefined,
+      pageSize: c.req.query('pageSize') ?? undefined,
+      modRank: c.req.query('modRank') ?? undefined,
+    });
+    if (!parsed.success) {
+      throw validationError('invalid market query', {
+        issues: parsed.error.flatten(),
+      });
     }
 
     const scene = (c.req.query('scene') as 'group' | 'c2c' | 'web') || 'web';
@@ -34,8 +41,13 @@ export function marketRoutes() {
         userId,
         moduleId: 'market',
       });
-      const data = MarketSearchDtoSchema.parse(
-        await ctx.marketService.search(q),
+      const data = MarketOrdersDtoSchema.parse(
+        await ctx.marketService.searchOrders({
+          query: parsed.data.q,
+          page: parsed.data.page,
+          pageSize: parsed.data.pageSize,
+          modRank: parsed.data.modRank,
+        }),
       );
       writeAuditEvent(ctx.db, {
         scene,

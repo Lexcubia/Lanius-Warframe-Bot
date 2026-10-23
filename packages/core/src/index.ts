@@ -85,15 +85,39 @@ export {
 export { GATED_MODULE_IDS, ModuleIdSchema, type ModuleId } from './modules.js';
 
 export {
-  MarketItemDtoSchema,
+  MARKET_ORDERS_PAGE_SIZE,
+  MarketListingDtoSchema,
+  MarketOrdersDtoSchema,
+  MarketOrdersQuerySchema,
+  MarketResolvedTargetSchema,
   MarketSearchDtoSchema,
+  MarketSellerStatusSchema,
+  RivenAttributeDtoSchema,
+  RivenListingDtoSchema,
+  RivenOrdersDtoSchema,
+  RivenOrdersQuerySchema,
   RivenSearchDtoSchema,
-  RivenSummaryDtoSchema,
-  type MarketItemDto,
+  type MarketListingDto,
+  type MarketOrdersDto,
+  type MarketOrdersQuery,
+  type MarketResolvedTarget,
   type MarketSearchDto,
+  type MarketSellerStatus,
+  type RivenAttributeDto,
+  type RivenListingDto,
+  type RivenOrdersDto,
+  type RivenOrdersQuery,
   type RivenSearchDto,
-  type RivenSummaryDto,
 } from './dto/market.js';
+
+export {
+  expandQueryCandidates,
+  resolveBestItem,
+  scoreItemMatch,
+  scoreItemMatchWithAliases,
+  type ItemIndexRow,
+  type ResolvedItemHit,
+} from './market/resolve-item.js';
 
 export {
   TraderItemDtoSchema,

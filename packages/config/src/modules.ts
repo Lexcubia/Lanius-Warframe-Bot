@@ -38,7 +38,7 @@ export const ApiModuleSchema = z.object({
   upstream: z
     .object({
       worldstateUrl: z.string().url().default('https://api.warframe.com/cdn/worldState.php'),
-      warframeMarketUrl: z.string().url().default('https://api.warframe.market/v1'),
+      warframeMarketUrl: z.string().url().default('https://api.warframe.market/v2'),
       timeoutMs: z.number().int().positive().default(8000),
     })
     .default({}),

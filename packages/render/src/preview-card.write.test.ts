@@ -210,38 +210,74 @@ const helpSample = {
 };
 
 const marketSample = {
-  query: 'primed',
-  items: [
+  query: 'primed continuity',
+  resolved: {
+    urlName: 'primed_continuity',
+    name: { zh: 'Primed Continuity', en: 'Primed Continuity' },
+  },
+  page: 1,
+  pageSize: 10,
+  total: 2,
+  orders: [
     {
-      urlName: 'primed_continuity',
-      name: { zh: 'Primed Continuity', en: 'Primed Continuity' },
-      lowestSell: 45,
-      highestBuy: 38,
+      platinum: 45,
+      quantity: 1,
+      modRank: 10,
+      seller: 'SellerA',
+      status: 'ingame' as const,
       updatedAt: new Date().toISOString(),
     },
     {
-      urlName: 'primed_flow',
-      name: { zh: 'Primed Flow', en: 'Primed Flow' },
-      lowestSell: 52,
-      highestBuy: 44,
+      platinum: 48,
+      quantity: 2,
+      modRank: 10,
+      seller: 'SellerB',
+      status: 'online' as const,
       updatedAt: new Date().toISOString(),
     },
   ],
+  statusFilter: 'online|ingame' as const,
+  sort: 'price_asc' as const,
+  modRank: 10,
+  updatedAt: new Date().toISOString(),
 };
 
 const rivenSample = {
   query: 'lanka',
-  results: [
+  resolved: {
+    urlName: 'lanka',
+    name: { zh: 'Lanka', en: 'Lanka' },
+  },
+  page: 1,
+  pageSize: 10,
+  total: 1,
+  orders: [
     {
-      weaponUrlName: 'lanka',
-      weaponName: { zh: 'Lanka', en: 'Lanka' },
-      minPlatinum: 120,
-      medianPlatinum: 180,
-      maxPlatinum: 260,
-      sampleCount: 24,
+      platinum: 180,
+      attributes: [
+        {
+          urlName: 'critical_chance',
+          name: { zh: 'critical chance', en: 'critical chance' },
+          value: 18.6,
+          positive: true,
+        },
+      ],
+      mastery: 10,
+      rank: 0,
+      rerolls: 2,
+      polarity: 'madurai',
+      seller: 'RivenSeller',
+      status: 'online' as const,
       updatedAt: new Date().toISOString(),
     },
   ],
+  statusFilter: 'online|ingame' as const,
+  sort: 'price_asc' as const,
+  rank: null,
+  mastery: null,
+  minRerolls: null,
+  maxRerolls: null,
+  updatedAt: new Date().toISOString(),
 };
 
 describe('preview card write', () => {
@@ -249,40 +285,36 @@ describe('preview card write', () => {
     await shutdownVueCardCapture();
   });
 
-  it(
-    'writes module PNGs for visual inspection',
-    async () => {
-      mkdirSync(outDir, { recursive: true });
-      const input = { locale: 'zh' as const, worldstate: sample };
-      const cycles = await renderWorldstateCard(input);
-      const fissures = await renderFissuresCard(input);
-      const invasions = await renderInvasionsCard(input);
-      const nightwave = await renderNightwaveCard(input);
-      const help = await renderHelpCard({ locale: 'zh', help: helpSample });
-      const market = await renderMarketCard({
-        locale: 'zh',
-        market: marketSample,
-      });
-      const riven = await renderRivenCard({ locale: 'zh', riven: rivenSample });
+  it('writes module PNGs for visual inspection', async () => {
+    mkdirSync(outDir, { recursive: true });
+    const input = { locale: 'zh' as const, worldstate: sample };
+    const cycles = await renderWorldstateCard(input);
+    const fissures = await renderFissuresCard(input);
+    const invasions = await renderInvasionsCard(input);
+    const nightwave = await renderNightwaveCard(input);
+    const help = await renderHelpCard({ locale: 'zh', help: helpSample });
+    const market = await renderMarketCard({
+      locale: 'zh',
+      market: marketSample,
+    });
+    const riven = await renderRivenCard({ locale: 'zh', riven: rivenSample });
 
-      writeFileSync(resolve(outDir, 'preview-worldstate.png'), cycles);
-      writeFileSync(resolve(outDir, 'preview-fissures.png'), fissures);
-      writeFileSync(resolve(outDir, 'preview-invasions.png'), invasions);
-      writeFileSync(resolve(outDir, 'preview-nightwave.png'), nightwave);
-      writeFileSync(resolve(outDir, 'preview-help.png'), help);
-      writeFileSync(resolve(outDir, 'preview-market.png'), market);
-      writeFileSync(resolve(outDir, 'preview-riven.png'), riven);
-      // 兼容旧路径
-      writeFileSync(resolve(outDir, 'preview.png'), cycles);
+    writeFileSync(resolve(outDir, 'preview-worldstate.png'), cycles);
+    writeFileSync(resolve(outDir, 'preview-fissures.png'), fissures);
+    writeFileSync(resolve(outDir, 'preview-invasions.png'), invasions);
+    writeFileSync(resolve(outDir, 'preview-nightwave.png'), nightwave);
+    writeFileSync(resolve(outDir, 'preview-help.png'), help);
+    writeFileSync(resolve(outDir, 'preview-market.png'), market);
+    writeFileSync(resolve(outDir, 'preview-riven.png'), riven);
+    // 兼容旧路径
+    writeFileSync(resolve(outDir, 'preview.png'), cycles);
 
-      expect(cycles.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
-      expect(fissures.length).toBeGreaterThan(1000);
-      expect(invasions.length).toBeGreaterThan(1000);
-      expect(nightwave.length).toBeGreaterThan(1000);
-      expect(help.length).toBeGreaterThan(1000);
-      expect(market.length).toBeGreaterThan(1000);
-      expect(riven.length).toBeGreaterThan(1000);
-    },
-    180_000,
-  );
+    expect(cycles.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(fissures.length).toBeGreaterThan(1000);
+    expect(invasions.length).toBeGreaterThan(1000);
+    expect(nightwave.length).toBeGreaterThan(1000);
+    expect(help.length).toBeGreaterThan(1000);
+    expect(market.length).toBeGreaterThan(1000);
+    expect(riven.length).toBeGreaterThan(1000);
+  }, 180_000);
 });

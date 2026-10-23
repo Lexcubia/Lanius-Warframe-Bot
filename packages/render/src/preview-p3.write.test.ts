@@ -21,6 +21,9 @@ describe('fix p3', () => {
       worldstate: {
         realm: 'international',
         fetchedAt: '2026-10-13T18:00:00.000Z', // 应显示 2026-10-14 02:00:00
+        cycles: [],
+        invasions: [],
+        nightwave: null,
         fissures: [
           {
             id: 'f1',
@@ -29,10 +32,13 @@ describe('fix p3', () => {
             missionTypeKey: 'MT_INTEL',
             missionType: { zh: '间谍', en: 'Spy' },
             node: { zh: 'Cambria（地球）', en: 'Cambria' },
-            faction: { zh: 'Grineer', en: 'Grineer' },
-            expiryMs: 3661e3,
-            isStorm: true,
-            isHard: false,
+            path: 'empyrean',
+            pathLabel: { zh: '九重天', en: 'Empyrean' },
+            iconPath: '/Lotus/Interface/Icons/Relics/RelicLithA.png',
+            iconUrl:
+              'https://content.warframe.com/PublicExport/Lotus/Interface/Icons/Relics/RelicLithA.png',
+            expiry: new Date(Date.now() + 3_661_000).toISOString(),
+            remainingMs: 3_661_000,
           },
           {
             id: 'f2',
@@ -41,10 +47,13 @@ describe('fix p3', () => {
             missionTypeKey: 'MT_SURVIVAL',
             missionType: { zh: '生存', en: 'Survival' },
             node: { zh: 'Mot（虚空）', en: 'Mot' },
-            faction: { zh: 'Corpus', en: 'Corpus' },
-            expiryMs: 5400e3,
-            isStorm: false,
-            isHard: true,
+            path: 'steelPath',
+            pathLabel: { zh: '钢铁之路', en: 'Steel Path' },
+            iconPath: '/Lotus/Interface/Icons/Relics/RelicRequiemA.png',
+            iconUrl:
+              'https://content.warframe.com/PublicExport/Lotus/Interface/Icons/Relics/RelicRequiemA.png',
+            expiry: new Date(Date.now() + 5_400_000).toISOString(),
+            remainingMs: 5_400_000,
           },
         ],
       },

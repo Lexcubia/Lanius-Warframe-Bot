@@ -4,5 +4,5 @@ port: 8787
 # adminToken: 写在 local，勿提交
 upstream:
   worldstateUrl: 'https://api.warframe.com/cdn/worldState.php'
-  warframeMarketUrl: 'https://api.warframe.market/v1'
+  warframeMarketUrl: 'https://api.warframe.market/v2'
   timeoutMs: 8000

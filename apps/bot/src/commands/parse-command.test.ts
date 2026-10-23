@@ -47,9 +47,24 @@ describe('parseCommand', () => {
       type: 'market',
       query: '红晶',
     });
+    expect(parseCommand('/wm 红晶 等级=5 p=2').intent).toEqual({
+      type: 'market',
+      query: '红晶',
+      modRank: 5,
+      page: 2,
+    });
     expect(parseCommand('/zk latron').intent).toEqual({
       type: 'riven',
       query: 'latron',
+    });
+    expect(parseCommand('/zk 拉特龙 等级=0 段位=8 循环=2 p=2').intent).toEqual({
+      type: 'riven',
+      query: '拉特龙',
+      rank: 0,
+      mastery: 8,
+      minRerolls: 2,
+      maxRerolls: 2,
+      page: 2,
     });
   });
 
