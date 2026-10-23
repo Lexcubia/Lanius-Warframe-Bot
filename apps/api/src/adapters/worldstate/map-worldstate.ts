@@ -1,28 +1,15 @@
-import type {
-  CatalogItemDto,
-  InvasionDto,
-  NightwaveDto,
-  Realm,
-  WorldstateDto,
-} from '@lanius/core';
+import type { CatalogItemDto, InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
 
 import { mapOpenWorldCycles } from './map-cycles.js';
 import { mapFissures } from './map-fissures.js';
-import {
-  NIGHTWAVE_KIND_LABELS,
-  resolveNightwaveChallengeKind,
-} from './nightwave-kind.js';
+import { NIGHTWAVE_KIND_LABELS, resolveNightwaveChallengeKind } from './nightwave-kind.js';
 import {
   resolveChallengeLabels,
   resolveFactionLabel,
   resolveNodeLabel,
   resolvePathLabel,
 } from './resolve-labels.js';
-import type {
-  UpstreamInvasion,
-  UpstreamSeasonInfo,
-  UpstreamWorldstate,
-} from './types.js';
+import type { UpstreamInvasion, UpstreamSeasonInfo, UpstreamWorldstate } from './types.js';
 
 /**
  * Source tag recorded in response `meta.source` for official worldstate.
@@ -52,6 +39,8 @@ export function mapWorldstate(
   const nowMs = Date.parse(fetchedAt);
   const fissureNow = Number.isFinite(nowMs) ? nowMs : Date.now();
 
+  // Wave 0：任务模块切片先挂空安全默认，真实 mapper 由 Wave 1 各 PR 填入。
+  // raw.Sorties / LiteSorties / EndlessXpSchedule / Alerts / Conquests / Jobs 类型已就绪。
   return {
     realm,
     fetchedAt,
@@ -59,6 +48,13 @@ export function mapWorldstate(
     fissures: mapFissures(raw, fissureNow),
     invasions,
     nightwave: mapNightwave(raw.SeasonInfo),
+    sortie: null,
+    archon: null,
+    circuit: null,
+    bounties: [],
+    arbitration: null,
+    alerts: [],
+    archimedea: null,
   };
 }
 
@@ -116,17 +112,13 @@ function mapNightwave(raw: UpstreamSeasonInfo | undefined): NightwaveDto | null 
       kindLabel: NIGHTWAVE_KIND_LABELS[kind],
       title: labels?.title,
       description: labels?.description,
-      expiry: Number.isFinite(expiryMs)
-        ? new Date(expiryMs).toISOString()
-        : undefined,
+      expiry: Number.isFinite(expiryMs) ? new Date(expiryMs).toISOString() : undefined,
     };
   });
 
   // 展示顺序：每日 → 每周 → 其他（同档保持上游顺序）
   const kindRank = { daily: 0, weekly: 1, other: 2 } as const;
-  activeChallenges.sort(
-    (a, b) => kindRank[a.kind] - kindRank[b.kind],
-  );
+  activeChallenges.sort((a, b) => kindRank[a.kind] - kindRank[b.kind]);
 
   return {
     season: raw.Season,
@@ -163,9 +155,7 @@ function computeCompletionPct(
  * @returns CatalogItemDto；无条目时 `undefined`
  */
 function mapCountedReward(
-  reward:
-    | { countedItems?: Array<{ ItemType?: string; ItemCount?: number }> }
-    | undefined,
+  reward: { countedItems?: Array<{ ItemType?: string; ItemCount?: number }> } | undefined,
 ): CatalogItemDto | undefined {
   const row = reward?.countedItems?.[0];
   const itemType = row?.ItemType;
@@ -173,9 +163,7 @@ function mapCountedReward(
     return undefined;
   }
   const quantity =
-    typeof row?.ItemCount === 'number' &&
-    Number.isFinite(row.ItemCount) &&
-    row.ItemCount > 0
+    typeof row?.ItemCount === 'number' && Number.isFinite(row.ItemCount) && row.ItemCount > 0
       ? Math.floor(row.ItemCount)
       : undefined;
   return {

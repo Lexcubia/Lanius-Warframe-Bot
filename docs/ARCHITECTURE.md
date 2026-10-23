@@ -60,6 +60,22 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 **禁止**在未立项时脚手架 Tauri。  
 **Web 栈已锁定 Nuxt/Vue**；勿再引入 Next.js / React / shadcn / next-intl 作为 Web 默认。
 
+### 2.0a Worldstate 任务模块切片（Wave 0+）
+
+`GET /v1/worldstate` 在既有 `cycles` / `fissures` / `invasions` / `nightwave` 之外，并列挂载空安全切片（字段互不耦合）：
+
+| DTO 字段      | ModuleId      | 上游 / 来源                                                    |
+| ------------- | ------------- | -------------------------------------------------------------- |
+| `sortie`      | `sortie`      | 官方 `Sorties`                                                 |
+| `archon`      | `archon`      | 官方 `LiteSorties`                                             |
+| `circuit`     | `circuit`     | 官方 `EndlessXpSchedule`（回廊 Circuit，**不是**杜薇利情绪）   |
+| `bounties`    | `bounties`    | 官方 `SyndicateMissions.Jobs` + MissionDeck（`ExportRewards`） |
+| `arbitration` | `arbitration` | 社区 WFCD `warframestat.us`（官方无独立字段）                  |
+| `alerts`      | `alerts`      | 官方 `Alerts`（**禁止**与科研合包）                            |
+| `archimedea`  | `archimedea`  | 官方 `Conquests`（`CT_LAB` / `CT_HEX`；**禁止**与警报合包）    |
+
+适配：`apps/api/src/adapters/worldstate/`；契约：`packages/core` DTO + `ModuleId` + `LANIUS_COMMAND_CATALOG`。赏金奖励表解析：`resolveMissionDeckRewards`。客户端仍只调 Lanius，不直连上游。
+
 ### 2.0 Web UI ⊥ QQ 出图 UI（硬边界）
 
 主站（公开站 / Admin / 后期 Tauri）与 QQ **截图出图** UI **完全剥离、互不干涉**。两端只共用底层 **Lanius 自定义 API** + `@lanius/core`（DTO / Zod / 别名 / 指令目录等）。色板等品牌 token 可对齐，但**不得**用同一套 ModuleCard / Shell 绑两端布局。
