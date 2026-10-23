@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
@@ -13,11 +14,22 @@ import {
 import type { CardSkinId } from './vue-cards/skins.js';
 
 /**
- * 父 store 预览目录（Plan C dense + light/dark）。
+ * dense 预览输出目录。
+ * 默认写仓库内 `packages/render/tmp/qq-cards-dense`（已 gitignore），保证 CI 可写。
+ * 本地可设 `LANIUS_QQ_CARD_PREVIEW_DIR`（或兼容旧名 `LANIUS_DENSE_PREVIEW_DIR`）指向 agent store。
+ *
+ * @returns 绝对路径
  */
-const outDir =
-  process.env.LANIUS_DENSE_PREVIEW_DIR ??
-  '/cursor/stores/bc-4d7c66be-70a8-44c1-8457-760a78beb7ee/artifacts/qq-cards-dense';
+function resolveDensePreviewDir(): string {
+  const fromEnv =
+    process.env.LANIUS_QQ_CARD_PREVIEW_DIR?.trim() || process.env.LANIUS_DENSE_PREVIEW_DIR?.trim();
+  if (fromEnv) {
+    return resolve(fromEnv);
+  }
+  return resolve(dirname(fileURLToPath(import.meta.url)), '../tmp/qq-cards-dense');
+}
+
+const outDir = resolveDensePreviewDir();
 
 const sampleWorldstate = {
   realm: 'international' as const,
