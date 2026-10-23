@@ -19,12 +19,13 @@ const PANEL_DESC_ZH: Readonly<Record<ModuleId, string>> = {
   market: 'WM 在线卖单排行',
   riven: 'WM 紫卡在线拍卖',
   mode: '切换本会话回复模式',
+  skin: '查看或切换卡片皮肤',
   help: '指令帮助与模块详解',
 };
 
 /**
  * 将 Lanius 指令目录映射为官方「指令面板」条目。
- * `模式` 拆成「模式 文本 / 模式 图片」两条，便于一点即发完整用法。
+ * `模式` 拆成「模式 文本 / 模式 图片」两条；`皮肤` 拆成「皮肤 / 皮肤 亮色 / 皮肤 暗色」。
  *
  * @returns 可供 `syncQqCommandPanels` 使用的指令项列表
  */
@@ -34,6 +35,12 @@ export function buildQqPanelItems(): QqPanelCommandItem[] {
     if (entry.id === 'mode') {
       items.push({ name: '模式 文本', desc: '切换为文本回复' });
       items.push({ name: '模式 图片', desc: '切换为图片卡片' });
+      continue;
+    }
+    if (entry.id === 'skin') {
+      items.push({ name: '皮肤', desc: '查看当前卡片皮肤' });
+      items.push({ name: '皮肤 亮色', desc: '切换为亮色卡片' });
+      items.push({ name: '皮肤 暗色', desc: '切换为暗色卡片' });
       continue;
     }
     const name = entry.roots[0] ?? entry.command.replace(/^\//, '');
@@ -56,6 +63,12 @@ export function buildQqMenuItems(): QqMenuSendItem[] {
     if (entry.id === 'mode') {
       items.push({ name: '文本模式', sendMessage: '模式 文本' });
       items.push({ name: '图片模式', sendMessage: '模式 图片' });
+      continue;
+    }
+    if (entry.id === 'skin') {
+      items.push({ name: '当前皮肤', sendMessage: '皮肤' });
+      items.push({ name: '亮色皮肤', sendMessage: '皮肤 亮色' });
+      items.push({ name: '暗色皮肤', sendMessage: '皮肤 暗色' });
       continue;
     }
     const name = entry.roots[0] ?? entry.command.replace(/^\//, '');

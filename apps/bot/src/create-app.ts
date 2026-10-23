@@ -55,6 +55,7 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
   });
   const prefs: SessionPrefs = {
     replyMode: config.bot.defaultReplyMode,
+    cardSkin: config.bot.defaultCardSkin,
     locale: config.defaults.locale,
   };
   /** 短时去重：官方可能对同一 msg_id 重推。 */

@@ -373,6 +373,31 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     examples: ['/模式 文本', '/模式 图片', '/mode text', '/mode image'],
   },
   {
+    id: 'skin',
+    command: '/皮肤',
+    roots: ['皮肤', 'skin', '亮色', '暗色'],
+    summary: {
+      zh: '查看或切换本会话 QQ 卡片皮肤（亮色 / 暗色）',
+      en: 'Show or switch QQ card skin for this session (light / dark)',
+    },
+    usage: {
+      zh: '/皮肤 [亮色|暗色]',
+      en: '/skin [light|dark]',
+    },
+    params: [
+      {
+        name: 'skin',
+        required: false,
+        description: {
+          zh: '卡片皮肤：`亮色` / `暗色`；省略则显示当前皮肤。亦可直接发 `/亮色` 或 `/暗色`',
+          en: 'Card skin: `light` / `dark`; omit to show current. Shortcuts: `/亮色` or `/暗色`',
+        },
+        choices: ['亮色', '暗色', 'light', 'dark'],
+      },
+    ],
+    examples: ['/皮肤', '/皮肤 亮色', '/皮肤 暗色', '/skin light', '/亮色', '/暗色'],
+  },
+  {
     id: 'help',
     command: '/帮助',
     roots: ['帮助', 'help'],

@@ -23,6 +23,7 @@ function sampleConfig(): BotConfig {
       port: 8788,
       apiBaseUrl: 'http://127.0.0.1:9',
       defaultReplyMode: 'text',
+      defaultCardSkin: 'light',
       dryRun: true,
       pushIntervalMs: 0,
       commandPrefix: '/',

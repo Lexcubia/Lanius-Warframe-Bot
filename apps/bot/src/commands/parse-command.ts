@@ -51,6 +51,10 @@ export type BotIntent =
     }
   | { type: 'help'; module?: string }
   | { type: 'mode'; mode: 'text' | 'image' }
+  /**
+   * 卡片皮肤：带 `cardSkin` 时切换；省略时仅查询当前值。
+   */
+  | { type: 'skin'; cardSkin?: 'light' | 'dark' }
   | { type: 'unknown'; raw: string };
 
 /**
@@ -142,6 +146,10 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     };
   }
 
+  if (command.id === 'skin') {
+    return { matched: true, intent: parseSkinIntent(rootToken, restTokens, body) };
+  }
+
   if (command.id === 'help') {
     return {
       matched: true,
@@ -211,6 +219,37 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
   }
 
   return { matched: true, intent: { type: 'unknown', raw: body } };
+}
+
+/**
+ * 解析 `/皮肤`（及 `/亮色` `/暗色` 快捷根）参数。
+ *
+ * @param rootToken - 命中的根词（可能为 `皮肤` / `skin` / `亮色` / `暗色`）
+ * @param restTokens - 根命令后的词元
+ * @param body - 去掉前导符后的完整正文（非法参数时写入 unknown.raw）
+ * @returns skin 意图；参数非法时为 unknown
+ */
+function parseSkinIntent(rootToken: string, restTokens: string[], body: string): BotIntent {
+  const rootKey = rootToken.trim().toLowerCase();
+  // 快捷根：直接设皮肤，无需第二参数
+  if (rootKey === '亮色') {
+    return { type: 'skin', cardSkin: 'light' };
+  }
+  if (rootKey === '暗色') {
+    return { type: 'skin', cardSkin: 'dark' };
+  }
+
+  const arg = (restTokens[0] ?? '').trim().toLowerCase();
+  if (!arg) {
+    return { type: 'skin' };
+  }
+  if (arg === '亮色' || arg === 'light' || arg === '亮') {
+    return { type: 'skin', cardSkin: 'light' };
+  }
+  if (arg === '暗色' || arg === 'dark' || arg === '暗') {
+    return { type: 'skin', cardSkin: 'dark' };
+  }
+  return { type: 'unknown', raw: body };
 }
 
 /**

@@ -17,6 +17,7 @@ export const ModuleIdSchema = z.enum([
   'subscribe',
   'help',
   'mode',
+  'skin',
 ]);
 
 /**
@@ -25,7 +26,7 @@ export const ModuleIdSchema = z.enum([
 export type ModuleId = z.infer<typeof ModuleIdSchema>;
 
 /**
- * 默认可被 ACL / 开关管控的模块（不含 `mode` 会话偏好）。
+ * 默认可被 ACL / 开关管控的模块（不含 `mode` / `skin` 会话偏好）。
  */
 export const GATED_MODULE_IDS = [
   'worldstate',

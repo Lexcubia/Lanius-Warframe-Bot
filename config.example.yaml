@@ -4,3 +4,6 @@
 # 说明：config/README.md
 #
 # 若仍使用本单体文件命名为 config.local.yaml，API/Bot 启动时会拆分写入 config/local/。
+#
+# Bot 会话卡片皮肤默认（等价字段）：
+#   bot.defaultCardSkin: light   # light | dark；QQ `/皮肤` 可覆盖本会话
