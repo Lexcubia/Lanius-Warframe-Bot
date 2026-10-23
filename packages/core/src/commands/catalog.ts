@@ -229,8 +229,8 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     command: '/wm',
     roots: ['wm', '市场', 'market'],
     summary: {
-      zh: '锁定一件 WM 物品的在线/游戏中卖单（价升序，每页 10；可点私聊N复制 /w）',
-      en: 'Lock one WM item; online/ingame sell orders (price↑, 10/page; Whisper N → /w)',
+      zh: '锁定一件 WM 物品的在线/游戏中卖单（价升序，每页 10；点私聊N 插入 /w）',
+      en: 'Lock one WM item; online/ingame sell orders (price↑, 10/page; W# inserts /w)',
     },
     usage: {
       zh: '/wm <物品名> [等级=N] [p=页码] [私聊=N]',
@@ -265,8 +265,8 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
         name: '私聊 / whisper',
         required: false,
         description: {
-          zh: '本页卖单序号；返回可粘贴到游戏的 `/w 卖家 …` 文案',
-          en: 'Order index on page; returns pasteable `/w seller …` line',
+          zh: '本页卖单序号（回退）；优先点消息内「私聊N」标签，直接插入输入框且不带 @',
+          en: 'Order index fallback; prefer in-message W# chips that insert /w without @bot',
         },
       },
     ],
@@ -283,8 +283,8 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     command: '/zk',
     roots: ['zk', '紫卡', 'riven'],
     summary: {
-      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序，每页 10；可点私聊N复制 /w）',
-      en: 'Lock one weapon; online/ingame riven auctions (price↑, 10/page; Whisper N → /w)',
+      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序，每页 10；点私聊N 插入 /w）',
+      en: 'Lock one weapon; online/ingame riven auctions (price↑, 10/page; W# inserts /w)',
     },
     usage: {
       zh: '/zk <武器名> [等级=N] [段位=N] [循环=N] [p=页码] [私聊=N]',
@@ -335,8 +335,8 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
         name: '私聊 / whisper',
         required: false,
         description: {
-          zh: '本页拍卖序号；返回可粘贴到游戏的 `/w 卖家 …` 文案',
-          en: 'Auction index on page; returns pasteable `/w seller …` line',
+          zh: '本页拍卖序号（回退）；优先点消息内「私聊N」标签插入 /w（不带 @）',
+          en: 'Auction index fallback; prefer in-message W# chips (insert /w, no @bot)',
         },
       },
     ],

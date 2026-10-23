@@ -121,10 +121,13 @@ export {
 
 export {
   WFM_STATIC_ASSET_BASE,
+  formatMarketPlatinumLabel,
   formatMarketPriceQuantity,
+  formatMarketQuantityLabel,
   formatMarketWhisper,
   formatSellerStatusLabel,
   resolveWfmAssetUrl,
+  sellerStatusTone,
 } from './market/display.js';
 
 export {

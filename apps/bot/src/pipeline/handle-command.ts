@@ -32,6 +32,9 @@ import {
   formatMarketWhisperReply,
   formatRivenText,
   formatRivenWhisperReply,
+  formatWhisperCmdInputLine,
+  marketWhisperLines,
+  rivenWhisperLines,
 } from '../formatters/market-text.js';
 import {
   formatRotationText,
@@ -177,9 +180,12 @@ export async function handleCommand(
       },
       page: data.page,
       totalPages,
-      orderCount: data.orders.length,
     });
     const hasWhisper = data.orders.length > 0;
+    // 图片模式：正文在 PNG 里，私聊标签用 Markdown footer（qqbot-cmd-input，不带 @）。
+    const whisperFooter = hasWhisper
+      ? formatWhisperCmdInputLine(marketWhisperLines(data, locale), locale)
+      : undefined;
     return replyCard({
       deps,
       target,
@@ -189,9 +195,10 @@ export async function handleCommand(
       label: 'market',
       keyboard: keyboard ?? undefined,
       hint:
-        keyboard != null
+        hasWhisper || keyboard != null
           ? marketPageMarkdownHint(locale, data.page, totalPages, hasWhisper)
           : undefined,
+      footerMarkdown: whisperFooter,
     });
   }
 
@@ -234,9 +241,11 @@ export async function handleCommand(
       },
       page: data.page,
       totalPages,
-      orderCount: data.orders.length,
     });
     const hasWhisper = data.orders.length > 0;
+    const whisperFooter = hasWhisper
+      ? formatWhisperCmdInputLine(rivenWhisperLines(data, locale), locale)
+      : undefined;
     return replyCard({
       deps,
       target,
@@ -246,9 +255,10 @@ export async function handleCommand(
       label: 'riven',
       keyboard: keyboard ?? undefined,
       hint:
-        keyboard != null
+        hasWhisper || keyboard != null
           ? rivenPageMarkdownHint(locale, data.page, totalPages, hasWhisper)
           : undefined,
+      footerMarkdown: whisperFooter,
     });
   }
 
@@ -539,11 +549,16 @@ async function replyCard(options: {
   label: string;
   keyboard?: QqKeyboardContent;
   hint?: string;
+  /**
+   * 追加在 Markdown 末尾的原始片段（如 `<qqbot-cmd-input>`）；文本模式已含于 `text` 时可省略。
+   */
+  footerMarkdown?: string;
 }): Promise<string> {
-  const { deps, target, text, preferImage, render, label, keyboard, hint } = options;
+  const { deps, target, text, preferImage, render, label, keyboard, hint, footerMarkdown } =
+    options;
   const mdBody = toCardMarkdown(text);
 
-  // 文本模式：单条 Markdown 文本（可挂键盘）。
+  // 文本模式：单条 Markdown 文本（可挂键盘；私聊标签已写在 text 内）。
   if (!preferImage) {
     const sent = await deps.qq.sendMarkdown(target, mdBody, keyboard);
     if (sent.ok) {
@@ -571,7 +586,7 @@ async function replyCard(options: {
       const uploaded = await uploadCardPng(cos, png);
       if (uploaded.ok && uploaded.url) {
         const size = pngImageSize(png) ?? { width: 640, height: 534 };
-        const md = cardImageMarkdown(uploaded.url, size, hint);
+        const md = cardImageMarkdown(uploaded.url, size, hint, footerMarkdown);
         console.log(`[lanius-bot] ${label} markdown payload >>> ${md} <<<`);
         const sent = await deps.qq.sendMarkdown(target, md, keyboard);
         if (sent.ok) {
@@ -652,12 +667,20 @@ function cardImageMarkdown(
   imageUrl: string,
   size: { width: number; height: number },
   hint?: string,
+  footerMarkdown?: string,
 ): string {
   // 官方嵌图语法 `![img #Wpx #Hpx](url)`，尺寸为图片原始像素。
   // 开头 `[](%7B%22version%22%3A2%7D)` 是 markdown v2 声明头（URL 编码的 {"version":2}），缺了它 QQ 会丢弃尺寸标注。
   const dim = ` #${size.width}px #${size.height}px`;
-  const base = `[](%7B%22version%22%3A2%7D)![img${dim}](${imageUrl})`;
-  return hint ? `${base}\n> ${hint}` : base;
+  const parts = [`[](%7B%22version%22%3A2%7D)![img${dim}](${imageUrl})`];
+  if (hint) {
+    parts.push(`> ${hint}`);
+  }
+  // footer 放在引用块外，保证 <qqbot-cmd-input> 可点击插入。
+  if (footerMarkdown?.trim()) {
+    parts.push(footerMarkdown.trim());
+  }
+  return parts.join('\n');
 }
 
 /**
