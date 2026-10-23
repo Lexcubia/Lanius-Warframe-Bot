@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { RivenModuleCard } from '@lanius/ui';
+import { RivenBoard } from '@lanius/ui';
 import type { RivenOrdersDto } from '@lanius/core';
 
 const { t, locale } = useI18n();
@@ -142,7 +142,7 @@ const totalPages = computed(() => {
     <p v-else-if="pending" class="state">{{ t('riven.loading') }}</p>
     <p v-else-if="error" class="state state--error">{{ t('riven.error') }}</p>
     <template v-else-if="data">
-      <RivenModuleCard :riven="data" :locale="locale === 'en' ? 'en' : 'zh'" />
+      <RivenBoard :riven="data" :locale="locale === 'en' ? 'en' : 'zh'" />
       <nav v-if="totalPages > 1" class="pager" aria-label="pagination">
         <button type="button" :disabled="data.page <= 1" @click="goPage(data.page - 1)">
           {{ t('riven.prevPage') }}
