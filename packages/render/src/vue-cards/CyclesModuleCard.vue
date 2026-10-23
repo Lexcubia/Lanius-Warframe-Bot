@@ -12,7 +12,7 @@ import QqCardShell from './QqCardShell.vue';
 import type { CardSkinId } from './skins.js';
 
 /**
- * 世界状态（开放世界周期）QQ 截图卡：2×3 dense 环格。
+ * 世界状态（开放世界周期）QQ 截图卡：2×3 环格铺满宽；字号偏大便于缩略图可读。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -136,11 +136,13 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
 .cycles {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  width: 100%;
 }
 .cycles__row {
   display: flex;
-  gap: 4px;
+  gap: 0;
+  width: 100%;
 }
 .cycles__tile {
   flex: 1;
@@ -148,7 +150,7 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px 2px;
+  padding: 3px 2px 4px;
   text-align: center;
   border-right: 1px solid var(--lanius-border);
 }
@@ -157,8 +159,12 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
 }
 .cycles__tile h3 {
   margin: 0 0 2px;
-  font-size: 11px;
+  font-size: var(--lanius-type-meta, 12px);
   font-weight: 700;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .cycles__ring-wrap {
   position: relative;
@@ -175,15 +181,15 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
   pointer-events: none;
 }
 .cycles__badge {
-  margin-top: 4px;
-  padding: 1px 6px;
+  margin-top: 3px;
+  padding: 1px 7px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: var(--lanius-type-caption, 11px);
   font-weight: 700;
 }
 .cycles__time {
   margin: 2px 0 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-body, 14px);
   font-weight: 700;
   font-family: var(--lanius-font-display);
 }

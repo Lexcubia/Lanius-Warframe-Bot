@@ -4,12 +4,19 @@
  */
 
 [data-lanius-skin] {
-  --lanius-card-padding: 8px;
-  --lanius-card-gap: 4px;
+  /* 左右更紧，内容尽量铺满 640 逻辑宽；正文字号偏大便于缩略图可读 */
+  --lanius-card-padding: 6px;
+  --lanius-card-gap: 3px;
   --lanius-card-radius: 10px;
   --lanius-font-display: 'Zen Maru Gothic', 'Noto Sans SC', sans-serif;
   --lanius-font-body: 'Noto Sans SC', 'Source Sans 3', sans-serif;
   --lanius-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --lanius-type-shell-title: 18px;
+  --lanius-type-shell-sub: 13px;
+  --lanius-type-lead: 17px;
+  --lanius-type-body: 15px;
+  --lanius-type-meta: 13px;
+  --lanius-type-caption: 12px;
 }
 
 [data-lanius-skin='light'] {
