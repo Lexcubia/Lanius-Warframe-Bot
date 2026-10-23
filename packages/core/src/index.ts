@@ -120,6 +120,14 @@ export {
 } from './market/resolve-item.js';
 
 export {
+  WFM_STATIC_ASSET_BASE,
+  formatMarketPriceQuantity,
+  formatMarketWhisper,
+  formatSellerStatusLabel,
+  resolveWfmAssetUrl,
+} from './market/display.js';
+
+export {
   TraderItemDtoSchema,
   VoidTraderDtoSchema,
   VarziaDtoSchema,

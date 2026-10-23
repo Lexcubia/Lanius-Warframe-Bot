@@ -36,18 +36,26 @@ function createMemoryCache(): CacheStore {
 }
 
 describe('MarketService.searchOrders', () => {
-  it('locks latron_prime_set for 拉特昂 / 拉特龙 aliases', async () => {
+  it('locks latron_prime_set for official WFM zh-hans 拉特昂 (not 拉特龙 alias)', async () => {
     const client = {
       async listItems(language: string) {
         if (language === 'en') {
           return [
-            { url_name: 'latron_prime_set', item_name: 'Latron Prime Set' },
+            {
+              url_name: 'latron_prime_set',
+              item_name: 'Latron Prime Set',
+              thumb: 'items/images/en/thumbs/latron_prime_set.png',
+            },
             { url_name: 'latron_wraith_set', item_name: 'Latron Wraith Set' },
             { url_name: 'latron_prime_barrel', item_name: 'Latron Prime Barrel' },
           ];
         }
         return [
-          { url_name: 'latron_prime_set', item_name: '拉特昂 Prime 一套' },
+          {
+            url_name: 'latron_prime_set',
+            item_name: '拉特昂 Prime 一套',
+            thumb: 'items/images/en/thumbs/latron_prime_set.png',
+          },
           { url_name: 'latron_wraith_set', item_name: '拉特昂·亡魂 一套' },
           { url_name: 'latron_prime_barrel', item_name: '拉特昂 Prime 枪管' },
         ];
@@ -68,10 +76,12 @@ describe('MarketService.searchOrders', () => {
       cache: createMemoryCache(),
       client,
     });
-    for (const query of ['拉特昂', '拉特龙']) {
-      const page = await service.searchOrders({ query, page: 1, pageSize: 10 });
-      expect(page.resolved.urlName).toBe('latron_prime_set');
-    }
+    const page = await service.searchOrders({ query: '拉特昂', page: 1, pageSize: 10 });
+    expect(page.resolved.urlName).toBe('latron_prime_set');
+    expect(page.resolved.iconUrl).toContain('warframe.market/static/assets/');
+    await expect(
+      service.searchOrders({ query: '拉特龙', page: 1, pageSize: 10 }),
+    ).rejects.toMatchObject({ code: 'NOT_FOUND' });
   });
 
   it('locks best item, filters sell+online, sorts asc, paginates 10', async () => {

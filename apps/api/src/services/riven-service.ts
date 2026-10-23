@@ -1,6 +1,7 @@
 import {
   MARKET_ORDERS_PAGE_SIZE,
   resolveBestItem,
+  resolveWfmAssetUrl,
   type ItemIndexRow,
   type MarketSellerStatus,
   type RivenAttributeDto,
@@ -13,7 +14,23 @@ import type { CacheStore } from '../cache/types.js';
 import { notFoundError, validationError } from '../lib/http-error.js';
 
 const RIVEN_ITEMS_TTL_MS = 6 * 60 * 60_000;
+const RIVEN_ATTR_TTL_MS = 6 * 60 * 60_000;
 const RIVEN_AUCTIONS_TTL_MS = 90_000;
+
+/**
+ * 带可选 thumb 的紫卡武器索引行。
+ */
+type RivenIndexRow = ItemIndexRow & {
+  thumb?: string;
+};
+
+/**
+ * 紫卡属性双语名（按 url_name 索引）。
+ */
+type RivenAttrNames = {
+  zh: string;
+  en: string;
+};
 
 /**
  * 紫卡拍卖查询入参。
@@ -50,6 +67,7 @@ export class RivenService {
 
   /**
    * 中文/英文模糊锁定武器后，返回在线/游戏中紫卡拍卖（价升序分页）。
+   * 仅用 WFM 索引；属性名来自 `/riven/attributes` 的 zh-hans / en。
    *
    * @param input - 查询与筛选/分页
    * @returns 拍卖分页 DTO
@@ -69,7 +87,7 @@ export class RivenService {
 
     const zhIndex = await this.getRivenItemIndex('zh-hans');
     const enIndex = await this.getRivenItemIndex('en');
-    // 中英索引合并打分，避免只搜一侧漏掉英文 slug / 中文别名。
+    // 中英索引合并打分，避免只搜一侧漏掉英文 slug / 中文官方名。
     const hit = resolveBestItem(q, mergeIndexRows(zhIndex, enIndex));
     if (!hit) {
       throw notFoundError(`未匹配到紫卡武器：${q} / No riven weapon matched: ${q}`);
@@ -79,16 +97,21 @@ export class RivenService {
       throw notFoundError(`未匹配到紫卡武器：${q} / No riven weapon matched: ${q}`);
     }
 
-    const enName =
-      enIndex.find((row) => row.urlName === hit.urlName)?.itemName ??
-      zhIndex.find((row) => row.urlName === hit.urlName)?.itemName ??
-      hit.urlName.replace(/_/g, ' ');
-    const zhName = zhIndex.find((row) => row.urlName === hit.urlName)?.itemName ?? hit.itemName;
+    const zhRow = zhIndex.find((row) => row.urlName === hit.urlName);
+    const enRow = enIndex.find((row) => row.urlName === hit.urlName);
+    const enName = enRow?.itemName ?? zhRow?.itemName ?? hit.urlName.replace(/_/g, ' ');
+    const zhName = zhRow?.itemName ?? hit.itemName;
+    const iconUrl = resolveWfmAssetUrl(zhRow?.thumb || enRow?.thumb);
 
-    const listings = await this.loadAuctionListings(hit.urlName, {
-      rank: input.rank,
-      mastery: input.mastery,
-    });
+    const attrNames = await this.getAttributeNameMap();
+    const listings = await this.loadAuctionListings(
+      hit.urlName,
+      {
+        rank: input.rank,
+        mastery: input.mastery,
+      },
+      attrNames,
+    );
 
     const filtered = listings.filter((row) => {
       if (input.rank !== undefined && row.rank !== input.rank) {
@@ -116,6 +139,7 @@ export class RivenService {
       resolved: {
         urlName: hit.urlName,
         name: { zh: zhName, en: enName },
+        ...(iconUrl ? { iconUrl } : {}),
       },
       page,
       pageSize,
@@ -137,19 +161,52 @@ export class RivenService {
    * @param language - WFM Language
    * @returns 索引行
    */
-  private async getRivenItemIndex(language: 'zh-hans' | 'en'): Promise<ItemIndexRow[]> {
-    const key = `wfm:v2:riven:items:${language}`;
-    const fresh = await this.cache.getFresh<ItemIndexRow[]>(key);
+  private async getRivenItemIndex(language: 'zh-hans' | 'en'): Promise<RivenIndexRow[]> {
+    const key = `wfm:v2:riven:items:thumb:${language}`;
+    const fresh = await this.cache.getFresh<RivenIndexRow[]>(key);
     if (fresh) {
       return fresh.value;
     }
     const items = await this.client.listRivenItems(language);
-    const slim: ItemIndexRow[] = items.map((item) => ({
+    const slim: RivenIndexRow[] = items.map((item) => ({
       urlName: item.url_name,
       itemName: item.item_name,
+      ...(item.thumb ? { thumb: item.thumb } : {}),
     }));
     await this.cache.set(key, slim, RIVEN_ITEMS_TTL_MS);
     return slim;
+  }
+
+  /**
+   * 拉取并缓存紫卡属性双语名（WFM Language: zh-hans / en）。
+   *
+   * @returns slug → { zh, en }
+   */
+  private async getAttributeNameMap(): Promise<Map<string, RivenAttrNames>> {
+    const key = 'wfm:v2:riven:attributes:i18n';
+    const fresh = await this.cache.getFresh<Array<[string, RivenAttrNames]>>(key);
+    if (fresh) {
+      return new Map(fresh.value);
+    }
+
+    const [zhRows, enRows] = await Promise.all([
+      this.client.listRivenAttributes('zh-hans'),
+      this.client.listRivenAttributes('en'),
+    ]);
+    const map = new Map<string, RivenAttrNames>();
+    for (const row of enRows) {
+      map.set(row.url_name, { zh: row.item_name, en: row.item_name });
+    }
+    for (const row of zhRows) {
+      const prev = map.get(row.url_name);
+      map.set(row.url_name, {
+        zh: row.item_name,
+        en: prev?.en ?? row.item_name,
+      });
+    }
+
+    await this.cache.set(key, [...map.entries()], RIVEN_ATTR_TTL_MS);
+    return map;
   }
 
   /**
@@ -157,14 +214,17 @@ export class RivenService {
    *
    * @param weaponUrlName - 武器 slug
    * @param upstreamFilter - 尽量透传给上游的 rank/mastery
+   * @param attrNames - 属性双语名表
    * @returns 规范化拍卖行
    */
   private async loadAuctionListings(
     weaponUrlName: string,
     upstreamFilter: { rank?: number; mastery?: number },
+    attrNames: Map<string, RivenAttrNames>,
   ): Promise<RivenListingDto[]> {
     const filterKey = [upstreamFilter.rank ?? 'any', upstreamFilter.mastery ?? 'any'].join(':');
-    const key = `wfm:v2:riven:auctions:${weaponUrlName}:${filterKey}`;
+    // 属性名映射变更时 bump 缓存键，避免旧 slug 文案残留。
+    const key = `wfm:v2:riven:auctions:attrs2:${weaponUrlName}:${filterKey}`;
     const cached = await this.cache.getFresh<RivenListingDto[]>(key);
     if (cached) {
       return cached.value;
@@ -177,7 +237,7 @@ export class RivenService {
 
     const listings: RivenListingDto[] = [];
     for (const row of auctions) {
-      const mapped = mapAuctionRow(row);
+      const mapped = mapAuctionRow(row, attrNames);
       if (mapped) {
         listings.push(mapped);
       }
@@ -193,9 +253,13 @@ export class RivenService {
  * 将上游拍卖行映射为 DTO；非在线或无有效价则丢弃。
  *
  * @param row - WFM 拍卖行
+ * @param attrNames - 属性双语名
  * @returns 列表行或 null
  */
-function mapAuctionRow(row: WfmAuctionRow): RivenListingDto | null {
+function mapAuctionRow(
+  row: WfmAuctionRow,
+  attrNames: Map<string, RivenAttrNames>,
+): RivenListingDto | null {
   const owner = row.owner ?? row.user;
   const status = normalizeSellerStatus(owner?.status);
   if (!status) {
@@ -214,10 +278,14 @@ function mapAuctionRow(row: WfmAuctionRow): RivenListingDto | null {
       if (!urlName || typeof attr.value !== 'number') {
         return null;
       }
-      const label = urlName.replace(/_/g, ' ');
+      const names = attrNames.get(urlName);
+      const fallback = urlName.replace(/_/g, ' ');
       return {
         urlName,
-        name: { zh: label, en: label },
+        name: {
+          zh: names?.zh ?? fallback,
+          en: names?.en ?? fallback,
+        },
         value: attr.value,
         positive: attr.positive !== false,
       } satisfies RivenAttributeDto;
@@ -258,12 +326,6 @@ function pickAuctionPrice(row: WfmAuctionRow): number | null {
  * @param raw - 上游 status
  * @returns 状态或 null
  */
-/**
- * 仅保留明确 online / ingame。
- *
- * @param raw - 上游 status
- * @returns 状态或 null
- */
 function normalizeSellerStatus(raw: string | undefined): MarketSellerStatus | null {
   if (raw === 'online' || raw === 'ingame') {
     return raw;
@@ -278,14 +340,19 @@ function normalizeSellerStatus(raw: string | undefined): MarketSellerStatus | nu
  * @param secondary - 补充行（en）
  * @returns 去重索引
  */
-function mergeIndexRows(primary: ItemIndexRow[], secondary: ItemIndexRow[]): ItemIndexRow[] {
-  const map = new Map<string, ItemIndexRow>();
+function mergeIndexRows(primary: RivenIndexRow[], secondary: RivenIndexRow[]): RivenIndexRow[] {
+  const map = new Map<string, RivenIndexRow>();
   for (const row of primary) {
     map.set(row.urlName, row);
   }
   for (const row of secondary) {
-    if (!map.has(row.urlName)) {
+    const existing = map.get(row.urlName);
+    if (!existing) {
       map.set(row.urlName, row);
+      continue;
+    }
+    if (!existing.thumb && row.thumb) {
+      map.set(row.urlName, { ...existing, thumb: row.thumb });
     }
   }
   return [...map.values()];
