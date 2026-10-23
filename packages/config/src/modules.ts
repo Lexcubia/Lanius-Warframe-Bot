@@ -52,6 +52,10 @@ export const BotModuleSchema = z.object({
   port: z.number().int().positive().default(8788),
   apiBaseUrl: z.string().url().default('http://127.0.0.1:8787'),
   defaultReplyMode: z.enum(['text', 'image']).default('image'),
+  /**
+   * QQ 图片模式卡片默认皮肤（后台配置；非用户 QQ 指令）。
+   */
+  defaultCardSkin: z.enum(['light', 'dark']).default('light'),
   dryRun: z.boolean().default(true),
   publicSiteBaseUrl: z.string().url().optional(),
   panelIdStorePath: z.string().optional(),
@@ -226,6 +230,8 @@ export const MODULE_FIELD_META: Record<ConfigModuleId, Record<string, FieldMeta>
     host: { restartRequired: true },
     port: { restartRequired: true },
     apiBaseUrl: { description: 'Lanius API 基址' },
+    defaultReplyMode: { description: '默认 QQ 回复模式 text|image（后台；默认 image）' },
+    defaultCardSkin: { description: '默认 QQ 卡片皮肤 light|dark（后台；默认 light）' },
     dryRun: { description: '是否跳过真实 QQ 下行' },
     pushIntervalMs: { description: '推送轮询间隔' },
     commandPrefix: { description: '指令前导符' },
