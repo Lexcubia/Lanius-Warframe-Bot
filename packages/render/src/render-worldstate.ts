@@ -63,6 +63,17 @@ export async function renderFissuresCard(input: RenderWorldstateCardInput): Prom
 }
 
 /**
+ * 渲染「警报」独立模块 PNG（Vue + Playwright 节点截图）。
+ * 与科研卡完全分离；空态由卡片展示「当前无警报」。
+ *
+ * @param input - 世界状态载荷
+ * @returns PNG 字节
+ */
+export async function renderAlertsCard(input: RenderWorldstateCardInput): Promise<Buffer> {
+  return captureVueCard({ kind: 'alerts', ...input });
+}
+
+/**
  * 渲染帮助卡片 PNG。
  *
  * @param input - 帮助 DTO、locale 与可选皮肤

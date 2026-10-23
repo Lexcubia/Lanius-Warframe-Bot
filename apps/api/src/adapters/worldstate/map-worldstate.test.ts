@@ -146,7 +146,9 @@ describe('mapWorldstate', () => {
     ]);
   });
 
-  it('plumbs empty-safe mission module slices for Wave 0 schema', () => {
+  it('plumbs empty-safe mission module slices; maps alerts when present', () => {
+    const fetchedAt = '2026-10-10T12:00:00.000Z';
+    const now = Date.parse(fetchedAt);
     const dto = mapWorldstate(
       'international',
       {
@@ -166,7 +168,19 @@ describe('mapWorldstate', () => {
             ],
           },
         ],
-        Alerts: [{ _id: { $oid: 'alert-1' } }],
+        Alerts: [
+          {
+            _id: { $oid: 'alert-1' },
+            Expiry: { $date: { $numberLong: String(now + 3_600_000) } },
+            MissionInfo: {
+              missionType: 'MT_MOBILE_DEFENSE',
+              faction: 'FC_INFESTATION',
+              location: 'SolNode175',
+              missionReward: { credits: 5000 },
+            },
+            Tag: 'TestAlert',
+          },
+        ],
         Conquests: [{ Type: 'CT_LAB', Missions: [], Variables: [] }],
         SyndicateMissions: [
           {
@@ -179,16 +193,20 @@ describe('mapWorldstate', () => {
           },
         ],
       },
-      '2026-10-10T12:00:00.000Z',
+      fetchedAt,
     );
 
-    // Wave 0：上游类型已读入但 mapper 仍返回空安全默认，供 Wave 1 填入。
+    // 其余任务模块仍由 Wave 1 各 PR 填入；alerts 本 PR 已接通。
     expect(dto.sortie).toBeNull();
     expect(dto.archon).toBeNull();
     expect(dto.circuit).toBeNull();
     expect(dto.bounties).toEqual([]);
     expect(dto.arbitration).toBeNull();
-    expect(dto.alerts).toEqual([]);
     expect(dto.archimedea).toBeNull();
+    expect(dto.alerts).toHaveLength(1);
+    expect(dto.alerts[0]?.id).toBe('alert-1');
+    expect(dto.alerts[0]?.tag).toBe('TestAlert');
+    expect(dto.alerts[0]?.credits).toBe(5000);
+    expect(dto.alerts[0]?.missionType?.zh).toBe('移动防御');
   });
 });

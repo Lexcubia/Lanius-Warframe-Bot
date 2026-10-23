@@ -15,6 +15,7 @@ import '@fontsource/noto-sans-sc/latin-700.css';
 import { createApp, type App, type Component } from 'vue';
 
 import {
+  AlertsModuleCard,
   CyclesModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
@@ -40,6 +41,7 @@ export type CardHostKind =
   | 'fissures'
   | 'invasions'
   | 'nightwave'
+  | 'alerts'
   | 'help'
   | 'market'
   | 'riven'
@@ -96,6 +98,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return InvasionsModuleCard;
     case 'nightwave':
       return NightwaveModuleCard;
+    case 'alerts':
+      return AlertsModuleCard;
     case 'help':
       return HelpModuleCard;
     case 'market':

@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { shutdownVueCardCapture } from './chromium/capture-vue-card.js';
 import {
+  renderAlertsCard,
   renderFissuresCard,
   renderInvasionsCard,
   renderNightwaveCard,
@@ -127,6 +128,25 @@ const sampleWorldstate = {
       },
     ],
   },
+  alerts: [
+    {
+      id: 'alert-1',
+      tag: 'RoadToTauEvent',
+      node: { zh: '测试节点（地球）', en: 'Test Node (Earth)' },
+      missionType: { zh: '移动防御', en: 'Mobile Defense' },
+      faction: { zh: 'Infested', en: 'Infested' },
+      credits: 17000,
+      expiry: '2099-01-01T00:00:00.000Z',
+      rewards: [
+        {
+          uniqueName: '/Lotus/Types/Gameplay/Events/RoadToTauEvent/RoadToTauEventResource',
+          name: { zh: '活动资源', en: 'Event Resource' },
+          iconUrl: TINY_ICON,
+          quantity: 50,
+        },
+      ],
+    },
+  ],
 };
 
 describe('module card renders', () => {
@@ -165,6 +185,22 @@ describe('module card renders', () => {
       worldstate: sampleWorldstate,
     });
     expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  }, 60_000);
+
+  it('renders alerts PNG with rows and empty state', async () => {
+    const withData = await renderAlertsCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(withData.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(withData.length).toBeGreaterThan(1000);
+
+    const empty = await renderAlertsCard({
+      locale: 'zh',
+      worldstate: { ...sampleWorldstate, alerts: [] },
+    });
+    expect(empty.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(empty.length).toBeGreaterThan(500);
   }, 60_000);
 
   it('renders void trader PNG', async () => {

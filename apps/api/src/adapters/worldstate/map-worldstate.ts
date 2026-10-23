@@ -1,5 +1,6 @@
 import type { CatalogItemDto, InvasionDto, NightwaveDto, Realm, WorldstateDto } from '@lanius/core';
 
+import { mapAlerts } from './map-alerts.js';
 import { mapOpenWorldCycles } from './map-cycles.js';
 import { mapFissures } from './map-fissures.js';
 import { NIGHTWAVE_KIND_LABELS, resolveNightwaveChallengeKind } from './nightwave-kind.js';
@@ -37,15 +38,14 @@ export function mapWorldstate(
     .filter((row): row is InvasionDto => row !== null);
 
   const nowMs = Date.parse(fetchedAt);
-  const fissureNow = Number.isFinite(nowMs) ? nowMs : Date.now();
+  const snapshotNow = Number.isFinite(nowMs) ? nowMs : Date.now();
 
-  // Wave 0：任务模块切片先挂空安全默认，真实 mapper 由 Wave 1 各 PR 填入。
-  // raw.Sorties / LiteSorties / EndlessXpSchedule / Alerts / Conquests / Jobs 类型已就绪。
+  // Wave 1 alerts：真实映射；其余任务模块仍由各并行 PR 填入（空安全默认）。
   return {
     realm,
     fetchedAt,
     cycles: mapOpenWorldCycles(raw),
-    fissures: mapFissures(raw, fissureNow),
+    fissures: mapFissures(raw, snapshotNow),
     invasions,
     nightwave: mapNightwave(raw.SeasonInfo),
     sortie: null,
@@ -53,7 +53,7 @@ export function mapWorldstate(
     circuit: null,
     bounties: [],
     arbitration: null,
-    alerts: [],
+    alerts: mapAlerts(raw, snapshotNow),
     archimedea: null,
   };
 }

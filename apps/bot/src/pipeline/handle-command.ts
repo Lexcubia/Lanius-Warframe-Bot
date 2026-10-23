@@ -1,5 +1,6 @@
 import { createLaniusApiClient } from '@lanius/api';
 import {
+  renderAlertsCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -42,6 +43,7 @@ import {
   formatVoidTraderText,
 } from '../formatters/traders-text.js';
 import {
+  formatAlertsText,
   formatFissuresText,
   formatInvasionsText,
   formatNightwaveText,
@@ -122,14 +124,13 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 0：任务模块 catalog / ModuleId 已占坑；完整图卡与 mapper 待 Wave 1。
+  // Wave 1：alerts 已接通；其余任务模块仍占坑 stub。
   if (
     intent.type === 'sortie' ||
     intent.type === 'archon' ||
     intent.type === 'circuit' ||
     intent.type === 'bounties' ||
     intent.type === 'arbitration' ||
-    intent.type === 'alerts' ||
     intent.type === 'archimedea'
   ) {
     const stub =
@@ -384,7 +385,9 @@ export async function handleCommand(
         ? 'invasions'
         : intent.type === 'nightwave'
           ? 'nightwave'
-          : 'worldstate';
+          : intent.type === 'alerts'
+            ? 'alerts'
+            : 'worldstate';
 
   let worldstate: WorldstateDto = envelope.data;
   let filterSummary: string | undefined;
@@ -408,9 +411,13 @@ export async function handleCommand(
           ? formatNightwaveText(envelope.data, locale, {
               stale: envelope.meta.stale,
             })
-          : formatWorldstateText(envelope.data, locale, {
-              stale: envelope.meta.stale,
-            });
+          : moduleKind === 'alerts'
+            ? formatAlertsText(envelope.data, locale, {
+                stale: envelope.meta.stale,
+              })
+            : formatWorldstateText(envelope.data, locale, {
+                stale: envelope.meta.stale,
+              });
 
   const renderInput = withCardSkin(
     {
@@ -449,7 +456,9 @@ export async function handleCommand(
         ? renderInvasionsCard(renderInput)
         : moduleKind === 'nightwave'
           ? renderNightwaveCard(renderInput)
-          : renderWorldstateCard(renderInput),
+          : moduleKind === 'alerts'
+            ? renderAlertsCard(renderInput)
+            : renderWorldstateCard(renderInput),
     label: moduleKind,
   });
 }

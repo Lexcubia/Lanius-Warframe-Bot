@@ -9,6 +9,7 @@ export {
 } from './chromium/capture-vue-card.js';
 export type { CardKind } from './chromium/card-kind.js';
 export {
+  renderAlertsCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
