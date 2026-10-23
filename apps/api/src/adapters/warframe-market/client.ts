@@ -22,7 +22,18 @@ export type WfmLanguage = 'zh-hans' | 'en';
 export type WfmItemRow = {
   url_name: string;
   item_name: string;
+  /** 相对或绝对 thumb；服务层可转绝对 URL */
   thumb?: string;
+};
+
+/**
+ * 紫卡属性目录行（v2 `/riven/attributes`）。
+ */
+export type WfmRivenAttributeCatalogRow = {
+  /** 属性 slug（与拍卖 attributes.url_name 对齐） */
+  url_name: string;
+  /** 展示名（按请求 Language 取 i18n） */
+  item_name: string;
 };
 
 /**
@@ -93,12 +104,21 @@ export type WfmRivenAuctionSearchOptions = {
 type WfmV2I18nBlock = {
   name?: string;
   thumb?: string;
+  icon?: string;
 };
 
 /**
  * v2 `/items` / `/riven/weapons` 行。
  */
 type WfmV2CatalogRow = {
+  slug?: string;
+  i18n?: Partial<Record<WfmLanguage | string, WfmV2I18nBlock>>;
+};
+
+/**
+ * v2 `/riven/attributes` 行。
+ */
+type WfmV2RivenAttributeRow = {
   slug?: string;
   i18n?: Partial<Record<WfmLanguage | string, WfmV2I18nBlock>>;
 };
@@ -195,6 +215,34 @@ export class WarframeMarketClient {
   async listRivenItems(language: WfmLanguage = this.defaultLanguage): Promise<WfmItemRow[]> {
     const json = await this.getJson<{ data?: WfmV2CatalogRow[] }>('/riven/weapons');
     return mapCatalogRows(json.data ?? [], language);
+  }
+
+  /**
+   * 拉取紫卡属性目录（v2 `/riven/attributes`；`Language` 头决定 i18n 优先语种）。
+   *
+   * @param language - 展示名语言（zh-hans / en）
+   * @returns slug → 展示名
+   */
+  async listRivenAttributes(
+    language: WfmLanguage = this.defaultLanguage,
+  ): Promise<WfmRivenAttributeCatalogRow[]> {
+    const json = await this.getJson<{ data?: WfmV2RivenAttributeRow[] }>('/riven/attributes', {
+      language,
+    });
+    const out: WfmRivenAttributeCatalogRow[] = [];
+    for (const row of json.data ?? []) {
+      const slug = row.slug?.trim();
+      if (!slug) {
+        continue;
+      }
+      const localized = row.i18n?.[language]?.name?.trim();
+      const fallbackEn = row.i18n?.en?.name?.trim();
+      out.push({
+        url_name: slug,
+        item_name: localized || fallbackEn || slug.replace(/_/g, ' '),
+      });
+    }
+    return out;
   }
 
   /**

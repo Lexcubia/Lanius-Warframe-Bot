@@ -229,20 +229,20 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     command: '/wm',
     roots: ['wm', '市场', 'market'],
     summary: {
-      zh: '锁定一件 WM 物品的在线/游戏中卖单（价升序，每页 10）',
-      en: 'Lock one WM item; online/ingame sell orders (price↑, 10/page)',
+      zh: '锁定一件 WM 物品的在线/游戏中卖单（价升序，每页 10；可点私聊N复制 /w）',
+      en: 'Lock one WM item; online/ingame sell orders (price↑, 10/page; Whisper N → /w)',
     },
     usage: {
-      zh: '/wm <物品名> [等级=N] [p=页码]',
-      en: '/wm <item> [rank=N] [p=page]',
+      zh: '/wm <物品名> [等级=N] [p=页码] [私聊=N]',
+      en: '/wm <item> [rank=N] [p=page] [whisper=N]',
     },
     params: [
       {
         name: 'query',
         required: true,
         description: {
-          zh: '物品中英文名或 slug；多命中取评分最高一件（含套装）',
-          en: 'Item name (zh/en) or slug; best single match (sets preferred)',
+          zh: '物品中英文名或 slug（WFM zh-hans/英文索引；多命中取评分最高一件）',
+          en: 'Item name (WFM zh-hans/en) or slug; best single match (sets preferred)',
         },
       },
       {
@@ -261,28 +261,42 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
           en: 'Page number (from 1; keyboard replays filters)',
         },
       },
+      {
+        name: '私聊 / whisper',
+        required: false,
+        description: {
+          zh: '本页卖单序号；返回可粘贴到游戏的 `/w 卖家 …` 文案',
+          en: 'Order index on page; returns pasteable `/w seller …` line',
+        },
+      },
     ],
-    examples: ['/wm 红晶', '/wm Nova Prime 一套', '/wm 持续力 等级=10', '/wm axiom p=2'],
+    examples: [
+      '/wm 红晶',
+      '/wm 拉特昂',
+      '/wm Nova Prime 一套',
+      '/wm 持续力 等级=10',
+      '/wm 拉特昂 私聊=1',
+    ],
   },
   {
     id: 'riven',
     command: '/zk',
     roots: ['zk', '紫卡', 'riven'],
     summary: {
-      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序，每页 10）',
-      en: 'Lock one weapon; online/ingame riven auctions (price↑, 10/page)',
+      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序，每页 10；可点私聊N复制 /w）',
+      en: 'Lock one weapon; online/ingame riven auctions (price↑, 10/page; Whisper N → /w)',
     },
     usage: {
-      zh: '/zk <武器名> [等级=N] [段位=N] [循环=N] [p=页码]',
-      en: '/zk <weapon> [rank=N] [mastery=N] [rerolls=N] [p=page]',
+      zh: '/zk <武器名> [等级=N] [段位=N] [循环=N] [p=页码] [私聊=N]',
+      en: '/zk <weapon> [rank=N] [mastery=N] [rerolls=N] [p=page] [whisper=N]',
     },
     params: [
       {
         name: 'query',
         required: true,
         description: {
-          zh: '武器中英文名或 url_name；多命中取最佳一件',
-          en: 'Weapon name (zh/en) or url_name; best single match',
+          zh: '武器中英文名或 url_name（WFM 官方译名，如「拉特昂」）',
+          en: 'Weapon name (WFM zh-hans/en) or url_name; best single match',
         },
       },
       {
@@ -317,8 +331,21 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
           en: 'Page number (from 1; keyboard replays filters)',
         },
       },
+      {
+        name: '私聊 / whisper',
+        required: false,
+        description: {
+          zh: '本页拍卖序号；返回可粘贴到游戏的 `/w 卖家 …` 文案',
+          en: 'Auction index on page; returns pasteable `/w seller …` line',
+        },
+      },
     ],
-    examples: ['/zk 拉特龙', '/zk latron 等级=0 段位=8', '/zk 拉特龙 循环=2 p=2'],
+    examples: [
+      '/zk 拉特昂',
+      '/zk latron 等级=0 段位=8',
+      '/zk 拉特昂 循环=2 p=2',
+      '/zk 拉特昂 私聊=1',
+    ],
   },
   {
     id: 'mode',

@@ -27,7 +27,12 @@ import { parseQqSendFailure, uploadCardPng } from '@lanius/qq-official';
 import type { BotConfig } from '../config.js';
 import type { BotIntent } from '../commands/parse-command.js';
 import { formatHelpText } from '../formatters/help-text.js';
-import { formatMarketText, formatRivenText } from '../formatters/market-text.js';
+import {
+  formatMarketText,
+  formatMarketWhisperReply,
+  formatRivenText,
+  formatRivenWhisperReply,
+} from '../formatters/market-text.js';
 import {
   formatRotationText,
   formatVarziaText,
@@ -151,6 +156,14 @@ export async function handleCommand(
       return sendFail(deps, target, locale, envelope.error.message);
     }
     const data = envelope.data;
+
+    // 私聊按钮：只回可粘贴 /w 文案，避免重绘整页卡片。
+    if (intent.whisperIndex !== undefined) {
+      const whisper = formatMarketWhisperReply(data, intent.whisperIndex - 1, locale);
+      const sent = await deps.qq.sendMarkdown(target, whisper);
+      return sent.ok ? 'market-whisper' : `send-failed:${sent.detail ?? 'unknown'}`;
+    }
+
     const text = formatMarketText(data, locale);
     const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
     const keyboard = buildMarketPageKeyboard({
@@ -164,7 +177,9 @@ export async function handleCommand(
       },
       page: data.page,
       totalPages,
+      orderCount: data.orders.length,
     });
+    const hasWhisper = data.orders.length > 0;
     return replyCard({
       deps,
       target,
@@ -173,7 +188,10 @@ export async function handleCommand(
       render: () => renderMarketCard({ market: data, locale }),
       label: 'market',
       keyboard: keyboard ?? undefined,
-      hint: keyboard != null ? marketPageMarkdownHint(locale, data.page, totalPages) : undefined,
+      hint:
+        keyboard != null
+          ? marketPageMarkdownHint(locale, data.page, totalPages, hasWhisper)
+          : undefined,
     });
   }
 
@@ -193,6 +211,13 @@ export async function handleCommand(
       return sendFail(deps, target, locale, envelope.error.message);
     }
     const data = envelope.data;
+
+    if (intent.whisperIndex !== undefined) {
+      const whisper = formatRivenWhisperReply(data, intent.whisperIndex - 1, locale);
+      const sent = await deps.qq.sendMarkdown(target, whisper);
+      return sent.ok ? 'riven-whisper' : `send-failed:${sent.detail ?? 'unknown'}`;
+    }
+
     const text = formatRivenText(data, locale);
     const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
     const keyboard = buildRivenPageKeyboard({
@@ -209,7 +234,9 @@ export async function handleCommand(
       },
       page: data.page,
       totalPages,
+      orderCount: data.orders.length,
     });
+    const hasWhisper = data.orders.length > 0;
     return replyCard({
       deps,
       target,
@@ -218,7 +245,10 @@ export async function handleCommand(
       render: () => renderRivenCard({ riven: data, locale }),
       label: 'riven',
       keyboard: keyboard ?? undefined,
-      hint: keyboard != null ? rivenPageMarkdownHint(locale, data.page, totalPages) : undefined,
+      hint:
+        keyboard != null
+          ? rivenPageMarkdownHint(locale, data.page, totalPages, hasWhisper)
+          : undefined,
     });
   }
 

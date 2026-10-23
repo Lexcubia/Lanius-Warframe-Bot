@@ -57,14 +57,19 @@ describe('parseCommand', () => {
       type: 'riven',
       query: 'latron',
     });
-    expect(parseCommand('/zk 拉特龙 等级=0 段位=8 循环=2 p=2').intent).toEqual({
+    expect(parseCommand('/zk 拉特昂 等级=0 段位=8 循环=2 p=2').intent).toEqual({
       type: 'riven',
-      query: '拉特龙',
+      query: '拉特昂',
       rank: 0,
       mastery: 8,
       minRerolls: 2,
       maxRerolls: 2,
       page: 2,
+    });
+    expect(parseCommand('/wm 拉特昂 私聊=1').intent).toEqual({
+      type: 'market',
+      query: '拉特昂',
+      whisperIndex: 1,
     });
   });
 

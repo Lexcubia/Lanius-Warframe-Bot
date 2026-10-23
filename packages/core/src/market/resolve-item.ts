@@ -19,16 +19,6 @@ export type ResolvedItemHit = {
 };
 
 /**
- * 社区常用别名 → 规范名/英文 slug（双向扩展查询候选）。
- * 例：玩家常写「拉特龙」，WFM zh-hans 实为「拉特昂」。
- */
-const NAME_ALIASES: Readonly<Record<string, readonly string[]>> = {
-  拉特龙: ['拉特昂', 'latron'],
-  拉特昂: ['拉特龙', 'latron'],
-  latron: ['拉特昂', '拉特龙'],
-};
-
-/**
  * 去掉空白并小写，便于包含匹配。
  *
  * @param value - 原始字符串
@@ -90,31 +80,15 @@ function queryMentionsVariant(query: string): boolean {
 }
 
 /**
- * 展开别名后的查询候选（含原串，去重）。
+ * 展开查询候选（仅原串；不再使用社区自造别名表）。
+ * 搜索只依赖 WFM 索引中的 zh-hans / 英文名与 slug。
  *
  * @param query - 用户输入
- * @returns 用于打分的候选列表
+ * @returns 用于打分的候选列表（至多一项）
  */
 export function expandQueryCandidates(query: string): string[] {
   const trimmed = query.trim();
-  if (!trimmed) {
-    return [];
-  }
-  const key = trimmed.toLowerCase();
-  const aliasKey = NAME_ALIASES[trimmed] ? trimmed : NAME_ALIASES[key] ? key : trimmed;
-  const extras = NAME_ALIASES[aliasKey] ?? NAME_ALIASES[trimmed] ?? NAME_ALIASES[key] ?? [];
-  const out = [trimmed, ...extras];
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const item of out) {
-    const token = item.trim();
-    if (!token) continue;
-    const fold = token.toLowerCase();
-    if (seen.has(fold)) continue;
-    seen.add(fold);
-    unique.push(token);
-  }
-  return unique;
+  return trimmed ? [trimmed] : [];
 }
 
 /**
@@ -189,7 +163,7 @@ export function scoreItemMatch(query: string, row: ItemIndexRow): number {
 }
 
 /**
- * 对别名展开后的全部候选取最高分。
+ * 对查询候选取最高分（现仅原串；保留函数名以兼容调用方）。
  *
  * @param query - 用户原始查询
  * @param row - 索引行

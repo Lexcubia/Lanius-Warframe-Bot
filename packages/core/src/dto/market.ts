@@ -18,6 +18,10 @@ export type MarketSellerStatus = z.infer<typeof MarketSellerStatusSchema>;
 export const MarketResolvedTargetSchema = z.object({
   urlName: z.string().min(1),
   name: LocalizedNameSchema,
+  /**
+   * 物品/武器图标绝对 URL（WFM thumb 或官方 CDN）；缺失时卡片可降级占位。
+   */
+  iconUrl: z.string().url().optional(),
 });
 
 /**

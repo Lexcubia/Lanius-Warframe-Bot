@@ -33,6 +33,7 @@ export { default as OfficialItemIcon } from './components/OfficialItemIcon.vue';
 export { default as DamageTypeIcon } from './components/DamageTypeIcon.vue';
 export { default as ValenceBonusBar } from './components/ValenceBonusBar.vue';
 export { resolveValenceElementIconSrc } from './lib/valence-element-icon.js';
+export { resolvePlatinumIconSrc } from './lib/platinum-icon.js';
 export { default as InvasionsModuleCard } from './components/InvasionsModuleCard.vue';
 export { default as NightwaveModuleCard } from './components/NightwaveModuleCard.vue';
 export { default as HelpModuleCard } from './components/HelpModuleCard.vue';
