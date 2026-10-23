@@ -53,6 +53,23 @@ export async function renderNightwaveCard(input: RenderWorldstateCardInput): Pro
 }
 
 /**
+ * 渲染「科研」独立模块 PNG（精英 / 时光；与警报无关）。
+ *
+ * @param input - 世界状态载荷；可选 `kind` 过滤子类（勿与 CardKind 混淆）
+ * @returns PNG 字节
+ */
+export async function renderArchimedeaCard(
+  input: RenderWorldstateCardInput & { kind?: import('@lanius/core').ArchimedeaKind },
+): Promise<Buffer> {
+  const { kind: archimedeaKind, ...rest } = input;
+  return captureVueCard({
+    kind: 'archimedea',
+    ...rest,
+    ...(archimedeaKind ? { archimedeaKind } : {}),
+  });
+}
+
+/**
  * 渲染「虚空裂隙」独立模块 PNG（Vue + Playwright 节点截图）。
  *
  * @param input - 世界状态载荷

@@ -221,7 +221,17 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
   {
     id: 'archimedea',
     command: '/科研',
-    roots: ['科研', '精英科研', '时光科研', 'archimedea', 'deeparchimedea'],
+    roots: [
+      '科研',
+      '精英科研',
+      '时光科研',
+      'archimedea',
+      'deeparchimedea',
+      'temporalarchimedea',
+      'deep',
+      'temporal',
+      'hex',
+    ],
     summary: {
       zh: '查看精英科研与时光科研（独立于警报）',
       en: 'Deep / Temporal Archimedea (separate from alerts)',

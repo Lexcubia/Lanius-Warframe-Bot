@@ -45,7 +45,8 @@ describe('parseCommand', () => {
     expect(parseCommand('/仲裁').intent).toEqual({ type: 'arbitration' });
     expect(parseCommand('/警报').intent).toEqual({ type: 'alerts' });
     expect(parseCommand('/科研').intent).toEqual({ type: 'archimedea' });
-    expect(parseCommand('/精英科研').intent).toEqual({ type: 'archimedea' });
+    expect(parseCommand('/精英科研').intent).toEqual({ type: 'archimedea', kind: 'lab' });
+    expect(parseCommand('/时光科研').intent).toEqual({ type: 'archimedea', kind: 'hex' });
     expect(parseCommand('/帮助').intent).toEqual({ type: 'help' });
     expect(parseCommand('/help zk').intent).toEqual({
       type: 'help',

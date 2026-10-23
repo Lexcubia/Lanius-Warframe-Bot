@@ -5,6 +5,7 @@ import {
   isFissureQueryActive,
   parseFissureFilterTokens,
   resolveModuleToken,
+  type ArchimedeaKind,
   type FissureQueryFilter,
   type PushFrequency,
   type SubscribableModuleId,
@@ -27,7 +28,8 @@ export type BotIntent =
   | { type: 'bounties' }
   | { type: 'arbitration' }
   | { type: 'alerts' }
-  | { type: 'archimedea' }
+  /** `kind`：精英=`lab`、时光=`hex`；裸 `/科研` 不带 kind 同时摘要两者 */
+  | { type: 'archimedea'; kind?: ArchimedeaKind }
   | {
       type: 'market';
       query: string;
@@ -191,6 +193,14 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     };
   }
 
+  if (command.id === 'archimedea') {
+    const kind = resolveArchimedeaKind(rootToken);
+    return {
+      matched: true,
+      intent: kind ? { type: 'archimedea', kind } : { type: 'archimedea' },
+    };
+  }
+
   if (
     command.id === 'worldstate' ||
     command.id === 'invasions' ||
@@ -201,7 +211,6 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     command.id === 'bounties' ||
     command.id === 'arbitration' ||
     command.id === 'alerts' ||
-    command.id === 'archimedea' ||
     command.id === 'voidTrader' ||
     command.id === 'varzia' ||
     command.id === 'tenetRotation' ||
@@ -211,6 +220,34 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
   }
 
   return { matched: true, intent: { type: 'unknown', raw: body } };
+}
+
+/**
+ * 由指令根词解析科研子类过滤。
+ *
+ * @param rootToken - 用户输入的根（已去前导 `/`）
+ * @returns `lab` / `hex`；总览命令返回 `undefined`
+ */
+function resolveArchimedeaKind(rootToken: string): ArchimedeaKind | undefined {
+  const key = rootToken.trim().toLowerCase();
+  if (
+    key === '精英科研' ||
+    key === 'deeparchimedea' ||
+    key === 'deep' ||
+    key === 'deep-archimedea'
+  ) {
+    return 'lab';
+  }
+  if (
+    key === '时光科研' ||
+    key === 'temporalarchimedea' ||
+    key === 'temporal' ||
+    key === 'temporal-archimedea' ||
+    key === 'hex'
+  ) {
+    return 'hex';
+  }
+  return undefined;
 }
 
 /**

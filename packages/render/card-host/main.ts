@@ -1,4 +1,5 @@
 import type {
+  ArchimedeaKind,
   HelpDto,
   Locale,
   MarketSearchDto,
@@ -17,6 +18,7 @@ import { createApp, type App, type Component } from 'vue';
 import {
   AlertsModuleCard,
   ArbitrationModuleCard,
+  ArchimedeaModuleCard,
   CyclesModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
@@ -44,6 +46,7 @@ export type CardHostKind =
   | 'nightwave'
   | 'alerts'
   | 'arbitration'
+  | 'archimedea'
   | 'help'
   | 'market'
   | 'riven'
@@ -61,6 +64,8 @@ export type CardHostPayload = {
   /** QQ 皮肤 id（非法值回落 light） */
   skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
+  /** 科研子类过滤（仅 archimedea） */
+  archimedeaKind?: ArchimedeaKind;
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
@@ -104,6 +109,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return AlertsModuleCard;
     case 'arbitration':
       return ArbitrationModuleCard;
+    case 'archimedea':
+      return ArchimedeaModuleCard;
     case 'help':
       return HelpModuleCard;
     case 'market':
@@ -158,6 +165,11 @@ function mountCard(payload: CardHostPayload): void {
     props.varzia = payload.varzia;
   } else if (payload.kind === 'weaponRotation') {
     props.rotation = payload.weaponRotation;
+  } else if (payload.kind === 'archimedea') {
+    props.worldstate = payload.worldstate;
+    if (payload.archimedeaKind) {
+      props.kind = payload.archimedeaKind;
+    }
   } else {
     props.worldstate = payload.worldstate;
   }

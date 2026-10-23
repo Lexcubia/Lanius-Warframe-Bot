@@ -2,6 +2,7 @@ import { createLaniusApiClient } from '@lanius/api';
 import {
   renderAlertsCard,
   renderArbitrationCard,
+  renderArchimedeaCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -43,6 +44,7 @@ import {
   formatVarziaText,
   formatVoidTraderText,
 } from '../formatters/traders-text.js';
+import { formatArchimedeaText } from '../formatters/archimedea-text.js';
 import {
   formatAlertsText,
   formatArbitrationText,
@@ -126,13 +128,12 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 1：alerts / arbitration 已接通；其余任务模块仍占坑 stub。
+  // Wave 1：alerts / arbitration / archimedea 已接通；其余任务模块仍占坑 stub。
   if (
     intent.type === 'sortie' ||
     intent.type === 'archon' ||
     intent.type === 'circuit' ||
-    intent.type === 'bounties' ||
-    intent.type === 'archimedea'
+    intent.type === 'bounties'
   ) {
     const stub =
       locale === 'en'
@@ -140,6 +141,37 @@ export async function handleCommand(
         : '数据接入中，请稍后再试。';
     const sent = await deps.qq.sendMarkdown(target, stub);
     return sent.ok ? `${intent.type}-stub` : `send-failed:${sent.detail ?? 'unknown'}`;
+  }
+
+  if (intent.type === 'archimedea') {
+    const envelope = await api.getWorldstate(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const kind = intent.kind;
+    const text = formatArchimedeaText(envelope.data, locale, {
+      stale: envelope.meta.stale,
+      ...(kind ? { kind } : {}),
+    });
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderArchimedeaCard(
+          withCardSkin(
+            {
+              worldstate: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+              ...(kind ? { kind } : {}),
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'archimedea',
+    });
   }
 
   if (intent.type === 'help' || intent.type === 'unknown') {

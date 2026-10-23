@@ -5,6 +5,7 @@ import { shutdownVueCardCapture } from './chromium/capture-vue-card.js';
 import {
   renderAlertsCard,
   renderArbitrationCard,
+  renderArchimedeaCard,
   renderFissuresCard,
   renderInvasionsCard,
   renderNightwaveCard,
@@ -222,6 +223,14 @@ describe('module card renders', () => {
     });
     expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
     expect(png.length).toBeGreaterThan(1000);
+  }, 60_000);
+
+  it('renders archimedea PNG (empty-safe)', async () => {
+    const png = await renderArchimedeaCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
   }, 60_000);
 
   it('renders void trader PNG', async () => {

@@ -1,4 +1,5 @@
 import type {
+  ArchimedeaKind,
   HelpDto,
   Locale,
   MarketSearchDto,
@@ -29,6 +30,11 @@ export type CaptureVueCardInput = {
    */
   skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
+  /**
+   * 科研子类过滤（`lab` / `hex`）。
+   * 与 `kind: CardKind` 字段语义不同，勿混用。
+   */
+  archimedeaKind?: ArchimedeaKind;
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
