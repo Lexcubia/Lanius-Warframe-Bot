@@ -192,8 +192,25 @@ jobs:
             REF='${{ steps.ver.outputs.ref }}'
             REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
             cd "${DEPLOY_DIR}"
-            # 先 fetch，并用目标 ref 上的脚本（写入 deploy/ 且设置 LANIUS_REPO_ROOT，避免 /tmp 把 repo 解析成 /）
-            git -C "${REPO_ROOT}" fetch origin --prune '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+            # 机房常连不上 github.com：先用镜像拉齐 refs，再取目标 ref 上的 update-container.sh
+            fetch_ok=0
+            for remote in \
+              origin \
+              https://github.com/Lexcubia/Lanius-Warframe-Bot.git \
+              https://gitclone.com/github.com/Lexcubia/Lanius-Warframe-Bot.git \
+              https://ghfast.top/https://github.com/Lexcubia/Lanius-Warframe-Bot.git
+            do
+              echo "git fetch via ${remote}"
+              if git -C "${REPO_ROOT}" fetch "${remote}" --prune \
+                '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'; then
+                fetch_ok=1
+                break
+              fi
+            done
+            if [ "${fetch_ok}" != "1" ]; then
+              echo "git fetch failed on all remotes/mirrors" >&2
+              exit 1
+            fi
             git -C "${REPO_ROOT}" show "${REF}:deploy/update-container.sh" > "${DEPLOY_DIR}/update-container.ref.sh"
             chmod +x "${DEPLOY_DIR}/update-container.ref.sh"
             export LANIUS_UPDATE_REF="${REF}"
