@@ -213,7 +213,9 @@ const marketSample = {
   query: 'primed continuity',
   resolved: {
     urlName: 'primed_continuity',
-    name: { zh: 'Primed Continuity', en: 'Primed Continuity' },
+    name: { zh: '持久力 Prime', en: 'Primed Continuity' },
+    iconUrl:
+      'https://warframe.market/static/assets/items/images/en/thumbs/primed_continuity.thumb.png',
   },
   page: 1,
   pageSize: 10,
@@ -246,7 +248,8 @@ const rivenSample = {
   query: 'lanka',
   resolved: {
     urlName: 'lanka',
-    name: { zh: 'Lanka', en: 'Lanka' },
+    name: { zh: '兰卡', en: 'Lanka' },
+    iconUrl: 'https://warframe.market/static/assets/items/images/en/thumbs/lanka.thumb.png',
   },
   page: 1,
   pageSize: 10,
@@ -257,9 +260,15 @@ const rivenSample = {
       attributes: [
         {
           urlName: 'critical_chance',
-          name: { zh: 'critical chance', en: 'critical chance' },
+          name: { zh: '暴击几率', en: 'Critical Chance' },
           value: 18.6,
           positive: true,
+        },
+        {
+          urlName: 'damage_vs_corpus',
+          name: { zh: '对 Corpus 伤害', en: 'Damage to Corpus' },
+          value: -6.2,
+          positive: false,
         },
       ],
       mastery: 10,

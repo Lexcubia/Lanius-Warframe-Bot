@@ -21,13 +21,10 @@ const RIVEN_INDEX = [
 ] as const;
 
 describe('expandQueryCandidates', () => {
-  it('expands 拉特龙 / 拉特昂 aliases', () => {
-    expect(expandQueryCandidates('拉特龙')).toEqual(
-      expect.arrayContaining(['拉特龙', '拉特昂', 'latron']),
-    );
-    expect(expandQueryCandidates('拉特昂')).toEqual(
-      expect.arrayContaining(['拉特昂', '拉特龙', 'latron']),
-    );
+  it('returns only the original query (no community alias table)', () => {
+    expect(expandQueryCandidates('拉特昂')).toEqual(['拉特昂']);
+    expect(expandQueryCandidates('拉特龙')).toEqual(['拉特龙']);
+    expect(expandQueryCandidates('latron')).toEqual(['latron']);
   });
 });
 
@@ -51,15 +48,18 @@ describe('resolveBestItem', () => {
     expect(hit?.urlName).toBe('nova_prime_set');
   });
 
-  it('locks latron riven weapon for 拉特昂 and community alias 拉特龙', () => {
+  it('locks latron riven weapon via WFM zh-hans 拉特昂 or en slug', () => {
     expect(resolveBestItem('拉特昂', RIVEN_INDEX)?.urlName).toBe('latron');
-    expect(resolveBestItem('拉特龙', RIVEN_INDEX)?.urlName).toBe('latron');
     expect(resolveBestItem('latron', RIVEN_INDEX)?.urlName).toBe('latron');
   });
 
-  it('locks latron prime set on market index for 拉特昂 / 拉特龙', () => {
+  it('does not invent 拉特龙 as an alias for 拉特昂', () => {
+    expect(resolveBestItem('拉特龙', RIVEN_INDEX)).toBeNull();
+    expect(resolveBestItem('拉特龙', MARKET_INDEX)).toBeNull();
+  });
+
+  it('locks latron prime set on market index for official 拉特昂', () => {
     expect(resolveBestItem('拉特昂', MARKET_INDEX)?.urlName).toBe('latron_prime_set');
-    expect(resolveBestItem('拉特龙', MARKET_INDEX)?.urlName).toBe('latron_prime_set');
   });
 
   it('locks wraith set when query names the variant', () => {

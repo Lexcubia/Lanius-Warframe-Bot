@@ -8,6 +8,10 @@ export type ParsedMarketArgs = {
   modRank?: number;
   /** 页码（从 1） */
   page?: number;
+  /**
+   * 本页卖单序号（从 1）；设置时机器人回复可粘贴的 `/w` 私聊文案，不重发卡片。
+   */
+  whisperIndex?: number;
 };
 
 /**
@@ -24,6 +28,10 @@ export type ParsedRivenArgs = {
   minRerolls?: number;
   maxRerolls?: number;
   page?: number;
+  /**
+   * 本页拍卖序号（从 1）；设置时回复可粘贴的 `/w` 私聊文案。
+   */
+  whisperIndex?: number;
 };
 
 /**
@@ -57,6 +65,7 @@ export function parseMarketArgs(tokens: string[]): ParsedMarketArgs {
   const unknownKeys: string[] = [];
   let modRank: number | undefined;
   let page: number | undefined;
+  let whisperIndex: number | undefined;
 
   for (const token of tokens) {
     const match = KV_TOKEN.exec(token);
@@ -79,6 +88,14 @@ export function parseMarketArgs(tokens: string[]): ParsedMarketArgs {
       page = num;
       continue;
     }
+    if (
+      (key === '私聊' || key === 'whisper' || key === 'w' || key === 'copy') &&
+      num !== undefined &&
+      num >= 1
+    ) {
+      whisperIndex = num;
+      continue;
+    }
     unknownKeys.push(key);
   }
 
@@ -91,6 +108,7 @@ export function parseMarketArgs(tokens: string[]): ParsedMarketArgs {
     query: nameParts.join(' ').trim(),
     ...(modRank !== undefined ? { modRank } : {}),
     ...(page !== undefined ? { page } : {}),
+    ...(whisperIndex !== undefined ? { whisperIndex } : {}),
   };
 }
 
@@ -109,6 +127,7 @@ export function parseRivenArgs(tokens: string[]): ParsedRivenArgs {
   let minRerolls: number | undefined;
   let maxRerolls: number | undefined;
   let page: number | undefined;
+  let whisperIndex: number | undefined;
 
   for (const token of tokens) {
     const match = KV_TOKEN.exec(token);
@@ -148,6 +167,14 @@ export function parseRivenArgs(tokens: string[]): ParsedRivenArgs {
       page = num;
       continue;
     }
+    if (
+      (key === '私聊' || key === 'whisper' || key === 'w' || key === 'copy') &&
+      num !== undefined &&
+      num >= 1
+    ) {
+      whisperIndex = num;
+      continue;
+    }
     unknownKeys.push(key);
   }
 
@@ -162,15 +189,16 @@ export function parseRivenArgs(tokens: string[]): ParsedRivenArgs {
     ...(minRerolls !== undefined ? { minRerolls } : {}),
     ...(maxRerolls !== undefined ? { maxRerolls } : {}),
     ...(page !== undefined ? { page } : {}),
+    ...(whisperIndex !== undefined ? { whisperIndex } : {}),
   };
 }
 
 /**
- * 将市场筛选重放为指令后缀（不含根命令），供翻页键盘使用。
+ * 将市场筛选重放为指令后缀（不含根命令），供翻页/私聊键盘使用。
  *
  * @param args - 已解析的市场参数
  * @param locale - 决定键名用中/英
- * @returns 如 `红晶 等级=5 p=2`
+ * @returns 如 `红晶 等级=5 p=2` 或 `拉特昂 p=2 私聊=1`
  */
 export function formatMarketCommandSuffix(args: ParsedMarketArgs, locale: 'zh' | 'en'): string {
   const parts: string[] = [];
@@ -183,6 +211,9 @@ export function formatMarketCommandSuffix(args: ParsedMarketArgs, locale: 'zh' |
   if (args.page !== undefined && args.page > 1) {
     parts.push(`p=${args.page}`);
   }
+  if (args.whisperIndex !== undefined && args.whisperIndex >= 1) {
+    parts.push(locale === 'en' ? `whisper=${args.whisperIndex}` : `私聊=${args.whisperIndex}`);
+  }
   return parts.join(' ');
 }
 
@@ -191,7 +222,7 @@ export function formatMarketCommandSuffix(args: ParsedMarketArgs, locale: 'zh' |
  *
  * @param args - 已解析的紫卡参数
  * @param locale - 键名语言
- * @returns 如 `拉特龙 等级=0 段位=8 p=2`
+ * @returns 如 `拉特昂 等级=0 段位=8 p=2`
  */
 export function formatRivenCommandSuffix(args: ParsedRivenArgs, locale: 'zh' | 'en'): string {
   const parts: string[] = [];
@@ -220,6 +251,9 @@ export function formatRivenCommandSuffix(args: ParsedRivenArgs, locale: 'zh' | '
   }
   if (args.page !== undefined && args.page > 1) {
     parts.push(`p=${args.page}`);
+  }
+  if (args.whisperIndex !== undefined && args.whisperIndex >= 1) {
+    parts.push(locale === 'en' ? `whisper=${args.whisperIndex}` : `私聊=${args.whisperIndex}`);
   }
   return parts.join(' ');
 }

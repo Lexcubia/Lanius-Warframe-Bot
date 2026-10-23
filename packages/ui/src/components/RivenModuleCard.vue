@@ -1,13 +1,17 @@
 <script setup lang="ts">
 import type { Locale, RivenOrdersDto } from '@lanius/core';
-import { pickLocalized } from '@lanius/core';
+import { formatSellerStatusLabel, pickLocalized } from '@lanius/core';
 
+import { resolvePlatinumIconSrc } from '../lib/platinum-icon.js';
+import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
 
 defineProps<{
   riven: RivenOrdersDto;
   locale: Locale;
 }>();
+
+const platIcon = resolvePlatinumIconSrc();
 </script>
 
 <template>
@@ -16,16 +20,24 @@ defineProps<{
     :subtitle="pickLocalized(riven.resolved.name, locale)"
     :locale="locale"
   >
-    <p class="meta">
-      <template v-if="locale === 'en'">
-        page {{ riven.page }}/{{ Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1) }}
-        · auctions online/ingame · price↑
-      </template>
-      <template v-else>
-        第 {{ riven.page }}/{{ Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1) }} 页 ·
-        在线/游戏中拍卖 · 价↑
-      </template>
-    </p>
+    <div class="head">
+      <OfficialItemIcon
+        class="head__icon"
+        :icon-url="riven.resolved.iconUrl"
+        :alt="pickLocalized(riven.resolved.name, locale)"
+        :size="40"
+      />
+      <p class="meta">
+        <template v-if="locale === 'en'">
+          page {{ riven.page }}/{{ Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1) }}
+          · auctions online/ingame · price↑
+        </template>
+        <template v-else>
+          第 {{ riven.page }}/{{ Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1) }} 页 ·
+          在线/游戏中拍卖 · 价↑
+        </template>
+      </p>
+    </div>
     <p v-if="riven.total === 0" class="empty">
       {{
         locale === 'en'
@@ -40,10 +52,18 @@ defineProps<{
         class="row"
       >
         <div class="name">
-          {{ order.platinum }}
+          <span class="price">{{ order.platinum }}</span>
+          <img
+            class="plat"
+            :src="platIcon"
+            alt=""
+            width="14"
+            height="14"
+            data-lanius-icon="platinum"
+          />
           <span class="unit">{{ locale === 'en' ? 'p' : '白金' }}</span>
-          · {{ order.seller }}
-          <span class="status">({{ order.status }})</span>
+          <span class="seller">· {{ order.seller }}</span>
+          <span class="status">({{ formatSellerStatusLabel(order.status, locale) }})</span>
         </div>
         <div class="prices">
           <span>
@@ -73,10 +93,20 @@ defineProps<{
 </template>
 
 <style scoped>
+.head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.head__icon {
+  flex: 0 0 auto;
+}
 .meta {
-  margin: 0 0 8px;
+  margin: 0;
   font-size: 11px;
   color: var(--lanius-text-muted);
+  line-height: 1.45;
 }
 .empty {
   margin: 0;
@@ -111,11 +141,22 @@ defineProps<{
   }
 }
 .name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
   font-weight: 700;
   font-size: 13px;
 }
+.plat {
+  width: 14px;
+  height: 14px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
 .unit,
-.status {
+.status,
+.seller {
   font-weight: 600;
   font-size: 11px;
   color: var(--lanius-text-muted);

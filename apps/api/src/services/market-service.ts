@@ -1,6 +1,7 @@
 import {
   MARKET_ORDERS_PAGE_SIZE,
   resolveBestItem,
+  resolveWfmAssetUrl,
   type ItemIndexRow,
   type MarketListingDto,
   type MarketOrdersDto,
@@ -13,6 +14,14 @@ import { notFoundError, validationError } from '../lib/http-error.js';
 
 const ITEMS_INDEX_TTL_MS = 6 * 60 * 60_000;
 const ITEM_ORDERS_TTL_MS = 90_000;
+
+/**
+ * 带可选 thumb 的索引行（缓存用）。
+ */
+type ItemIndexRowWithThumb = ItemIndexRow & {
+  /** WFM 相对或绝对 thumb */
+  thumb?: string;
+};
 
 /**
  * 市场卖单查询入参（路由已校验后的业务形）。
@@ -45,6 +54,7 @@ export class MarketService {
 
   /**
    * 中文模糊锁定单一物品后，返回在线/游戏中卖单（价升序分页）。
+   * 仅用 WFM zh-hans / 英文索引，不含社区自造别名。
    *
    * @param input - 查询与分页/等级过滤
    * @returns 卖单分页 DTO
@@ -72,7 +82,10 @@ export class MarketService {
     const enName =
       enIndex.find((row) => row.urlName === hit.urlName)?.itemName ??
       hit.urlName.replace(/_/g, ' ');
-    const zhName = zhIndex.find((row) => row.urlName === hit.urlName)?.itemName ?? hit.itemName;
+    const zhRow = zhIndex.find((row) => row.urlName === hit.urlName);
+    const enRow = enIndex.find((row) => row.urlName === hit.urlName);
+    const zhName = zhRow?.itemName ?? hit.itemName;
+    const iconUrl = resolveWfmAssetUrl(zhRow?.thumb || enRow?.thumb);
 
     const listings = await this.loadSellListings(hit.urlName);
     const filtered =
@@ -90,6 +103,7 @@ export class MarketService {
       resolved: {
         urlName: hit.urlName,
         name: { zh: zhName, en: enName },
+        ...(iconUrl ? { iconUrl } : {}),
       },
       page,
       pageSize,
@@ -106,19 +120,20 @@ export class MarketService {
    * 读取（或刷新）指定语言的物品索引。
    *
    * @param language - WFM Language（缓存键区分）
-   * @returns 索引行
+   * @returns 索引行（含 thumb）
    */
-  private async getItemIndex(language: 'zh-hans' | 'en'): Promise<ItemIndexRow[]> {
-    // v2 前缀：避免旧 v1 空索引缓存污染。
-    const key = `wfm:v2:items:index:${language}`;
-    const fresh = await this.cache.getFresh<ItemIndexRow[]>(key);
+  private async getItemIndex(language: 'zh-hans' | 'en'): Promise<ItemIndexRowWithThumb[]> {
+    // v2 前缀：避免旧 v1 空索引缓存污染；thumb 字段变更时 bump 键。
+    const key = `wfm:v2:items:index:thumb:${language}`;
+    const fresh = await this.cache.getFresh<ItemIndexRowWithThumb[]>(key);
     if (fresh) {
       return fresh.value;
     }
     const items = await this.client.listItems(language);
-    const slim: ItemIndexRow[] = items.map((item) => ({
+    const slim: ItemIndexRowWithThumb[] = items.map((item) => ({
       urlName: item.url_name,
       itemName: item.item_name,
+      ...(item.thumb ? { thumb: item.thumb } : {}),
     }));
     await this.cache.set(key, slim, ITEMS_INDEX_TTL_MS);
     return slim;
@@ -186,14 +201,23 @@ function normalizeSellerStatus(raw: string | undefined): MarketSellerStatus | nu
  * @param secondary - 补充行（通常 en）
  * @returns 去重后的索引
  */
-function mergeIndexRows(primary: ItemIndexRow[], secondary: ItemIndexRow[]): ItemIndexRow[] {
-  const map = new Map<string, ItemIndexRow>();
+function mergeIndexRows(
+  primary: ItemIndexRowWithThumb[],
+  secondary: ItemIndexRowWithThumb[],
+): ItemIndexRowWithThumb[] {
+  const map = new Map<string, ItemIndexRowWithThumb>();
   for (const row of primary) {
     map.set(row.urlName, row);
   }
   for (const row of secondary) {
-    if (!map.has(row.urlName)) {
+    const existing = map.get(row.urlName);
+    if (!existing) {
       map.set(row.urlName, row);
+      continue;
+    }
+    // 补缺 thumb（中文侧偶发缺图时用英文 thumb）。
+    if (!existing.thumb && row.thumb) {
+      map.set(row.urlName, { ...existing, thumb: row.thumb });
     }
   }
   return [...map.values()];

@@ -1,4 +1,7 @@
 import {
+  formatMarketPriceQuantity,
+  formatMarketWhisper,
+  formatSellerStatusLabel,
   pickLocalized,
   type Locale,
   type MarketOrdersDto,
@@ -36,14 +39,20 @@ export function formatMarketText(data: MarketOrdersDto, locale: Locale): string 
         : locale === 'en'
           ? ` r${order.modRank}`
           : ` 等级${order.modRank}`;
-    const status = order.status === 'ingame' ? 'ingame' : 'online';
+    const status = formatSellerStatusLabel(order.status, locale);
     const n = (data.page - 1) * data.pageSize + index + 1;
+    const price = formatMarketPriceQuantity(order.platinum, order.quantity, locale);
     return locale === 'en'
-      ? `${n}. ${order.platinum}p ×${order.quantity}${rank} · ${order.seller} (${status})`
-      : `${n}. ${order.platinum}白金 ×${order.quantity}${rank} · ${order.seller}（${status}）`;
+      ? `${n}. ${price}${rank} · ${order.seller} (${status})`
+      : `${n}. ${price}${rank} · ${order.seller}（${status}）`;
   });
 
-  return [title, header, ...lines].join('\n');
+  const tip =
+    locale === 'en'
+      ? 'Tip: tap Whisper N to get an in-game /w paste line.'
+      : '提示：点「私聊N」可获取游戏内可粘贴的 /w 文案。';
+
+  return [title, header, ...lines, tip].join('\n');
 }
 
 /**
@@ -83,10 +92,77 @@ export function formatRivenText(data: RivenOrdersDto, locale: Locale): string {
       locale === 'en'
         ? `MR${order.mastery} · rank ${order.rank} · rerolls ${order.rerolls}`
         : `段位${order.mastery} · 等级${order.rank} · 循环${order.rerolls}`;
+    const status = formatSellerStatusLabel(order.status, locale);
     return locale === 'en'
-      ? `${n}. ${order.platinum}p · ${order.seller} (${order.status})\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`
-      : `${n}. ${order.platinum}白金 · ${order.seller}（${order.status}）\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`;
+      ? `${n}. ${order.platinum}p · ${order.seller} (${status})\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`
+      : `${n}. ${order.platinum} 白金 · ${order.seller}（${status}）\n   ${meta}${attrs ? `\n   ${attrs}` : ''}`;
   });
 
-  return [title, header, ...lines].join('\n');
+  const tip =
+    locale === 'en'
+      ? 'Tip: tap Whisper N to get an in-game /w paste line.'
+      : '提示：点「私聊N」可获取游戏内可粘贴的 /w 文案。';
+
+  return [title, header, ...lines, tip].join('\n');
+}
+
+/**
+ * 将指定卖单格式化为可复制私聊正文（供按钮触发后回复）。
+ *
+ * @param data - 市场页
+ * @param indexOnPage - 本页 0-based 下标
+ * @param locale - 语言
+ * @returns 私聊文案；越界时返回错误提示
+ */
+export function formatMarketWhisperReply(
+  data: MarketOrdersDto,
+  indexOnPage: number,
+  locale: Locale,
+): string {
+  const order = data.orders[indexOnPage];
+  if (!order) {
+    return locale === 'en'
+      ? 'That order index is out of range on this page.'
+      : '本页没有该序号的卖单。';
+  }
+  const itemName = pickLocalized(data.resolved.name, locale);
+  const line = formatMarketWhisper({
+    seller: order.seller,
+    itemName,
+    platinum: order.platinum,
+    locale,
+  });
+  const guide = locale === 'en' ? 'Copy into Warframe chat:' : '请复制到游戏内聊天：';
+  return `${guide}\n${line}`;
+}
+
+/**
+ * 将指定紫卡拍卖格式化为可复制私聊正文。
+ *
+ * @param data - 紫卡页
+ * @param indexOnPage - 本页 0-based 下标
+ * @param locale - 语言
+ * @returns 私聊文案；越界时返回错误提示
+ */
+export function formatRivenWhisperReply(
+  data: RivenOrdersDto,
+  indexOnPage: number,
+  locale: Locale,
+): string {
+  const order = data.orders[indexOnPage];
+  if (!order) {
+    return locale === 'en'
+      ? 'That auction index is out of range on this page.'
+      : '本页没有该序号的拍卖。';
+  }
+  const weapon = pickLocalized(data.resolved.name, locale);
+  const itemName = locale === 'en' ? `${weapon} Riven` : `${weapon} 紫卡`;
+  const line = formatMarketWhisper({
+    seller: order.seller,
+    itemName,
+    platinum: order.platinum,
+    locale,
+  });
+  const guide = locale === 'en' ? 'Copy into Warframe chat:' : '请复制到游戏内聊天：';
+  return `${guide}\n${line}`;
 }

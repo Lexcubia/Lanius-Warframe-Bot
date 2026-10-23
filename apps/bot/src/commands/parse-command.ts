@@ -25,6 +25,8 @@ export type BotIntent =
       query: string;
       modRank?: number;
       page?: number;
+      /** 本页卖单序号（1-based）；有值时只回私聊文案 */
+      whisperIndex?: number;
     }
   | {
       type: 'riven';
@@ -34,6 +36,8 @@ export type BotIntent =
       minRerolls?: number;
       maxRerolls?: number;
       page?: number;
+      /** 本页拍卖序号（1-based）；有值时只回私聊文案 */
+      whisperIndex?: number;
     }
   | { type: 'voidTrader' }
   | { type: 'varzia' }
@@ -157,6 +161,7 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
         query: parsed.query,
         ...(parsed.modRank !== undefined ? { modRank: parsed.modRank } : {}),
         ...(parsed.page !== undefined ? { page: parsed.page } : {}),
+        ...(parsed.whisperIndex !== undefined ? { whisperIndex: parsed.whisperIndex } : {}),
       },
     };
   }
@@ -176,6 +181,7 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
         ...(parsed.minRerolls !== undefined ? { minRerolls: parsed.minRerolls } : {}),
         ...(parsed.maxRerolls !== undefined ? { maxRerolls: parsed.maxRerolls } : {}),
         ...(parsed.page !== undefined ? { page: parsed.page } : {}),
+        ...(parsed.whisperIndex !== undefined ? { whisperIndex: parsed.whisperIndex } : {}),
       },
     };
   }
