@@ -22,14 +22,15 @@ Internet
 
 ## 发版与自动部署（维护者）
 
-| 事件                        | 行为                                                                                                               |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| PR / `develop`              | 仅 [ci.yml](../.github/workflows/ci.yml)                                                                           |
-| tag `v*` / `main` auto-tag  | [release.yml](../.github/workflows/release.yml)：推 **GHCR（可选镜像产物）**，**不 SSH**                           |
-| 长期分支 **`release`** push | [deploy-release.yml](../.github/workflows/deploy-release.yml)：SSH → **`update-node.sh`（git + build + systemd）** |
-| Admin「版本」               | 默认执行 `update-node.sh`；`github.deployMode: docker` 时才走镜像                                                  |
+| 事件                             | 行为                                                                                                 |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| PR→`develop`/`main`、push 同分支 | [ci.yml](../.github/workflows/ci.yml)：轻量 install + test + typecheck（**不装 Playwright**）        |
+| tag `v*` / `main` auto-tag       | [release.yml](../.github/workflows/release.yml)：推 **GHCR（可选镜像产物）**，无检查、**不 SSH**     |
+| 长期分支 **`release`** push      | **跳过 CI**；仅 [deploy-release.yml](../.github/workflows/deploy-release.yml) 部署（默认容器热启动） |
+| Admin「版本」                    | 默认执行 `update-node.sh`；`github.deployMode: docker` 时才走镜像                                    |
 
-约定（硬顺序）：功能合入 `develop` → PR **`develop` → `main`** → 在 `main` 打 SemVer tag → 将 **`release` 快进到 `main` tip**（或 Admin 选版）完成上线。  
+发版硬约束（唯一合法链）：功能合入 `develop` → PR **`develop` → `main`** → 在 `main` 打 SemVer tag → 将 **`release` 快进到 `main` tip**（或 Admin 选版）完成上线。  
+`release` **只跟 `main`**（含已打 tag 的归档点），**不跑 CI**；检查只在 develop/main（及对应 PR）完成。  
 **禁止**从 `develop` 直推 / 直合 `release`；**禁止**绕过 `main`。发版后若 `main` 非 `develop` 祖先，须 PR **`main` → `develop`** 回灌。  
 旧「仅 pull GHCR、禁止 build」流程已降级：仅当显式选 `docker` 运行时使用。
 
