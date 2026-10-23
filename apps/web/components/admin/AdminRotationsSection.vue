@@ -5,10 +5,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  save: [
-    moduleId: string,
-    body: { epochIso: string; periodDays: number; items: string[] },
-  ];
+  save: [moduleId: string, body: { epochIso: string; periodDays: number; items: string[] }];
 }>();
 
 type Draft = {
@@ -16,6 +13,12 @@ type Draft = {
   epochIso: string;
   periodDays: number;
   itemsText: string;
+};
+
+type ItemRow = {
+  name: string;
+  element: string;
+  bonusPct: string;
 };
 
 /**
@@ -34,10 +37,7 @@ function formatItemLine(entry: unknown): string {
     if (!name) {
       return '';
     }
-    const element =
-      typeof row.element === 'string' && row.element.trim()
-        ? row.element.trim()
-        : '';
+    const element = typeof row.element === 'string' && row.element.trim() ? row.element.trim() : '';
     const bonus =
       typeof row.bonusPct === 'number' && Number.isFinite(row.bonusPct)
         ? String(row.bonusPct)
@@ -50,6 +50,38 @@ function formatItemLine(entry: unknown): string {
     return name;
   }
   return '';
+}
+
+/**
+ * 解析单行 Valence 文本为结构化行。
+ *
+ * @param line - 如 `Tenet Agendus | heat | 45.2`
+ * @returns 结构化行
+ */
+function parseItemLine(line: string): ItemRow {
+  const parts = line.split('|').map((p) => p.trim());
+  return {
+    name: parts[0] ?? '',
+    element: parts[1] && parts[1] !== '-' ? parts[1] : '',
+    bonusPct: parts[2] ?? '',
+  };
+}
+
+/**
+ * 结构化行写回文本行。
+ *
+ * @param row - 结构化行
+ * @returns 管道语法文本
+ */
+function serializeItemRow(row: ItemRow): string {
+  const name = row.name.trim();
+  if (!name) return '';
+  const element = row.element.trim();
+  const bonus = row.bonusPct.trim();
+  if (element || bonus) {
+    return [name, element || '-', bonus].filter((p) => p !== '').join(' | ');
+  }
+  return name;
 }
 
 /**
@@ -77,6 +109,21 @@ function toDraft(row: Record<string, unknown>): Draft {
 }
 
 const drafts = ref<Draft[]>([]);
+/** 每张表的结构化行编辑态 */
+const itemRows = ref<Record<string, ItemRow[]>>({});
+/** 是否显示原始多行文本 */
+const showRaw = ref<Record<string, boolean>>({});
+
+const elementItems = [
+  { label: '（无）', value: '' },
+  { label: 'impact', value: 'impact' },
+  { label: 'heat', value: 'heat' },
+  { label: 'cold', value: 'cold' },
+  { label: 'electricity', value: 'electricity' },
+  { label: 'toxin', value: 'toxin' },
+  { label: 'magnetic', value: 'magnetic' },
+  { label: 'radiation', value: 'radiation' },
+];
 
 watch(
   () => props.schedules,
@@ -93,9 +140,60 @@ watch(
         });
       }
     }
+    const nextRows: Record<string, ItemRow[]> = {};
+    for (const draft of drafts.value) {
+      nextRows[draft.moduleId] = draft.itemsText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map(parseItemLine);
+      if (!nextRows[draft.moduleId]?.length) {
+        nextRows[draft.moduleId] = [{ name: '', element: '', bonusPct: '' }];
+      }
+    }
+    itemRows.value = nextRows;
   },
   { immediate: true },
 );
+
+/**
+ * 新增空武器行。
+ *
+ * @param moduleId - 轮换模块 id
+ * @returns 无返回值
+ */
+function addItemRow(moduleId: string): void {
+  const list = itemRows.value[moduleId] ?? [];
+  itemRows.value[moduleId] = [...list, { name: '', element: '', bonusPct: '' }];
+}
+
+/**
+ * 删除武器行。
+ *
+ * @param moduleId - 轮换模块 id
+ * @param index - 行下标
+ * @returns 无返回值
+ */
+function removeItemRow(moduleId: string, index: number): void {
+  const list = [...(itemRows.value[moduleId] ?? [])];
+  list.splice(index, 1);
+  itemRows.value[moduleId] = list.length ? list : [{ name: '', element: '', bonusPct: '' }];
+}
+
+/**
+ * 将结构化行同步回草稿文本。
+ *
+ * @param moduleId - 轮换模块 id
+ * @returns 无返回值
+ */
+function syncRowsToDraft(moduleId: string): void {
+  const draft = drafts.value.find((d) => d.moduleId === moduleId);
+  if (!draft) return;
+  draft.itemsText = (itemRows.value[moduleId] ?? [])
+    .map(serializeItemRow)
+    .filter(Boolean)
+    .join('\n');
+}
 
 /**
  * 提交单个轮换表。
@@ -104,6 +202,9 @@ watch(
  * @returns 无返回值
  */
 function saveDraft(draft: Draft): void {
+  if (!showRaw.value[draft.moduleId]) {
+    syncRowsToDraft(draft.moduleId);
+  }
   const items = draft.itemsText
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -117,52 +218,100 @@ function saveDraft(draft: Draft): void {
 </script>
 
 <template>
-  <section class="admin-panel">
-    <h2 class="admin-panel__title">轮换表（信条 / 终幕）</h2>
-    <p class="admin-panel__hint">
-      列表即<strong>当期货架全部武器</strong>（平级展示，无主次）。每行一件；可选
-      Valence：
-      <code>Tenet Agendus | heat | 45.2</code>
-      （元素：impact/heat/cold/electricity/toxin/magnetic/radiation）。epochIso /
-      periodDays（通常 4）仅控制刷新倒计时。官方 worldState
-      不含商店随机加成，百分比需人工按游戏内/wiki 更新。
-    </p>
-    <div
-      v-for="draft in drafts"
-      :key="draft.moduleId"
-      class="admin-panel"
-      style="margin-top: 0.85rem; box-shadow: none"
-    >
-      <h3 class="admin-panel__title" style="font-size: 0.98rem">
-        <code>{{ draft.moduleId }}</code>
-      </h3>
-      <label class="admin-field"
-        >epochIso
-        <input v-model="draft.epochIso" class="admin-input" />
-      </label>
-      <label class="admin-field"
-        >periodDays
-        <input
-          v-model.number="draft.periodDays"
-          class="admin-input"
-          type="number"
-          min="1"
-          style="max-width: 8rem"
-        />
-      </label>
-      <label class="admin-field"
-        >items（每行一武器，可选 | 元素 | 百分比）
-        <textarea v-model="draft.itemsText" class="admin-textarea" rows="8" />
-      </label>
-      <div class="admin-actions">
-        <button
-          type="button"
-          class="admin-btn admin-btn--primary"
-          @click="saveDraft(draft)"
-        >
-          保存
-        </button>
+  <div class="space-y-4">
+    <UAlert
+      color="info"
+      variant="subtle"
+      icon="i-lucide-info"
+      title="信条 / 终幕轮换表"
+      description="列表即当期货架全部武器（平级展示）。可选 Valence：元素 + 百分比。epochIso / periodDays（通常 4）控制刷新倒计时。"
+    />
+
+    <UCard v-for="draft in drafts" :key="draft.moduleId">
+      <template #header>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="font-semibold text-highlighted">
+            <code>{{ draft.moduleId }}</code>
+          </h2>
+          <div class="flex gap-2">
+            <UButton
+              size="xs"
+              color="neutral"
+              variant="soft"
+              :icon="showRaw[draft.moduleId] ? 'i-lucide-table' : 'i-lucide-file-text'"
+              @click="
+                showRaw[draft.moduleId] = !showRaw[draft.moduleId];
+                if (!showRaw[draft.moduleId]) {
+                  itemRows[draft.moduleId] = draft.itemsText
+                    .split(/\r?\n/)
+                    .map((l) => l.trim())
+                    .filter(Boolean)
+                    .map(parseItemLine);
+                } else {
+                  syncRowsToDraft(draft.moduleId);
+                }
+              "
+            >
+              {{ showRaw[draft.moduleId] ? '表格编辑' : '原始文本' }}
+            </UButton>
+            <UButton size="sm" icon="i-lucide-save" @click="saveDraft(draft)"> 保存 </UButton>
+          </div>
+        </div>
+      </template>
+
+      <div class="mb-4 grid gap-4 sm:grid-cols-2">
+        <UFormField label="epochIso" description="周期起点（ISO 8601）">
+          <UInput v-model="draft.epochIso" class="w-full font-mono text-sm" />
+        </UFormField>
+        <UFormField label="periodDays" description="通常为 4">
+          <UInput
+            v-model.number="draft.periodDays"
+            type="number"
+            :min="1"
+            class="w-full max-w-[8rem]"
+          />
+        </UFormField>
       </div>
-    </div>
-  </section>
+
+      <div v-if="!showRaw[draft.moduleId]" class="space-y-3">
+        <div
+          v-for="(row, idx) in itemRows[draft.moduleId] ?? []"
+          :key="`${draft.moduleId}-${idx}`"
+          class="grid gap-2 rounded-lg border border-default p-3 sm:grid-cols-[1fr_9rem_6rem_auto]"
+        >
+          <UFormField label="武器名">
+            <UInput v-model="row.name" class="w-full" placeholder="Tenet Agendus" />
+          </UFormField>
+          <UFormField label="元素">
+            <USelect v-model="row.element" :items="elementItems" value-key="value" class="w-full" />
+          </UFormField>
+          <UFormField label="加成 %">
+            <UInput v-model="row.bonusPct" class="w-full" placeholder="45.2" />
+          </UFormField>
+          <div class="flex items-end">
+            <UButton
+              color="error"
+              variant="ghost"
+              icon="i-lucide-trash-2"
+              aria-label="删除行"
+              @click="removeItemRow(draft.moduleId, idx)"
+            />
+          </div>
+        </div>
+        <UButton
+          size="sm"
+          color="neutral"
+          variant="soft"
+          icon="i-lucide-plus"
+          @click="addItemRow(draft.moduleId)"
+        >
+          添加武器
+        </UButton>
+      </div>
+
+      <UFormField v-else label="items（每行一武器，可选 | 元素 | 百分比）">
+        <UTextarea v-model="draft.itemsText" :rows="8" class="w-full font-mono text-sm" />
+      </UFormField>
+    </UCard>
+  </div>
 </template>
