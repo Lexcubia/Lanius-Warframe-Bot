@@ -195,5 +195,16 @@ jobs:
             export LANIUS_UPDATE_REF="${REF}"
             bash ./update-container.sh
             docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
-            curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" || \
-              curl -fsS "http://127.0.0.1/api/lanius/v1/health"
+            # 部署后必须换新进程：uptimeSec 过大说明未真正重启
+            HEALTH_JSON="$(curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" \
+              || curl -fsS "http://127.0.0.1/api/lanius/v1/health")"
+            echo "${HEALTH_JSON}"
+            node -e '
+              const j = JSON.parse(process.argv[1]);
+              const u = j?.data?.uptimeSec;
+              if (typeof u !== "number" || u > 120) {
+                console.error("deploy health uptimeSec too high:", u);
+                process.exit(1);
+              }
+              console.log("deploy health ok, uptimeSec=", u);
+            ' "${HEALTH_JSON}"
