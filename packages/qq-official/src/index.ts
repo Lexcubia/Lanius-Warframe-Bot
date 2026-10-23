@@ -21,6 +21,7 @@ export {
   type QqKeyboardContent,
   type QqKeyboardRow,
 } from './keyboard.js';
+export { QQ_CMD_INPUT_MAX_CHARS, clampQqCmdChars, qqCmdInputTag } from './cmd-input.js';
 export { uploadCardPng, type CosUploadConfig, type CosUploadResult } from './cos-upload.js';
 export {
   syncQqCustomMenu,
