@@ -6,6 +6,7 @@ import {
   renderAlertsCard,
   renderArbitrationCard,
   renderArchimedeaCard,
+  renderCircuitCard,
   renderFissuresCard,
   renderInvasionsCard,
   renderNightwaveCard,
@@ -160,6 +161,22 @@ const sampleWorldstate = {
     expiry: '2026-10-10T12:00:00.000Z',
     source: 'warframestat',
   },
+  circuit: {
+    activation: '2026-10-19T00:00:00.000Z',
+    expiry: '2026-10-26T00:00:00.000Z',
+    normalChoices: [
+      { key: 'Hydroid', name: { zh: '水刑天', en: 'Hydroid' } },
+      { key: 'Mirage', name: { zh: '幻影', en: 'Mirage' } },
+      { key: 'Limbo', name: { zh: '灵薄狱', en: 'Limbo' } },
+    ],
+    hardChoices: [
+      { key: 'Dera', name: { zh: '德拉', en: 'Dera' } },
+      { key: 'Cestra', name: { zh: '锡斯特', en: 'Cestra' } },
+      { key: 'Okina', name: { zh: '奥金刀', en: 'Okina' } },
+      { key: 'Sybaris', name: { zh: '席芭莉丝', en: 'Sybaris' } },
+      { key: 'Sicarus', name: { zh: '席卡鲁斯', en: 'Sicarus' } },
+    ],
+  },
 };
 
 describe('module card renders', () => {
@@ -231,6 +248,15 @@ describe('module card renders', () => {
       worldstate: sampleWorldstate,
     });
     expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+  }, 60_000);
+
+  it('renders circuit PNG', async () => {
+    const png = await renderCircuitCard({
+      locale: 'zh',
+      worldstate: sampleWorldstate,
+    });
+    expect(png.subarray(0, 8).toString('hex')).toBe('89504e470d0a1a0a');
+    expect(png.length).toBeGreaterThan(1000);
   }, 60_000);
 
   it('renders void trader PNG', async () => {

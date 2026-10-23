@@ -3,6 +3,7 @@ import {
   renderAlertsCard,
   renderArbitrationCard,
   renderArchimedeaCard,
+  renderCircuitCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -48,6 +49,7 @@ import { formatArchimedeaText } from '../formatters/archimedea-text.js';
 import {
   formatAlertsText,
   formatArbitrationText,
+  formatCircuitText,
   formatFissuresText,
   formatInvasionsText,
   formatNightwaveText,
@@ -128,11 +130,10 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 1：alerts / arbitration / archimedea 已接通；其余任务模块仍占坑 stub。
+  // Wave 1：alerts / arbitration / archimedea / circuit 已接通；其余仍 stub。
   if (
     intent.type === 'sortie' ||
     intent.type === 'archon' ||
-    intent.type === 'circuit' ||
     intent.type === 'bounties'
   ) {
     const stub =
@@ -409,6 +410,30 @@ export async function handleCommand(
 
   if (!envelope.ok) {
     return sendFail(deps, target, locale, envelope.error.message);
+  }
+
+  if (intent.type === 'circuit') {
+    const text = formatCircuitText(envelope.data, locale, {
+      stale: envelope.meta.stale,
+    });
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderCircuitCard(
+          withCardSkin(
+            {
+              worldstate: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'circuit',
+    });
   }
 
   const moduleKind =

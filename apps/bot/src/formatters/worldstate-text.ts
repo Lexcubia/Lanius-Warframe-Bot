@@ -220,6 +220,67 @@ export function formatAlertsText(
 }
 
 /**
+ * 回廊 / Circuit 模块文本（普通战甲 + 钢路 Incarnon）。
+ *
+ * @param worldstate - DTO
+ * @param locale - locale
+ * @param options - stale / 站点导流等
+ * @returns QQ 文本
+ */
+export function formatCircuitText(
+  worldstate: WorldstateDto,
+  locale: Locale,
+  options: { stale?: boolean; siteUrl?: string } = {},
+): string {
+  const zh = locale !== 'en';
+  const bullet = String.fromCharCode(0xb7);
+  const lines: string[] = [];
+  lines.push(zh ? `【Lanius ${bullet} 回廊 / Circuit】` : `[Lanius ${bullet} Circuit]`);
+  if (options.stale) {
+    lines.push(zh ? '（数据可能延迟）' : '(data may be delayed)');
+  }
+
+  const circuit = worldstate.circuit;
+  if (!circuit) {
+    lines.push(zh ? `${bullet} 暂无回廊轮换数据` : `${bullet} no Circuit rotation`);
+  } else {
+    if (circuit.expiry) {
+      const remainMs = Date.parse(circuit.expiry) - Date.now();
+      if (Number.isFinite(remainMs) && remainMs > 0) {
+        lines.push(
+          zh
+            ? `本周剩余 ${formatRemaining(remainMs, true)}`
+            : `Week ends in ${formatRemaining(remainMs, false)}`,
+        );
+      }
+    }
+    lines.push(zh ? '普通 · 可选战甲' : 'Normal · Warframes');
+    if (circuit.normalChoices.length === 0) {
+      lines.push(zh ? `${bullet} 暂无` : `${bullet} none`);
+    } else {
+      for (const row of circuit.normalChoices) {
+        const name = row.name ? pickLocalized(row.name, locale) : row.key;
+        lines.push(`${bullet} ${name}`);
+      }
+    }
+    lines.push(zh ? '钢路 · Incarnon 适配器' : 'Steel Path · Incarnon');
+    if (circuit.hardChoices.length === 0) {
+      lines.push(zh ? `${bullet} 暂无` : `${bullet} none`);
+    } else {
+      for (const row of circuit.hardChoices) {
+        const name = row.name ? pickLocalized(row.name, locale) : row.key;
+        lines.push(`${bullet} ${name}`);
+      }
+    }
+  }
+
+  if (options.siteUrl) {
+    lines.push(options.siteUrl);
+  }
+  return lines.join('\n');
+}
+
+/**
  * 午夜电波模块文本。
  *
  * @param worldstate - DTO

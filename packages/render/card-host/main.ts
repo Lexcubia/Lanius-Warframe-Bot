@@ -19,6 +19,7 @@ import {
   AlertsModuleCard,
   ArbitrationModuleCard,
   ArchimedeaModuleCard,
+  CircuitModuleCard,
   CyclesModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
@@ -47,6 +48,7 @@ export type CardHostKind =
   | 'alerts'
   | 'arbitration'
   | 'archimedea'
+  | 'circuit'
   | 'help'
   | 'market'
   | 'riven'
@@ -111,6 +113,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return ArbitrationModuleCard;
     case 'archimedea':
       return ArchimedeaModuleCard;
+    case 'circuit':
+      return CircuitModuleCard;
     case 'help':
       return HelpModuleCard;
     case 'market':
