@@ -53,8 +53,10 @@ export function createBotApp(config: BotConfig, logger: Logger): BotAppBundle {
     appSecret: config.qq.appSecret,
     dryRun: config.bot.dryRun,
   });
+  // 回复模式与卡片皮肤仅来自后台配置，无 QQ 用户指令切换。
   const prefs: SessionPrefs = {
     replyMode: config.bot.defaultReplyMode,
+    cardSkin: config.bot.defaultCardSkin,
     locale: config.defaults.locale,
   };
   /** 短时去重：官方可能对同一 msg_id 重推。 */

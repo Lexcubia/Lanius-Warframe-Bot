@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import type { CatalogItemDto, InvasionDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
-import { formatTimestamp } from '../lib/format-timestamp.js';
+import { OfficialItemIcon, formatTimestamp } from '@lanius/ui';
 import { computed } from 'vue';
 
-import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
+import type { CardSkinId } from './skins.js';
 
 /**
- * 入侵 QQ/截图模块卡片（消费 `WorldstateDto.invasions`）。
+ * 入侵 QQ 截图模块卡（dense：节点+％一行，细条，攻守奖励并排）。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
   locale: 'zh' | 'en';
   stale?: boolean;
-  /** 最多展示条数 */
   maxItems?: number;
+  skin?: CardSkinId;
 }>();
 
 /**
@@ -69,12 +69,20 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"
+    :skin="skin"
   >
     <ul v-if="items.length" class="invasions">
-      <li v-for="item in items" :key="item.id" class="invasions__row">
+      <li
+        v-for="(item, index) in items"
+        :key="item.id"
+        class="invasions__row"
+        :class="{ 'invasions__row--zebra': index % 2 === 1 }"
+      >
         <div class="invasions__head">
           <strong>{{ label(item.node) }}</strong>
-          <span v-if="item.completionPct !== undefined">{{ item.completionPct }}%</span>
+          <span v-if="item.completionPct !== undefined" class="invasions__pct"
+            >{{ item.completionPct }}%</span
+          >
         </div>
         <div v-if="item.completionPct !== undefined" class="invasions__bar" aria-hidden="true">
           <div
@@ -88,18 +96,18 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
             <OfficialItemIcon
               :icon-url="item.attackerReward?.iconUrl"
               :alt="rewardText(item.attackerReward)"
-              :size="28"
+              :size="22"
             />
-            <span>{{ rewardText(item.attackerReward) }}</span>
+            <span class="invasions__reward">{{ rewardText(item.attackerReward) }}</span>
           </p>
           <p class="invasions__side">
             <span class="invasions__faction">{{ label(item.defendingFaction) }}</span>
             <OfficialItemIcon
               :icon-url="item.defenderReward?.iconUrl"
               :alt="rewardText(item.defenderReward)"
-              :size="28"
+              :size="22"
             />
-            <span>{{ rewardText(item.defenderReward) }}</span>
+            <span class="invasions__reward">{{ rewardText(item.defenderReward) }}</span>
           </p>
         </div>
       </li>
@@ -115,79 +123,77 @@ const stamp = computed(() => formatTimestamp(props.worldstate.fetchedAt));
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
-
 .invasions__row {
-  padding: 10px;
-  background: var(--lanius-panel);
-  border: 1px solid var(--lanius-border);
-  border-radius: 10px;
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease,
-    background 0.18s ease;
+  padding: 5px 2px 6px;
+  border-bottom: 1px solid var(--lanius-border);
 }
-
-@media (hover: hover) {
-  .invasions__row:hover {
-    border-color: rgba(255, 122, 110, 0.4);
-    background: #fff;
-    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
-    transform: translateY(-1px);
-  }
+.invasions__row--zebra {
+  background: var(--lanius-zebra);
 }
-
 .invasions__head {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
-  margin-bottom: 6px;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  margin-bottom: 3px;
 }
-
 .invasions__head strong {
   color: var(--lanius-brand);
+  min-width: 0;
 }
-
+.invasions__pct {
+  margin-left: auto;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--lanius-text);
+}
 .invasions__bar {
-  height: 8px;
-  border-radius: 4px;
+  height: 3px;
+  border-radius: 2px;
   background: var(--lanius-border);
   overflow: hidden;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
-
 .invasions__fill {
   height: 100%;
   background: linear-gradient(90deg, var(--lanius-bar-attack), var(--lanius-bar-defend));
 }
-
-.invasions__sides p,
+.invasions__sides {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+}
 .invasions__side {
-  margin: 0 0 4px;
-  font-size: 11px;
+  margin: 0;
+  font-size: 10px;
   color: var(--lanius-text);
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   min-width: 0;
 }
-
 .invasions__faction {
   flex-shrink: 0;
-  min-width: 4.5em;
   font-weight: 700;
   color: var(--lanius-text-muted);
+  max-width: 4.2em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
+.invasions__reward {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .invasions__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--lanius-text-muted);
   text-align: center;
-  padding: 16px 0;
+  padding: 12px 0;
 }
 </style>

@@ -18,7 +18,6 @@ export type GateContext = {
  * 判断模块是否允许执行。
  *
  * 优先级：deny > allow；group/c2c 规则 > global；无规则默认允许。
- * `mode` 模块始终放行。
  *
  * @param db - SQLite
  * @param ctx - 场景上下文
@@ -26,10 +25,6 @@ export type GateContext = {
  * @throws HttpError 拒绝访问时
  */
 export function assertModuleAllowed(db: LaniusDb, ctx: GateContext): void {
-  if (ctx.moduleId === 'mode') {
-    return;
-  }
-
   const settings = listModuleSettings(db);
   const setting = settings.find((row) => row.module_id === ctx.moduleId);
   if (setting && setting.enabled !== 1) {

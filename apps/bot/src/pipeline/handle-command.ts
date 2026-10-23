@@ -53,12 +53,30 @@ import { buildMarketPageKeyboard, marketPageMarkdownHint } from '../qq/build-mar
 import { buildRivenPageKeyboard, rivenPageMarkdownHint } from '../qq/build-riven-keyboard.js';
 
 /**
- * 会话级可变偏好（MVP 进程内内存）。
+ * QQ 图片模式卡片皮肤（与 render capture 约定一致）。
+ */
+export type CardSkin = 'light' | 'dark';
+
+/**
+ * 进程级回复偏好（由 `bot.defaultReplyMode` / `bot.defaultCardSkin` 初始化；无 QQ 指令切换）。
  */
 export type SessionPrefs = {
   replyMode: 'text' | 'image';
+  /** 图片模式卡片亮/暗色皮肤（后台配置） */
+  cardSkin: CardSkin;
   locale: Locale;
 };
+
+/**
+ * 为 render*Card 入参附加 `skin`（与 `@lanius/render` 的 `skin?` / `resolveCardSkin` 对齐）。
+ *
+ * @param input - 原卡片渲染入参
+ * @param skin - 会话当前卡片皮肤（`light` | `dark`）
+ * @returns 带 `skin` 字段的入参，供图片模式截图使用
+ */
+function withCardSkin<T extends object>(input: T, skin: CardSkin): T & { skin: CardSkin } {
+  return { ...input, skin };
+}
 
 /**
  * 命令处理管道的依赖。
@@ -104,19 +122,6 @@ export async function handleCommand(
     locale,
   };
 
-  if (intent.type === 'mode') {
-    deps.prefs.replyMode = intent.mode;
-    const msg =
-      locale === 'en'
-        ? `Reply mode set to ${intent.mode}.`
-        : `已切换为${intent.mode === 'image' ? '图片' : '文本'}模式。`;
-    const sent = await deps.qq.sendText(target, msg);
-    if (!sent.ok) {
-      return `send-failed:${sent.detail ?? 'unknown'}`;
-    }
-    return msg;
-  }
-
   if (intent.type === 'help' || intent.type === 'unknown') {
     const envelope = await api
       .getHelp(intent.type === 'help' ? intent.module : undefined)
@@ -135,7 +140,7 @@ export async function handleCommand(
       target,
       text,
       preferImage: deps.prefs.replyMode === 'image',
-      render: () => renderHelpCard({ help, locale }),
+      render: () => renderHelpCard(withCardSkin({ help, locale }, deps.prefs.cardSkin)),
       label: 'help',
       keyboard: buildHelpShortcutKeyboard({
         locale,
@@ -191,7 +196,7 @@ export async function handleCommand(
       target,
       text,
       preferImage: deps.prefs.replyMode === 'image',
-      render: () => renderMarketCard({ market: data, locale }),
+      render: () => renderMarketCard(withCardSkin({ market: data, locale }, deps.prefs.cardSkin)),
       label: 'market',
       keyboard: keyboard ?? undefined,
       hint:
@@ -251,7 +256,7 @@ export async function handleCommand(
       target,
       text,
       preferImage: deps.prefs.replyMode === 'image',
-      render: () => renderRivenCard({ riven: data, locale }),
+      render: () => renderRivenCard(withCardSkin({ riven: data, locale }, deps.prefs.cardSkin)),
       label: 'riven',
       keyboard: keyboard ?? undefined,
       hint:
@@ -280,11 +285,16 @@ export async function handleCommand(
       text,
       preferImage: deps.prefs.replyMode === 'image',
       render: () =>
-        renderVoidTraderCard({
-          voidTrader: envelope.data,
-          locale,
-          stale: envelope.meta.stale,
-        }),
+        renderVoidTraderCard(
+          withCardSkin(
+            {
+              voidTrader: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
       label: 'voidTrader',
     });
   }
@@ -303,11 +313,16 @@ export async function handleCommand(
       text,
       preferImage: deps.prefs.replyMode === 'image',
       render: () =>
-        renderVarziaCard({
-          varzia: envelope.data,
-          locale,
-          stale: envelope.meta.stale,
-        }),
+        renderVarziaCard(
+          withCardSkin(
+            {
+              varzia: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
       label: 'varzia',
     });
   }
@@ -325,10 +340,15 @@ export async function handleCommand(
       text,
       preferImage: deps.prefs.replyMode === 'image',
       render: () =>
-        renderWeaponRotationCard({
-          rotation: envelope.data,
-          locale,
-        }),
+        renderWeaponRotationCard(
+          withCardSkin(
+            {
+              rotation: envelope.data,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
       label: kind === 'tenet' ? 'tenetRotation' : 'codaRotation',
     });
   }
@@ -374,11 +394,14 @@ export async function handleCommand(
               stale: envelope.meta.stale,
             });
 
-  const renderInput = {
-    worldstate,
-    locale,
-    stale: envelope.meta.stale,
-  };
+  const renderInput = withCardSkin(
+    {
+      worldstate,
+      locale,
+      stale: envelope.meta.stale,
+    },
+    deps.prefs.cardSkin,
+  );
 
   // 裂隙：Markdown 嵌图 + 底部快捷筛选按钮，单条发送，便于 QQ 内一键筛选
   if (moduleKind === 'fissures') {

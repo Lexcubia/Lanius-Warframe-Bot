@@ -6,6 +6,27 @@
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-23
+
+### Added
+
+- 公开站 Web-native 看板：`MarketBoard` / `RivenBoard` / `HelpBoard` / `FissuresBoard` / `InvasionsBoard` / `NightwaveBoard`（不再挂载 QQ ModuleCard）。
+- QQ 出图：`packages/render/vue-cards` 密集布局 + `light`/`dark` 皮肤（`render*Card({ skin })`）。
+- `/admin`：基于 Nuxt UI 的企业级配置控制台（结构化表单/表格；JSON 折叠备用）。
+- Admin Config → bot：`defaultReplyMode`（默认 `image`）与 `defaultCardSkin`（`light`|`dark`）仅后台可配。
+
+### Changed
+
+- Web ⊥ QQ UI 硬边界：站点/Admin（及规划 Tauri）与 QQ 出图卡分离，仅共享 Lanius API + `@lanius/core`。
+- 回复模式与卡片皮肤改为仅后台配置；进程偏好自配置初始化。
+- 文档 / 帮助文案：不再提及用户侧 `/模式` `/皮肤`。
+
+### Removed
+
+- 用户侧 `/模式`、`/皮肤`（及别名）指令、面板入口与帮助条目。
+- `packages/ui` 遗留 QQ `*ModuleCard` / `QqCardShell`（公开站仅用 Board；出图仅 `packages/render/vue-cards`）。
+- `packages/render` 未再使用的 Satori 建树 / `rasterizeCard` 路径（出图仅 Vue + Playwright）。
+
 ## [0.4.8] - 2026-10-23
 
 ### Changed

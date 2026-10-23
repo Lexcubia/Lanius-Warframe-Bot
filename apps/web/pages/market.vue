@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MarketModuleCard } from '@lanius/ui';
+import { MarketBoard } from '@lanius/ui';
 import type { MarketOrdersDto } from '@lanius/core';
 
 const { t, locale } = useI18n();
@@ -129,7 +129,7 @@ const totalPages = computed(() => {
     <p v-else-if="pending" class="state">{{ t('market.loading') }}</p>
     <p v-else-if="error" class="state state--error">{{ t('market.error') }}</p>
     <template v-else-if="data">
-      <MarketModuleCard :market="data" :locale="locale === 'en' ? 'en' : 'zh'" />
+      <MarketBoard :market="data" :locale="locale === 'en' ? 'en' : 'zh'" />
       <nav v-if="totalPages > 1" class="pager" aria-label="pagination">
         <button type="button" :disabled="data.page <= 1" @click="goPage(data.page - 1)">
           {{ t('market.prevPage') }}

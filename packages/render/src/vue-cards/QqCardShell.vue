@@ -1,22 +1,31 @@
 <script setup lang="ts">
+import type { CardSkinId } from './skins.js';
+
 /**
- * QQ 移动端卡片外壳：固定逻辑宽度、紧凑头栏，供 Chromium 节点截图与 Web 复用。
- * 视觉对齐公开站暖底动漫风（奶油底、珊瑚点缀、软圆角）。
+ * QQ 截图专用卡片外壳：固定逻辑宽、扁头栏、dense 间距；经 `data-lanius-skin` 套用 light/dark。
  */
-defineProps<{
-  /** 主标题 */
-  title: string;
-  /** 副标题 */
-  subtitle: string;
-  /** 是否陈旧数据提示 */
-  stale?: boolean;
-  /** 文案语言 */
-  locale: 'zh' | 'en';
-}>();
+withDefaults(
+  defineProps<{
+    /** 主标题 */
+    title: string;
+    /** 副标题 */
+    subtitle: string;
+    /** 是否陈旧数据提示 */
+    stale?: boolean;
+    /** 文案语言 */
+    locale: 'zh' | 'en';
+    /** QQ 皮肤 id（非法值由挂载侧已 resolve） */
+    skin?: CardSkinId;
+  }>(),
+  {
+    stale: false,
+    skin: 'light',
+  },
+);
 </script>
 
 <template>
-  <section class="lanius-qq-shell" data-lanius-card-root>
+  <section class="lanius-qq-shell" data-lanius-card-root :data-lanius-skin="skin">
     <header class="lanius-qq-shell__head">
       <div class="lanius-qq-shell__brand">
         <span class="lanius-qq-shell__mark" aria-hidden="true" />
@@ -36,26 +45,17 @@ defineProps<{
 <style scoped>
 .lanius-qq-shell {
   box-sizing: border-box;
-  /*
-   * 默认 QQ 逻辑宽 640；Web 可在祖先设 `--lanius-card-width: 100%` 铺满。
-   */
   width: min(100%, var(--lanius-card-width, 640px));
   max-width: 100%;
   min-width: 0;
-  padding: var(--lanius-card-padding, 12px) var(--lanius-card-padding, 12px)
-    calc(var(--lanius-card-padding, 12px) + 2px);
-  background:
-    radial-gradient(420px 180px at 6% -20%, rgba(78, 183, 232, 0.22), transparent 60%),
-    radial-gradient(360px 160px at 96% 0%, rgba(255, 122, 110, 0.18), transparent 55%),
-    linear-gradient(180deg, var(--lanius-panel-raised) 0%, var(--lanius-void) 100%);
+  padding: var(--lanius-card-padding, 8px);
+  background: var(--lanius-shell-bg);
   color: var(--lanius-text);
   font-family: var(--lanius-font-body);
   border: 1px solid var(--lanius-border);
-  /* 与 QQ 卡片圆角一致的紧凑圆角 */
   border-radius: 10px;
-  /* 截图保留圆角：溢出裁剪，避免内容超出圆角边界 */
   overflow: hidden;
-  box-shadow: 0 10px 28px rgba(62, 78, 110, 0.1);
+  box-shadow: var(--lanius-shell-shadow);
 }
 
 .lanius-qq-shell__head {
@@ -63,29 +63,29 @@ defineProps<{
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 8px;
-  padding-bottom: 8px;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
   border-bottom: 1px solid var(--lanius-border);
 }
 
 .lanius-qq-shell__brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
 .lanius-qq-shell__mark {
   flex-shrink: 0;
-  width: 10px;
-  height: 10px;
-  border-radius: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
   background: linear-gradient(145deg, var(--lanius-highlight), var(--lanius-bar-defend));
 }
 
 .lanius-qq-shell__title {
   margin: 0;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--lanius-brand);
   font-family: var(--lanius-font-display);
@@ -100,13 +100,12 @@ defineProps<{
 }
 
 .lanius-qq-shell__stale {
-  margin: 0 0 6px;
-  font-size: 11px;
+  margin: 0 0 4px;
+  font-size: 10px;
   color: var(--lanius-warn);
 }
 
 .lanius-qq-shell__body {
-  /* 内容区：去掉独立白底框与边框，减少"卡中卡"嵌套感，内容直接落在 shell 渐变底上 */
-  padding: 4px 0 0;
+  padding: 2px 0 0;
 }
 </style>

@@ -18,24 +18,17 @@ const PANEL_DESC_ZH: Readonly<Record<ModuleId, string>> = {
   subscribe: '订阅或退订模块推送',
   market: 'WM 在线卖单排行',
   riven: 'WM 紫卡在线拍卖',
-  mode: '切换本会话回复模式',
   help: '指令帮助与模块详解',
 };
 
 /**
  * 将 Lanius 指令目录映射为官方「指令面板」条目。
- * `模式` 拆成「模式 文本 / 模式 图片」两条，便于一点即发完整用法。
  *
  * @returns 可供 `syncQqCommandPanels` 使用的指令项列表
  */
 export function buildQqPanelItems(): QqPanelCommandItem[] {
   const items: QqPanelCommandItem[] = [];
   for (const entry of LANIUS_COMMAND_CATALOG) {
-    if (entry.id === 'mode') {
-      items.push({ name: '模式 文本', desc: '切换为文本回复' });
-      items.push({ name: '模式 图片', desc: '切换为图片卡片' });
-      continue;
-    }
     const name = entry.roots[0] ?? entry.command.replace(/^\//, '');
     items.push({
       name,
@@ -53,11 +46,6 @@ export function buildQqPanelItems(): QqPanelCommandItem[] {
 export function buildQqMenuItems(): QqMenuSendItem[] {
   const items: QqMenuSendItem[] = [];
   for (const entry of LANIUS_COMMAND_CATALOG) {
-    if (entry.id === 'mode') {
-      items.push({ name: '文本模式', sendMessage: '模式 文本' });
-      items.push({ name: '图片模式', sendMessage: '模式 图片' });
-      continue;
-    }
     const name = entry.roots[0] ?? entry.command.replace(/^\//, '');
     items.push({
       name,

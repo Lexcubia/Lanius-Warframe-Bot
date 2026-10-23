@@ -1,25 +1,21 @@
 <script setup lang="ts">
 import type { Locale, VoidTraderDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import { formatRemain, formatTimestamp, OfficialItemIcon } from '@lanius/ui';
 import { computed } from 'vue';
 
-import { formatRemain } from '../lib/format-remain.js';
-import { formatTimestamp } from '../lib/format-timestamp.js';
-import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
+import type { CardSkinId } from './skins.js';
 
 /**
- * 虚空商人（Baro）QQ/截图模块卡片。
+ * 虚空商人 QQ 截图卡：名左 · 信用中 · 杜卡德右，分割行。
  */
 const props = defineProps<{
-  /** 虚空商人快照 */
   voidTrader: VoidTraderDto;
-  /** 文案语言 */
   locale: Locale;
-  /** 是否陈旧数据 */
   stale?: boolean;
-  /** 最多展示货架条数 */
   maxItems?: number;
+  skin?: CardSkinId;
 }>();
 
 /**
@@ -45,7 +41,7 @@ const items = computed(() => {
 /**
  * 状态与剩余时间副文案。
  *
- * @returns 副标题旁说明
+ * @returns 状态行
  */
 const statusLine = computed(() => {
   const remain = formatRemain(props.voidTrader.remainingMs, props.locale);
@@ -72,16 +68,22 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"
+    :skin="skin"
   >
     <p class="trader__meta">{{ statusLine }}</p>
     <ul v-if="items.length" class="trader__list">
-      <li v-for="(item, idx) in items" :key="idx" class="trader__row">
-        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="32" />
+      <li
+        v-for="(item, idx) in items"
+        :key="idx"
+        class="trader__row"
+        :class="{ 'trader__row--zebra': idx % 2 === 1 }"
+      >
+        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="24" />
         <span class="trader__name">{{ label(item.name) }}</span>
-        <span v-if="item.ducats != null" class="trader__price">{{ item.ducats }}d</span>
-        <span v-if="item.credits != null" class="trader__price">
+        <span v-if="item.credits != null" class="trader__credits">
           {{ Math.round(item.credits / 1000) }}k
         </span>
+        <span v-if="item.ducats != null" class="trader__ducats">{{ item.ducats }}d</span>
       </li>
     </ul>
     <p v-else class="trader__empty">
@@ -92,54 +94,56 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
 
 <style scoped>
 .trader__meta {
-  margin: 0 0 8px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
   color: var(--lanius-text-muted);
 }
-
 .trader__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+  border-top: 1px solid var(--lanius-border);
 }
-
 .trader__row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  background: var(--lanius-panel);
-  border: 1px solid var(--lanius-border);
-  border-radius: 10px;
+  gap: 6px;
+  padding: 3px 2px;
+  border-bottom: 1px solid var(--lanius-border);
   min-width: 0;
 }
-
+.trader__row--zebra {
+  background: var(--lanius-zebra);
+}
 .trader__name {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--lanius-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.trader__price {
+.trader__credits {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--lanius-text-muted);
   font-variant-numeric: tabular-nums;
 }
-
+.trader__ducats {
+  flex-shrink: 0;
+  margin-left: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--lanius-accent-dim);
+  font-variant-numeric: tabular-nums;
+}
 .trader__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--lanius-text-muted);
   text-align: center;
-  padding: 16px 0;
+  padding: 12px 0;
 }
 </style>

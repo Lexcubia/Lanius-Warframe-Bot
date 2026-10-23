@@ -53,6 +53,9 @@ describe('ConfigDriver', () => {
     });
     expect(driver.get('api').port).toBe(9999);
     expect(driver.get('api').adminToken).toBe('secret-token');
+    // bot.yaml 仅写 dryRun 时，回复形态/皮肤走 schema 默认（后台配置）
+    expect(driver.get('bot').defaultReplyMode).toBe('image');
+    expect(driver.get('bot').defaultCardSkin).toBe('light');
     const desc = driver.describe('api');
     expect(desc.data.adminToken).toBe(SECRET_MASK);
     expect(desc.restartRequired).toContain('port');
@@ -61,10 +64,7 @@ describe('ConfigDriver', () => {
   it('preserves secrets when saving mask', () => {
     resetConfigDriverForTests();
     const configRoot = makeRoot();
-    writeFileSync(
-      join(configRoot, 'local', 'api.yaml'),
-      "adminToken: 'keep-me'\n",
-    );
+    writeFileSync(join(configRoot, 'local', 'api.yaml'), "adminToken: 'keep-me'\n");
     const driver = new ConfigDriver({
       repoRoot: configRoot,
       configRoot,

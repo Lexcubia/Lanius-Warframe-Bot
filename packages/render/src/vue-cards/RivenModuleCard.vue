@@ -6,14 +6,15 @@ import {
   pickLocalized,
   sellerStatusTone,
 } from '@lanius/core';
+import { OfficialItemIcon, resolvePlatinumIconSrc } from '@lanius/ui';
 
-import { resolvePlatinumIconSrc } from '../lib/platinum-icon.js';
-import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
+import type { CardSkinId } from './skins.js';
 
 defineProps<{
   riven: RivenOrdersDto;
   locale: Locale;
+  skin?: CardSkinId;
 }>();
 
 const platIcon = resolvePlatinumIconSrc();
@@ -28,14 +29,14 @@ const platIcon = resolvePlatinumIconSrc();
         : `第 ${riven.page}/${Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1)} 页`
     "
     :locale="locale"
+    :skin="skin"
   >
-    <!-- 武器详情：名称与图标同在正文，避免挤在右上角看不清 -->
     <div class="item">
       <OfficialItemIcon
         class="item__icon"
         :icon-url="riven.resolved.iconUrl"
         :alt="pickLocalized(riven.resolved.name, locale)"
-        :size="64"
+        :size="76"
       />
       <div class="item__body">
         <h2 class="item__name">{{ pickLocalized(riven.resolved.name, locale) }}</h2>
@@ -57,6 +58,7 @@ const platIcon = resolvePlatinumIconSrc();
         v-for="(order, index) in riven.orders"
         :key="`${order.seller}-${order.platinum}-${index}`"
         class="row"
+        :class="{ 'row--zebra': index % 2 === 1 }"
       >
         <div class="deal">
           <span class="deal__plat">
@@ -64,8 +66,8 @@ const platIcon = resolvePlatinumIconSrc();
               class="plat"
               :src="platIcon"
               alt=""
-              width="16"
-              height="16"
+              width="14"
+              height="14"
               data-lanius-icon="platinum"
             />
             <span class="deal__plat-num">{{ order.platinum }}</span>
@@ -78,26 +80,17 @@ const platIcon = resolvePlatinumIconSrc();
             {{ formatSellerStatusLabel(order.status, locale) }}
           </span>
         </div>
-        <div class="prices">
-          <span>
-            {{ locale === 'en' ? `MR${order.mastery}` : `段位${order.mastery}` }}
-          </span>
-          <span>
-            {{ locale === 'en' ? `rank ${order.rank}` : `等级${order.rank}` }}
-          </span>
-          <span>
-            {{ locale === 'en' ? `rerolls ${order.rerolls}` : `循环${order.rerolls}` }}
-          </span>
-        </div>
-        <div v-if="order.attributes.length" class="attrs">
+        <div class="meta">
+          <span>{{ locale === 'en' ? `MR${order.mastery}` : `段位${order.mastery}` }}</span>
+          <span>{{ locale === 'en' ? `rank ${order.rank}` : `等级${order.rank}` }}</span>
+          <span>{{ locale === 'en' ? `rerolls ${order.rerolls}` : `循环${order.rerolls}` }}</span>
           <span
             v-for="attr in order.attributes"
             :key="attr.urlName + String(attr.value)"
             class="attr"
             :class="{ 'attr--neg': !attr.positive }"
           >
-            {{ pickLocalized(attr.name, locale) }}
-            {{ attr.positive ? '+' : '' }}{{ attr.value }}
+            {{ pickLocalized(attr.name, locale) }}{{ attr.positive ? '+' : '' }}{{ attr.value }}
           </span>
         </div>
       </li>
@@ -109,12 +102,10 @@ const platIcon = resolvePlatinumIconSrc();
 .item {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--lanius-border);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.55);
+  gap: 10px;
+  margin-bottom: 6px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--lanius-border);
 }
 .item__icon {
   flex: 0 0 auto;
@@ -124,119 +115,100 @@ const platIcon = resolvePlatinumIconSrc();
   flex: 1 1 auto;
 }
 .item__name {
-  margin: 0 0 4px;
-  font-size: 16px;
+  margin: 0 0 2px;
+  font-size: 15px;
   font-weight: 800;
-  line-height: 1.3;
+  line-height: 1.25;
   font-family: var(--lanius-font-display);
   color: var(--lanius-text);
   word-break: break-word;
 }
 .item__meta {
   margin: 0;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--lanius-text-muted);
-  line-height: 1.45;
 }
 .empty {
   margin: 0;
   color: var(--lanius-text-muted);
-  font-size: 13px;
+  font-size: 12px;
 }
 .rows {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 8px;
 }
 .row {
-  border: 1px solid var(--lanius-border);
-  border-radius: 10px;
-  padding: 8px 10px;
-  background: var(--lanius-panel);
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease,
-    background 0.18s ease;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--lanius-border);
 }
-
-@media (hover: hover) {
-  .row:hover {
-    border-color: rgba(255, 122, 110, 0.4);
-    background: #fff;
-    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
-    transform: translateY(-1px);
-  }
+.row--zebra {
+  background: var(--lanius-zebra);
 }
 .deal {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8px 10px;
+  gap: 6px 8px;
+  font-size: 12px;
   font-weight: 700;
-  font-size: 13px;
 }
 .deal__plat {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 8px 2px 6px;
-  border-radius: 8px;
-  background: rgba(255, 122, 110, 0.12);
+  gap: 3px;
+  flex-shrink: 0;
 }
 .deal__plat-num {
   font-variant-numeric: tabular-nums;
 }
 .plat {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
-  flex: 0 0 auto;
 }
 .seller__name {
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--lanius-text);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .seller__rep {
   font-weight: 600;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--lanius-text-muted);
+  flex-shrink: 0;
 }
 .status {
+  margin-left: auto;
   font-weight: 700;
-  font-size: 11px;
+  font-size: 10px;
+  flex-shrink: 0;
 }
 .status--online {
-  color: var(--lanius-success, #5fd0b0);
+  color: var(--lanius-success);
 }
 .status--ingame {
-  color: var(--lanius-accent-dim, #2f8fc4);
+  color: var(--lanius-accent-dim);
 }
 .status--offline {
-  color: var(--lanius-text-muted, #6b7385);
-}
-.prices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-  font-size: 12px;
   color: var(--lanius-text-muted);
 }
-.attrs {
+.meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
+  gap: 4px 8px;
+  margin-top: 2px;
+  font-size: 10px;
+  color: var(--lanius-text-muted);
 }
 .attr {
-  font-size: 11px;
   color: var(--lanius-text);
 }
 .attr--neg {
-  color: var(--lanius-danger, #c44);
+  color: var(--lanius-danger);
 }
 </style>

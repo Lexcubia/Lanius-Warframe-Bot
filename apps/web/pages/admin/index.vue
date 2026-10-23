@@ -6,37 +6,61 @@ definePageMeta({
   layout: false,
 });
 
-const { t } = useI18n({ useScope: 'global' });
 const { adminFetch } = useAdminApi();
+const toast = useToast();
 
 const username = ref('admin');
 const password = ref('');
 const loggedIn = ref(false);
 const probing = ref(true);
 const loginPending = ref(false);
-const error = ref('');
-const notice = ref('');
+const refreshing = ref(false);
 const activeSection = ref<AdminSectionId>('overview');
-const navOpen = ref(false);
+const sidebarOpen = ref(false);
 
 /**
  * 分区标题与说明（工作区页眉）。
  */
 const sectionMeta: Record<AdminSectionId, { title: string; desc: string }> = {
-  overview: { title: '概览', desc: '运行态速览：模块、订阅、ACL、版本与最近审计。' },
-  config: { title: '配置', desc: '按模块编辑 YAML 投影 JSON；密钥掩码，支持热加载。' },
-  releases: { title: '版本', desc: '从 GitHub Releases/tags 选版，服务器 pull 换版。' },
-  modules: { title: '模块', desc: '功能模块启停（门禁 / 帮助 / 推送共用 ModuleId）。' },
-  subscriptions: { title: '订阅', desc: 'QQ 推送订阅运维：频率与启用状态。' },
-  rotations: { title: '轮换', desc: '信条 / 终幕武器轮换表（epoch、周期、列表）。' },
-  acl: { title: 'ACL', desc: '全局 / 群 / C2C 维度的允许与拒绝规则。' },
-  helpMenu: { title: '帮助菜单', desc: '公开帮助标题、简介与可见模块清单。' },
-  audit: { title: '审计', desc: '近期调用日志，便于排查门禁与延迟。' },
+  overview: {
+    title: '概览',
+    desc: '运行态速览：模块、订阅、ACL、版本与最近审计。',
+  },
+  config: {
+    title: '配置',
+    desc: '按模块结构化编辑；密钥掩码，支持热加载。',
+  },
+  releases: {
+    title: '版本',
+    desc: '从 GitHub Releases/tags 选版，服务器 pull 换版。',
+  },
+  modules: {
+    title: '模块',
+    desc: '功能模块启停（门禁 / 帮助 / 推送共用 ModuleId）。',
+  },
+  subscriptions: {
+    title: '订阅',
+    desc: 'QQ 推送订阅运维：频率与启用状态。',
+  },
+  rotations: {
+    title: '轮换',
+    desc: '信条 / 终幕武器轮换表（epoch、周期、列表）。',
+  },
+  acl: {
+    title: 'ACL',
+    desc: '全局 / 群 / C2C 维度的允许与拒绝规则。',
+  },
+  helpMenu: {
+    title: '帮助菜单',
+    desc: '公开帮助标题、简介与可见模块清单。',
+  },
+  audit: {
+    title: '审计',
+    desc: '近期调用日志，便于排查门禁与延迟。',
+  },
 };
 
-const modules = ref<Array<{ id: string; enabled: boolean; sortOrder: number }>>(
-  [],
-);
+const modules = ref<Array<{ id: string; enabled: boolean; sortOrder: number }>>([]);
 const audit = ref<Array<Record<string, unknown>>>([]);
 const acl = ref<Array<Record<string, unknown>>>([]);
 const subscriptions = ref<Array<Record<string, unknown>>>([]);
@@ -49,10 +73,7 @@ const configModules = ref<
   }>
 >([]);
 const selectedConfig = ref('api');
-const configEdit = ref('');
-const releases = ref<
-  Array<{ tag: string; name: string; publishedAt: string | null }>
->([]);
+const releases = ref<Array<{ tag: string; name: string; publishedAt: string | null }>>([]);
 const currentRelease = ref<Record<string, unknown> | null>(null);
 const helpDraft = ref({
   titleZh: '指令帮助',
@@ -61,6 +82,7 @@ const helpDraft = ref({
   introEn: 'Each QQ command is its own root. A leading / is optional.',
   visibleModuleIds: [] as string[],
 });
+const helpSaving = ref(false);
 
 /**
  * 当前工作区页眉。
@@ -68,41 +90,39 @@ const helpDraft = ref({
 const currentMeta = computed(() => sectionMeta[activeSection.value]);
 
 /**
- * 概览指标。
+ * 面包屑项。
  */
-const overviewStats = computed(() => [
-  {
-    label: '模块',
-    value: String(modules.value.length),
-    sub: `启用 ${modules.value.filter((m) => m.enabled).length}`,
-  },
-  {
-    label: '订阅',
-    value: String(subscriptions.value.length),
-    sub: 'push subscriptions',
-  },
-  {
-    label: 'ACL',
-    value: String(acl.value.length),
-    sub: 'access rules',
-  },
-  {
-    label: '审计',
-    value: String(audit.value.length),
-    sub: 'recent events',
-  },
-]);
+const breadcrumbs = computed(() => [{ label: 'Lanius Admin' }, { label: currentMeta.value.title }]);
 
 /**
- * 将选中配置模块载入 JSON 编辑器。
+ * 展示成功 toast。
  *
+ * @param title - 标题
+ * @param description - 可选说明
  * @returns 无返回值
  */
-function loadConfigEditor(): void {
-  const row = configModules.value.find(
-    (m) => m.moduleId === selectedConfig.value,
-  );
-  configEdit.value = row ? JSON.stringify(row.data, null, 2) : '{}';
+function notifyOk(title: string, description?: string): void {
+  toast.add({
+    title,
+    description,
+    color: 'success',
+    icon: 'i-lucide-check',
+  });
+}
+
+/**
+ * 展示错误 toast。
+ *
+ * @param err - 错误对象或文案
+ * @returns 无返回值
+ */
+function notifyErr(err: unknown): void {
+  toast.add({
+    title: '操作失败',
+    description: err instanceof Error ? err.message : String(err),
+    color: 'error',
+    icon: 'i-lucide-circle-alert',
+  });
 }
 
 /**
@@ -135,33 +155,38 @@ async function hydrateHelpDraft(): Promise<void> {
  * @returns 无返回值
  */
 async function refresh(): Promise<void> {
-  const [mod, rules, events, subs, rots, cfg, rel] = await Promise.all([
-    adminFetch<{ modules: typeof modules.value }>('/v1/admin/modules'),
-    adminFetch<{ rules: typeof acl.value }>('/v1/admin/acl'),
-    adminFetch<{ events: typeof audit.value }>('/v1/admin/audit?limit=50'),
-    adminFetch<{ subscriptions: typeof subscriptions.value }>(
-      '/v1/admin/subscriptions',
-    ),
-    adminFetch<{ schedules: typeof rotations.value }>('/v1/admin/rotations'),
-    adminFetch<{ modules: typeof configModules.value }>('/v1/admin/config'),
-    adminFetch<{
-      releases: typeof releases.value;
-      current: Record<string, unknown> | null;
-    }>('/v1/admin/releases').catch(() => ({
-      releases: [] as typeof releases.value,
-      current: null,
-    })),
-  ]);
-  modules.value = mod.modules;
-  acl.value = rules.rules;
-  audit.value = events.events;
-  subscriptions.value = subs.subscriptions;
-  rotations.value = rots.schedules;
-  configModules.value = cfg.modules;
-  releases.value = rel.releases ?? [];
-  currentRelease.value = rel.current ?? null;
-  loadConfigEditor();
-  await hydrateHelpDraft();
+  refreshing.value = true;
+  try {
+    const [mod, rules, events, subs, rots, cfg, rel] = await Promise.all([
+      adminFetch<{ modules: typeof modules.value }>('/v1/admin/modules'),
+      adminFetch<{ rules: typeof acl.value }>('/v1/admin/acl'),
+      adminFetch<{ events: typeof audit.value }>('/v1/admin/audit?limit=200'),
+      adminFetch<{ subscriptions: typeof subscriptions.value }>('/v1/admin/subscriptions'),
+      adminFetch<{ schedules: typeof rotations.value }>('/v1/admin/rotations'),
+      adminFetch<{ modules: typeof configModules.value }>('/v1/admin/config'),
+      adminFetch<{
+        releases: typeof releases.value;
+        current: Record<string, unknown> | null;
+      }>('/v1/admin/releases').catch(() => ({
+        releases: [] as typeof releases.value,
+        current: null,
+      })),
+    ]);
+    modules.value = mod.modules;
+    acl.value = rules.rules;
+    audit.value = events.events;
+    subscriptions.value = subs.subscriptions;
+    rotations.value = rots.schedules;
+    configModules.value = cfg.modules;
+    releases.value = rel.releases ?? [];
+    currentRelease.value = rel.current ?? null;
+    if (!configModules.value.some((m) => m.moduleId === selectedConfig.value)) {
+      selectedConfig.value = configModules.value[0]?.moduleId ?? 'api';
+    }
+    await hydrateHelpDraft();
+  } finally {
+    refreshing.value = false;
+  }
 }
 
 /**
@@ -171,7 +196,6 @@ async function refresh(): Promise<void> {
  */
 async function probeSession(): Promise<void> {
   probing.value = true;
-  error.value = '';
   try {
     await adminFetch('/v1/admin/modules');
     loggedIn.value = true;
@@ -179,8 +203,7 @@ async function probeSession(): Promise<void> {
   } catch (err) {
     loggedIn.value = false;
     if (!(err instanceof AdminApiError && err.status === 401)) {
-      // 非未授权错误仍展示，便于代理/API 宕机排查
-      error.value = err instanceof Error ? err.message : String(err);
+      notifyErr(err);
     }
   } finally {
     probing.value = false;
@@ -193,7 +216,6 @@ async function probeSession(): Promise<void> {
  * @returns 无返回值
  */
 async function login(): Promise<void> {
-  error.value = '';
   loginPending.value = true;
   try {
     await adminFetch('/v1/admin/login', {
@@ -206,8 +228,9 @@ async function login(): Promise<void> {
     loggedIn.value = true;
     password.value = '';
     await refresh();
+    notifyOk('已登录');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   } finally {
     loginPending.value = false;
   }
@@ -219,8 +242,6 @@ async function login(): Promise<void> {
  * @returns 无返回值
  */
 async function logout(): Promise<void> {
-  error.value = '';
-  notice.value = '';
   try {
     await adminFetch('/v1/admin/logout', { method: 'POST' });
   } catch {
@@ -228,18 +249,17 @@ async function logout(): Promise<void> {
   }
   loggedIn.value = false;
   activeSection.value = 'overview';
+  notifyOk('已退出');
 }
 
 /**
- * 保存当前配置模块 JSON。
+ * 保存配置模块对象。
  *
+ * @param body - 配置 JSON 体
  * @returns 无返回值
  */
-async function saveConfig(): Promise<void> {
-  notice.value = '';
-  error.value = '';
+async function saveConfig(body: Record<string, unknown>): Promise<void> {
   try {
-    const body = JSON.parse(configEdit.value) as Record<string, unknown>;
     const result = await adminFetch<{ restartRequired?: string[] }>(
       `/v1/admin/config/${selectedConfig.value}`,
       {
@@ -247,12 +267,15 @@ async function saveConfig(): Promise<void> {
         body: JSON.stringify(body),
       },
     );
-    notice.value = result.restartRequired?.length
-      ? `已保存并热加载。需进程重启的字段：${result.restartRequired.join(', ')}`
-      : '已保存并热加载。';
+    notifyOk(
+      '已保存并热加载',
+      result.restartRequired?.length
+        ? `需进程重启的字段：${result.restartRequired.join(', ')}`
+        : undefined,
+    );
     await refresh();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -263,8 +286,6 @@ async function saveConfig(): Promise<void> {
  * @returns 无返回值
  */
 async function applyTag(tag: string): Promise<void> {
-  notice.value = '';
-  error.value = '';
   try {
     const result = await adminFetch<{
       ok: boolean;
@@ -274,11 +295,13 @@ async function applyTag(tag: string): Promise<void> {
       method: 'POST',
       body: JSON.stringify({ tag, action: 'update' }),
     });
-    notice.value = result.ok
-      ? `已请求更新到 ${tag}（${result.mode}）`
-      : `未能自动执行：${result.detail}`;
+    if (result.ok) {
+      notifyOk(`已请求更新到 ${tag}`, result.mode);
+    } else {
+      notifyErr(new Error(result.detail));
+    }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -293,15 +316,15 @@ async function patchSub(
   id: number,
   patch: { enabled?: boolean; frequency?: string },
 ): Promise<void> {
-  error.value = '';
   try {
     await adminFetch(`/v1/subscriptions/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(patch),
     });
     await refresh();
+    notifyOk('订阅已更新');
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -313,15 +336,15 @@ async function patchSub(
  * @returns 无返回值
  */
 async function toggleModule(id: string, enabled: boolean): Promise<void> {
-  error.value = '';
   try {
     await adminFetch(`/v1/admin/modules/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ enabled }),
     });
     await refresh();
+    notifyOk(`${id} 已${enabled ? '启用' : '关闭'}`);
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -336,17 +359,15 @@ async function saveRotation(
   moduleId: string,
   body: { epochIso: string; periodDays: number; items: string[] },
 ): Promise<void> {
-  notice.value = '';
-  error.value = '';
   try {
     await adminFetch(`/v1/admin/rotations/${moduleId}`, {
       method: 'PUT',
       body: JSON.stringify(body),
     });
-    notice.value = `已保存轮换表 ${moduleId}`;
+    notifyOk(`已保存轮换表 ${moduleId}`);
     await refresh();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -357,17 +378,15 @@ async function saveRotation(
  * @returns 无返回值
  */
 async function createAcl(body: Record<string, unknown>): Promise<void> {
-  notice.value = '';
-  error.value = '';
   try {
     await adminFetch('/v1/admin/acl', {
       method: 'POST',
       body: JSON.stringify(body),
     });
-    notice.value = '已新增 ACL 规则';
+    notifyOk('已新增 ACL 规则');
     await refresh();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -378,14 +397,12 @@ async function createAcl(body: Record<string, unknown>): Promise<void> {
  * @returns 无返回值
  */
 async function removeAcl(id: number): Promise<void> {
-  notice.value = '';
-  error.value = '';
   try {
     await adminFetch(`/v1/admin/acl/${id}`, { method: 'DELETE' });
-    notice.value = `已删除 ACL #${id}`;
+    notifyOk(`已删除 ACL #${id}`);
     await refresh();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
   }
 }
 
@@ -395,21 +412,31 @@ async function removeAcl(id: number): Promise<void> {
  * @returns 无返回值
  */
 async function saveHelpMenu(): Promise<void> {
-  notice.value = '';
-  error.value = '';
+  helpSaving.value = true;
   try {
     await adminFetch('/v1/admin/help-menu', {
       method: 'PUT',
       body: JSON.stringify(helpDraft.value),
     });
-    notice.value = '已保存帮助菜单';
+    notifyOk('已保存帮助菜单');
     await refresh();
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err);
+    notifyErr(err);
+  } finally {
+    helpSaving.value = false;
   }
 }
 
-watch(selectedConfig, () => loadConfigEditor());
+/**
+ * 切换侧栏分区并在窄屏关闭抽屉。
+ *
+ * @param id - 分区 id
+ * @returns 无返回值
+ */
+function goSection(id: AdminSectionId): void {
+  activeSection.value = id;
+  sidebarOpen.value = false;
+}
 
 onMounted(() => {
   void probeSession();
@@ -417,162 +444,178 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="admin-root" :class="{ 'admin-root--nav-open': navOpen }">
-    <header class="admin-top">
-      <button
-        v-if="loggedIn"
-        type="button"
-        class="admin-menu-btn"
-        aria-label="Toggle navigation"
-        @click="navOpen = !navOpen"
-      >
-        ☰
-      </button>
-      <div class="admin-top__brand">
-        <span class="admin-top__mark">L</span>
-        <span>Lanius Admin</span>
+  <UApp>
+    <div class="admin-root min-h-screen bg-default text-default">
+      <div v-if="probing" class="flex min-h-screen flex-col items-center justify-center gap-3">
+        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-primary" />
+        <p class="text-sm text-muted">正在探测会话…</p>
       </div>
-      <span class="admin-top__meta">ops console · cookie session</span>
-      <div class="admin-top__spacer" />
-      <div class="admin-top__actions">
-        <button
-          v-if="loggedIn"
-          type="button"
-          class="admin-btn admin-btn--top"
-          @click="refresh"
+
+      <AdminLoginCard
+        v-else-if="!loggedIn"
+        v-model:username="username"
+        v-model:password="password"
+        error=""
+        :pending="loginPending"
+        @submit="login"
+      />
+
+      <UDashboardGroup v-else unit="rem" storage-key="lanius-admin">
+        <UDashboardSidebar
+          id="lanius-admin-sidebar"
+          v-model:open="sidebarOpen"
+          collapsible
+          resizable
+          :min-size="14"
+          :default-size="16"
+          :max-size="22"
+          class="bg-elevated"
         >
-          刷新
-        </button>
-        <button
-          v-if="loggedIn"
-          type="button"
-          class="admin-btn admin-btn--top"
-          @click="logout"
-        >
-          退出
-        </button>
-        <NuxtLink class="admin-btn admin-btn--top" to="/">公开站</NuxtLink>
-      </div>
-    </header>
+          <template #header>
+            <div class="flex items-center gap-2.5 px-2 py-1">
+              <span
+                class="grid size-8 place-items-center rounded-lg bg-primary text-sm font-bold text-inverted"
+              >
+                L
+              </span>
+              <div class="min-w-0">
+                <p class="truncate font-semibold text-highlighted">Lanius Admin</p>
+                <p class="truncate text-xs text-muted">ops · cookie session</p>
+              </div>
+            </div>
+          </template>
 
-    <p v-if="probing" class="admin-flash" style="margin: 1rem">
-      正在探测会话…
-    </p>
+          <AdminSectionNav v-model="activeSection" @select="sidebarOpen = false" />
 
-    <AdminLoginCard
-      v-else-if="!loggedIn"
-      v-model:username="username"
-      v-model:password="password"
-      :error="error"
-      :pending="loginPending"
-      @submit="login"
-    />
+          <template #footer>
+            <div class="space-y-2 p-2">
+              <UButton
+                block
+                color="neutral"
+                variant="soft"
+                icon="i-lucide-refresh-cw"
+                :loading="refreshing"
+                @click="refresh"
+              >
+                刷新全部
+              </UButton>
+              <UButton
+                block
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-log-out"
+                @click="logout"
+              >
+                退出
+              </UButton>
+            </div>
+          </template>
+        </UDashboardSidebar>
 
-    <div v-else class="admin-shell">
-      <div class="admin-backdrop" @click="navOpen = false" />
-      <aside class="admin-side">
-        <p class="admin-side__label">导航</p>
-        <AdminSectionNav
-          v-model="activeSection"
-          @select="navOpen = false"
-        />
-        <div class="admin-side__foot">
-          <button type="button" class="admin-btn admin-btn--ghost" @click="refresh">
-            刷新全部数据
-          </button>
-        </div>
-      </aside>
-
-      <main class="admin-work">
-        <header class="admin-work__head">
-          <div>
-            <h1 class="admin-work__title">{{ currentMeta.title }}</h1>
-            <p class="admin-work__desc">{{ currentMeta.desc }}</p>
-          </div>
-        </header>
-
-        <p v-if="notice" class="admin-flash admin-flash--ok">{{ notice }}</p>
-        <p v-if="error" class="admin-flash admin-flash--err">{{ error }}</p>
-
-        <section v-if="activeSection === 'overview'" class="admin-panel">
-          <h2 class="admin-panel__title">{{ t('admin.title') }}</h2>
-          <p class="admin-panel__hint">
-            手动访问 /admin；前台导航不展示入口。
-          </p>
-          <div class="admin-metrics">
+        <UDashboardPanel id="lanius-admin-panel">
+          <template #header>
+            <UDashboardNavbar :title="currentMeta.title">
+              <template #leading>
+                <UDashboardSidebarCollapse />
+              </template>
+              <template #right>
+                <div class="flex items-center gap-2">
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-lucide-refresh-cw"
+                    :loading="refreshing"
+                    aria-label="刷新"
+                    @click="refresh"
+                  />
+                  <UButton
+                    color="neutral"
+                    variant="ghost"
+                    icon="i-lucide-external-link"
+                    to="/"
+                    target="_blank"
+                  >
+                    公开站
+                  </UButton>
+                </div>
+              </template>
+            </UDashboardNavbar>
             <div
-              v-for="stat in overviewStats"
-              :key="stat.label"
-              class="admin-metric"
+              class="flex flex-wrap items-center justify-between gap-2 border-b border-default px-4 py-2 sm:px-6"
             >
-              <p class="admin-metric__label">{{ stat.label }}</p>
-              <p class="admin-metric__value">{{ stat.value }}</p>
-              <p class="admin-metric__sub">{{ stat.sub }}</p>
-            </div>
-            <div class="admin-metric">
-              <p class="admin-metric__label">版本</p>
-              <p class="admin-metric__value" style="font-size: 1.05rem">
-                {{ String(currentRelease?.imageTag ?? 'n/a') }}
-              </p>
-              <p class="admin-metric__sub">
-                pkg {{ String(currentRelease?.packageVersion ?? 'n/a') }}
+              <UBreadcrumb :items="breadcrumbs" />
+              <p class="text-xs text-muted sm:text-sm">
+                {{ currentMeta.desc }}
               </p>
             </div>
-          </div>
-        </section>
+          </template>
 
-        <AdminConfigSection
-          v-else-if="activeSection === 'config'"
-          v-model:selected-module-id="selectedConfig"
-          v-model:edit-text="configEdit"
-          :modules="configModules"
-          @save="saveConfig"
-        />
+          <template #body>
+            <div>
+              <AdminOverviewSection
+                v-if="activeSection === 'overview'"
+                :modules="modules"
+                :subscription-count="subscriptions.length"
+                :acl-count="acl.length"
+                :audit="audit"
+                :current-release="currentRelease"
+                @navigate="goSection"
+              />
 
-        <AdminReleasesSection
-          v-else-if="activeSection === 'releases'"
-          :releases="releases"
-          :current="currentRelease"
-          @apply="applyTag"
-        />
+              <AdminConfigSection
+                v-else-if="activeSection === 'config'"
+                v-model:selected-module-id="selectedConfig"
+                :modules="configModules"
+                @save="saveConfig"
+              />
 
-        <AdminModulesSection
-          v-else-if="activeSection === 'modules'"
-          :modules="modules"
-          @toggle="toggleModule"
-        />
+              <AdminReleasesSection
+                v-else-if="activeSection === 'releases'"
+                :releases="releases"
+                :current="currentRelease"
+                @apply="applyTag"
+              />
 
-        <AdminSubscriptionsSection
-          v-else-if="activeSection === 'subscriptions'"
-          :subscriptions="subscriptions"
-          @patch="patchSub"
-        />
+              <AdminModulesSection
+                v-else-if="activeSection === 'modules'"
+                :modules="modules"
+                :loading="refreshing"
+                @toggle="toggleModule"
+              />
 
-        <AdminRotationsSection
-          v-else-if="activeSection === 'rotations'"
-          :schedules="rotations"
-          @save="saveRotation"
-        />
+              <AdminSubscriptionsSection
+                v-else-if="activeSection === 'subscriptions'"
+                :subscriptions="subscriptions"
+                @patch="patchSub"
+              />
 
-        <AdminAclSection
-          v-else-if="activeSection === 'acl'"
-          :rules="acl"
-          @create="createAcl"
-          @remove="removeAcl"
-        />
+              <AdminRotationsSection
+                v-else-if="activeSection === 'rotations'"
+                :schedules="rotations"
+                @save="saveRotation"
+              />
 
-        <AdminHelpMenuSection
-          v-else-if="activeSection === 'helpMenu'"
-          v-model:draft="helpDraft"
-          :module-ids="modules.map((m) => m.id)"
-          @save="saveHelpMenu"
-        />
+              <AdminAclSection
+                v-else-if="activeSection === 'acl'"
+                :rules="acl"
+                :module-ids="modules.map((m) => m.id)"
+                @create="createAcl"
+                @remove="removeAcl"
+              />
 
-        <AdminAuditSection
-          v-else-if="activeSection === 'audit'"
-          :events="audit"
-        />
-      </main>
+              <AdminHelpMenuSection
+                v-else-if="activeSection === 'helpMenu'"
+                v-model:draft="helpDraft"
+                :module-ids="modules.map((m) => m.id)"
+                :saving="helpSaving"
+                @save="saveHelpMenu"
+              />
+
+              <AdminAuditSection v-else-if="activeSection === 'audit'" :events="audit" />
+            </div>
+          </template>
+        </UDashboardPanel>
+      </UDashboardGroup>
     </div>
-  </div>
+  </UApp>
 </template>

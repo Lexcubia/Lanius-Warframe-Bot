@@ -25,39 +25,49 @@ function onSubmit(): void {
 
 <template>
   <div class="admin-login">
-    <section class="admin-login__card">
-      <p class="admin-login__eyebrow">Operations</p>
-      <h2 class="admin-login__title">登录管理控制台</h2>
-      <p class="admin-login__hint">
-        会话使用 HttpOnly cookie；公开导航不展示本入口。
-      </p>
-      <form @submit.prevent="onSubmit">
-        <label class="admin-field"
-          >用户名
-          <input v-model="username" autocomplete="username" class="admin-input" />
-        </label>
-        <label class="admin-field"
-          >口令
-          <input
+    <UCard class="admin-login__card" :ui="{ body: 'space-y-5' }">
+      <div class="space-y-1">
+        <p class="text-xs font-medium uppercase tracking-wider text-muted">Lanius Operations</p>
+        <h1 class="text-2xl font-semibold text-highlighted">登录管理控制台</h1>
+        <p class="text-sm text-muted">
+          会话使用 HttpOnly cookie；公开导航不展示本入口。口令来自
+          <code class="text-xs">config/local/admin.yaml</code>。
+        </p>
+      </div>
+
+      <UForm class="space-y-4" @submit.prevent="onSubmit">
+        <UFormField label="用户名" name="username" required>
+          <UInput
+            v-model="username"
+            autocomplete="username"
+            placeholder="admin"
+            size="lg"
+            class="w-full"
+            icon="i-lucide-user"
+          />
+        </UFormField>
+        <UFormField label="口令" name="password" required>
+          <UInput
             v-model="password"
             type="password"
             autocomplete="current-password"
-            class="admin-input"
+            size="lg"
+            class="w-full"
+            icon="i-lucide-lock"
           />
-        </label>
-        <div class="admin-actions">
-          <button
-            type="submit"
-            class="admin-btn admin-btn--primary"
-            :disabled="pending"
-          >
-            {{ pending ? '登录中…' : '登录' }}
-          </button>
-        </div>
-      </form>
-      <p v-if="error" class="admin-flash admin-flash--err" style="margin-top: 1rem">
-        {{ error }}
-      </p>
-    </section>
+        </UFormField>
+        <UButton type="submit" block size="lg" :loading="pending" icon="i-lucide-log-in">
+          {{ pending ? '登录中…' : '登录' }}
+        </UButton>
+      </UForm>
+
+      <UAlert
+        v-if="error"
+        color="error"
+        variant="subtle"
+        icon="i-lucide-circle-alert"
+        :title="error"
+      />
+    </UCard>
   </div>
 </template>

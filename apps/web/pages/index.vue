@@ -2,8 +2,8 @@
 import {
   DamageTypeIcon,
   FissuresPanel,
-  InvasionsModuleCard,
-  NightwaveModuleCard,
+  InvasionsBoard,
+  NightwaveBoard,
   OfficialItemIcon,
   ValenceBonusBar,
   WorldstateBoard,
@@ -228,7 +228,7 @@ watch(
         :title="t('home.mod.invasions')"
         subtitle="Invasions"
       >
-        <InvasionsModuleCard
+        <InvasionsBoard
           v-if="data.worldstate.invasions.length"
           :worldstate="data.worldstate"
           :locale="loc"
@@ -244,7 +244,7 @@ watch(
         :title="t('home.mod.nightwave')"
         subtitle="Nightwave"
       >
-        <NightwaveModuleCard
+        <NightwaveBoard
           v-if="data.worldstate.nightwave"
           :worldstate="data.worldstate"
           :locale="loc"

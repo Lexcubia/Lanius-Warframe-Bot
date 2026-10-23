@@ -1,27 +1,27 @@
 <script setup lang="ts">
 import type { Locale, RotationWeaponDto, WeaponRotationDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import {
+  DamageTypeIcon,
+  formatRemain,
+  formatTimestamp,
+  OfficialItemIcon,
+  ValenceBonusBar,
+} from '@lanius/ui';
 import { computed } from 'vue';
 
-import { formatRemain } from '../lib/format-remain.js';
-import { formatTimestamp } from '../lib/format-timestamp.js';
-import DamageTypeIcon from './DamageTypeIcon.vue';
-import OfficialItemIcon from './OfficialItemIcon.vue';
 import QqCardShell from './QqCardShell.vue';
-import ValenceBonusBar from './ValenceBonusBar.vue';
+import type { CardSkinId } from './skins.js';
 
 /**
- * 信条 / 终幕武器轮换 QQ/截图模块卡片。
+ * 信条 / 终幕轮换 QQ 截图卡：名 + Valence 细条同行；元素右对齐。
  */
 const props = defineProps<{
-  /** 轮换货架快照（`kind` 区分信条/终幕） */
   rotation: WeaponRotationDto;
-  /** 文案语言 */
   locale: Locale;
-  /** 是否陈旧数据 */
   stale?: boolean;
-  /** 最多展示武器条数 */
   maxItems?: number;
+  skin?: CardSkinId;
 }>();
 
 /**
@@ -35,7 +35,7 @@ function label(name: { zh: string; en: string }): string {
 }
 
 /**
- * 元素译名（无配置时返回 null）。
+ * 元素译名。
  *
  * @param weapon - 轮换武器行
  * @returns 元素名或 null
@@ -88,20 +88,34 @@ const stamp = computed(() => formatTimestamp(props.rotation.fetchedAt));
 </script>
 
 <template>
-  <QqCardShell :title="title" :subtitle="stamp || 'LANIUS'" :stale="stale" :locale="locale">
+  <QqCardShell
+    :title="title"
+    :subtitle="stamp || 'LANIUS'"
+    :stale="stale"
+    :locale="locale"
+    :skin="skin"
+  >
     <p class="rot__meta">{{ remainLine }}</p>
     <ul class="rot__list">
-      <li v-for="(item, idx) in offerings" :key="`${idx}-${item.name.en}`" class="rot__row">
-        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="36" />
-        <div class="rot__body">
-          <p class="rot__name">{{ label(item.name) }}</p>
-          <div class="rot__valence">
-            <DamageTypeIcon :element="item.element" :alt="elementName(item) ?? ''" :size="16" />
-            <span class="rot__el">{{ elementName(item) || '—' }}</span>
-            <ValenceBonusBar v-if="item.bonusPct != null" :bonus-pct="item.bonusPct" />
-            <span v-else class="rot__pct">—</span>
-          </div>
-        </div>
+      <li
+        v-for="(item, idx) in offerings"
+        :key="`${idx}-${item.name.en}`"
+        class="rot__row"
+        :class="{ 'rot__row--zebra': idx % 2 === 1 }"
+      >
+        <OfficialItemIcon :icon-url="item.iconUrl" :alt="label(item.name)" :size="28" />
+        <span class="rot__name">{{ label(item.name) }}</span>
+        <ValenceBonusBar
+          v-if="item.bonusPct != null"
+          class="rot__bar"
+          :bonus-pct="item.bonusPct"
+          :show-label="true"
+        />
+        <span v-else class="rot__pct">—</span>
+        <span class="rot__el">
+          <DamageTypeIcon :element="item.element" :alt="elementName(item) ?? ''" :size="14" />
+          {{ elementName(item) || '—' }}
+        </span>
       </li>
     </ul>
   </QqCardShell>
@@ -109,65 +123,53 @@ const stamp = computed(() => formatTimestamp(props.rotation.fetchedAt));
 
 <style scoped>
 .rot__meta {
-  margin: 0 0 8px;
-  font-size: 12px;
+  margin: 0 0 4px;
+  font-size: 11px;
   color: var(--lanius-text-muted);
 }
-
 .rot__list {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  border-top: 1px solid var(--lanius-border);
 }
-
 .rot__row {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  background: var(--lanius-panel);
-  border: 1px solid var(--lanius-border);
-  border-radius: 10px;
+  gap: 6px;
+  padding: 4px 2px;
+  border-bottom: 1px solid var(--lanius-border);
   min-width: 0;
 }
-
-.rot__body {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.rot__row--zebra {
+  background: var(--lanius-zebra);
 }
-
 .rot__name {
-  margin: 0;
-  font-size: 13px;
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
   font-weight: 700;
   color: var(--lanius-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.rot__valence {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
+.rot__bar {
+  flex: 0 1 120px;
+  min-width: 72px;
+  max-width: 140px;
 }
-
-.rot__el {
-  flex-shrink: 0;
-  font-size: 11px;
-  color: var(--lanius-text-muted);
-  min-width: 2.5em;
-}
-
 .rot__pct {
-  font-size: 11px;
+  font-size: 10px;
+  color: var(--lanius-text-muted);
+}
+.rot__el {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: 10px;
   color: var(--lanius-text-muted);
 }
 </style>

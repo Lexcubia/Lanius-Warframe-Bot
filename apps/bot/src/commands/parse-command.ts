@@ -50,7 +50,6 @@ export type BotIntent =
       frequency?: PushFrequency;
     }
   | { type: 'help'; module?: string }
-  | { type: 'mode'; mode: 'text' | 'image' }
   | { type: 'unknown'; raw: string };
 
 /**
@@ -126,20 +125,6 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
       return { matched: true, intent: { type: 'unknown', raw: body } };
     }
     return { matched: false, reason: 'no_root' };
-  }
-
-  if (command.id === 'mode') {
-    const arg = (restTokens[0] ?? '').toLowerCase();
-    if (arg === '图片' || arg === 'image') {
-      return { matched: true, intent: { type: 'mode', mode: 'image' } };
-    }
-    if (arg === '文本' || arg === 'text') {
-      return { matched: true, intent: { type: 'mode', mode: 'text' } };
-    }
-    return {
-      matched: true,
-      intent: { type: 'unknown', raw: body },
-    };
   }
 
   if (command.id === 'help') {

@@ -1,5 +1,5 @@
 /**
- * `@lanius/render` — 将 DTO 渲染为 QQ 图片回复用的 PNG 卡片。
+ * `@lanius/render` — 将 DTO 渲染为 QQ 图片回复用的 PNG 卡片（Vue + Playwright）。
  */
 
 export {
@@ -8,11 +8,6 @@ export {
   type CaptureVueCardInput,
 } from './chromium/capture-vue-card.js';
 export type { CardKind } from './chromium/card-kind.js';
-export {
-  buildCycleRingDataUrl,
-  type CycleRingSvgInput,
-} from './cycle-ring-svg.js';
-export { rasterizeCard } from './rasterize-card.js';
 export {
   renderFissuresCard,
   renderHelpCard,
@@ -27,22 +22,10 @@ export {
   type RenderWorldstateCardInput,
 } from './render-worldstate.js';
 export {
-  buildWorldstateCardTree,
-  estimateWorldstateCardHeight,
-  type WorldstateCardOptions,
-} from './worldstate-card.js';
-export {
-  buildFissuresCardTree,
-  estimateFissuresCardHeight,
-  type FissuresCardOptions,
-} from './fissures-card.js';
-export {
-  buildInvasionsCardTree,
-  estimateInvasionsCardHeight,
-  type InvasionsCardOptions,
-} from './invasions-card.js';
-export {
-  buildNightwaveCardTree,
-  estimateNightwaveCardHeight,
-  type NightwaveCardOptions,
-} from './nightwave-card.js';
+  CARD_SKINS,
+  DEFAULT_CARD_SKIN,
+  listCardSkinIds,
+  resolveCardSkin,
+  type CardSkinDef,
+  type CardSkinId,
+} from './vue-cards/skins.js';

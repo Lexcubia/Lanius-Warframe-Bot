@@ -11,6 +11,7 @@ import type {
 import { laniusTokens } from '@lanius/ui/tokens';
 import type { Page } from 'playwright';
 
+import { resolveCardSkin, type CardSkinId } from '../vue-cards/skins.js';
 import type { CardKind } from './card-kind.js';
 import { ensureBrowser, shutdownBrowser } from './ensure-browser.js';
 import { ensureCardHostOrigin, shutdownCardHost } from './ensure-card-host.js';
@@ -22,6 +23,11 @@ export type CaptureVueCardInput = {
   kind: CardKind;
   locale: Locale;
   stale?: boolean;
+  /**
+   * QQ 卡片皮肤；非法或空值由 `resolveCardSkin` 回落为 `light`。
+   * 不驱动公开站主题。
+   */
+  skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
   help?: HelpDto;
   market?: MarketSearchDto;
@@ -112,6 +118,10 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
   await page.setViewportSize({ width: width + 24, height: 1200 });
   // 注入本次卡片的逻辑宽度（QqCardShell 读 --lanius-card-width）。evaluate 回调跑在浏览器，tsc 按 Node lib 检查，故用 addStyleTag 规避 document 引用。
   await page.addStyleTag({ content: `:root{--lanius-card-width:${width}px}` });
+  const mountPayload = {
+    ...input,
+    skin: resolveCardSkin(input.skin),
+  };
   await page.evaluate((payload) => {
     const host = globalThis as unknown as CardHostGlobals;
     const mount = host.__LANIUS_MOUNT_CARD__;
@@ -119,7 +129,7 @@ async function captureOnce(input: CaptureVueCardInput): Promise<Buffer> {
       throw new Error('card-host mount API missing');
     }
     mount(payload);
-  }, input);
+  }, mountPayload);
 
   await page.waitForFunction(() => {
     const host = globalThis as unknown as CardHostGlobals;

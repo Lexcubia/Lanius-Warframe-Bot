@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import type { OpenWorldCycleDto, WorldstateDto } from '@lanius/core';
 import { pickLocalized } from '@lanius/core';
+import {
+  formatRemain,
+  formatTimestamp,
+  OpenWorldCycleIcon,
+  resolveOpenWorldCycleTheme,
+} from '@lanius/ui';
 
-import { formatRemain } from '../lib/format-remain.js';
-import { formatTimestamp } from '../lib/format-timestamp.js';
-import { resolveOpenWorldCycleTheme } from '../lib/open-world-cycle-theme.js';
-import OpenWorldCycleIcon from './OpenWorldCycleIcon.vue';
 import QqCardShell from './QqCardShell.vue';
+import type { CardSkinId } from './skins.js';
 
 /**
- * 世界状态（开放世界周期）QQ/截图模块卡片。
+ * 世界状态（开放世界周期）QQ 截图卡：2×3 dense 环格。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
   locale: 'zh' | 'en';
   stale?: boolean;
+  skin?: CardSkinId;
 }>();
 
 /**
@@ -28,7 +32,7 @@ function label(name: { zh: string; en: string }): string {
 }
 
 /**
- * SVG 环几何与六地主题色。
+ * SVG 环几何与六地主题色（环半径略缩小以省高）。
  *
  * @param cycle - 周期 DTO
  * @returns 绘制参数
@@ -43,9 +47,9 @@ function ringGeom(cycle: OpenWorldCycleDto): {
   badgeBg: string;
   badgeFg: string;
 } {
-  const r = 34;
-  const cx = 44;
-  const cy = 44;
+  const r = 28;
+  const cx = 36;
+  const cy = 36;
   const circ = 2 * Math.PI * r;
   const p = Math.max(0, Math.min(1, cycle.progress));
   const angle = -Math.PI / 2 + p * Math.PI * 2;
@@ -63,7 +67,6 @@ function ringGeom(cycle: OpenWorldCycleDto): {
 }
 
 const rows = [() => props.worldstate.cycles.slice(0, 3), () => props.worldstate.cycles.slice(3, 6)];
-
 const stamp = formatTimestamp(props.worldstate.fetchedAt);
 </script>
 
@@ -73,6 +76,7 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"
+    :skin="skin"
   >
     <div class="cycles">
       <div v-for="(rowFn, ri) in rows" :key="ri" class="cycles__row">
@@ -82,37 +86,37 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
             <div class="cycles__ring-wrap">
               <svg
                 class="cycles__ring"
-                viewBox="0 0 88 88"
-                width="86"
-                height="86"
+                viewBox="0 0 72 72"
+                width="64"
+                height="64"
                 aria-hidden="true"
               >
-                <circle cx="44" cy="44" r="34" fill="none" stroke-width="8" :stroke="g.track" />
+                <circle cx="36" cy="36" r="28" fill="none" stroke-width="7" :stroke="g.track" />
                 <circle
-                  cx="44"
-                  cy="44"
-                  r="34"
+                  cx="36"
+                  cy="36"
+                  r="28"
                   fill="none"
-                  stroke-width="8"
+                  stroke-width="7"
                   stroke-linecap="round"
                   :stroke="g.color"
                   :stroke-dasharray="`${g.dash} ${g.circ}`"
-                  transform="rotate(-90 44 44)"
+                  transform="rotate(-90 36 36)"
                 />
                 <circle
                   :cx="g.thumbX"
                   :cy="g.thumbY"
-                  r="5.5"
+                  r="4.5"
                   :fill="g.color"
                   stroke="#fff"
-                  stroke-width="2"
+                  stroke-width="1.5"
                 />
               </svg>
               <OpenWorldCycleIcon
                 class="cycles__ring-icon"
                 :cycle-id="cycle.id"
                 :color="g.color"
-                :size="26"
+                :size="22"
               />
             </div>
             <span class="cycles__badge" :style="{ background: g.badgeBg, color: g.badgeFg }">
@@ -132,76 +136,54 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
 .cycles {
   display: flex;
   flex-direction: column;
-  gap: var(--lanius-card-gap, 8px);
+  gap: 4px;
 }
-
 .cycles__row {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
-
 .cycles__tile {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 4px;
-  background: var(--lanius-panel);
-  border: 1px solid var(--lanius-border);
-  border-radius: var(--lanius-card-radius, 16px);
+  padding: 4px 2px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(62, 78, 110, 0.04);
-  transition:
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    transform 0.18s ease,
-    background 0.18s ease;
+  border-right: 1px solid var(--lanius-border);
 }
-
-@media (hover: hover) {
-  .cycles__tile:hover {
-    border-color: rgba(78, 183, 232, 0.45);
-    background: #fff;
-    box-shadow: 0 8px 18px rgba(62, 78, 110, 0.12);
-    transform: translateY(-2px);
-  }
+.cycles__tile:last-child {
+  border-right: none;
 }
-
 .cycles__tile h3 {
-  margin: 0 0 6px;
-  font-size: 12px;
+  margin: 0 0 2px;
+  font-size: 11px;
   font-weight: 700;
 }
-
 .cycles__ring-wrap {
   position: relative;
-  width: 86px;
-  height: 86px;
+  width: 64px;
+  height: 64px;
 }
-
 .cycles__ring {
   display: block;
 }
-
 .cycles__ring-icon {
   position: absolute;
   inset: 0;
   margin: auto;
   pointer-events: none;
 }
-
 .cycles__badge {
-  margin-top: 8px;
-  padding: 3px 10px;
-  border-radius: 8px;
-  font-size: 12px;
+  margin-top: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
   font-weight: 700;
 }
-
 .cycles__time {
-  margin: 6px 0 0;
-  font-size: 14px;
+  margin: 2px 0 0;
+  font-size: 12px;
   font-weight: 700;
   font-family: var(--lanius-font-display);
 }
