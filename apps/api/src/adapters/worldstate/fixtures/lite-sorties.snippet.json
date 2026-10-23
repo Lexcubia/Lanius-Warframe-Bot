@@ -1,0 +1,36 @@
+{
+  "LiteSorties": [
+    {
+      "_id": {
+        "$oid": "fixture-1427d302"
+      },
+      "Activation": {
+        "$date": {
+          "$numberLong": "1792368000000"
+        }
+      },
+      "Expiry": {
+        "$date": {
+          "$numberLong": "1792972800000"
+        }
+      },
+      "Reward": "/Lotus/Types/Game/MissionDecks/ArchonSortieRewards",
+      "Seed": 1,
+      "Boss": "SORTIE_BOSS_AMAR",
+      "Missions": [
+        {
+          "missionType": "MT_RESCUE",
+          "node": "SolNode11"
+        },
+        {
+          "missionType": "MT_TERRITORY",
+          "node": "SolNode45"
+        },
+        {
+          "missionType": "MT_ASSASSINATION",
+          "node": "SolNode99"
+        }
+      ]
+    }
+  ]
+}

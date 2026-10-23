@@ -20,6 +20,14 @@ export type BotIntent =
   | { type: 'fissures'; filter?: FissureQueryFilter }
   | { type: 'invasions' }
   | { type: 'nightwave' }
+  /** Wave 0 占位模块：mapper 未就绪时回「数据接入中」 */
+  | { type: 'sortie' }
+  | { type: 'archon' }
+  | { type: 'circuit' }
+  | { type: 'bounties' }
+  | { type: 'arbitration' }
+  | { type: 'alerts' }
+  | { type: 'archimedea' }
   | {
       type: 'market';
       query: string;
@@ -187,6 +195,13 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     command.id === 'worldstate' ||
     command.id === 'invasions' ||
     command.id === 'nightwave' ||
+    command.id === 'sortie' ||
+    command.id === 'archon' ||
+    command.id === 'circuit' ||
+    command.id === 'bounties' ||
+    command.id === 'arbitration' ||
+    command.id === 'alerts' ||
+    command.id === 'archimedea' ||
     command.id === 'voidTrader' ||
     command.id === 'varzia' ||
     command.id === 'tenetRotation' ||

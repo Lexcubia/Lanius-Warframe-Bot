@@ -1,3 +1,4 @@
+import { EMPTY_WORLDSTATE_MISSION_SLICES } from '@lanius/core';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -35,6 +36,7 @@ const outDir = resolveDensePreviewDir();
 const sampleWorldstate = {
   realm: 'international' as const,
   fetchedAt: new Date().toISOString(),
+  ...EMPTY_WORLDSTATE_MISSION_SLICES,
   fissures: [],
   cycles: [],
   invasions: [

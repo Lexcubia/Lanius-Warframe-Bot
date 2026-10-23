@@ -38,6 +38,14 @@ describe('parseCommand', () => {
     expect(parseCommand('午夜电波').intent).toEqual({ type: 'nightwave' });
     expect(parseCommand('/电波').intent).toEqual({ type: 'nightwave' });
     expect(parseCommand('夜浪').intent).toEqual({ type: 'nightwave' });
+    expect(parseCommand('/突击').intent).toEqual({ type: 'sortie' });
+    expect(parseCommand('/执行官').intent).toEqual({ type: 'archon' });
+    expect(parseCommand('/回廊').intent).toEqual({ type: 'circuit' });
+    expect(parseCommand('/赏金').intent).toEqual({ type: 'bounties' });
+    expect(parseCommand('/仲裁').intent).toEqual({ type: 'arbitration' });
+    expect(parseCommand('/警报').intent).toEqual({ type: 'alerts' });
+    expect(parseCommand('/科研').intent).toEqual({ type: 'archimedea' });
+    expect(parseCommand('/精英科研').intent).toEqual({ type: 'archimedea' });
     expect(parseCommand('/帮助').intent).toEqual({ type: 'help' });
     expect(parseCommand('/help zk').intent).toEqual({
       type: 'help',

@@ -1,0 +1,44 @@
+{
+  "Alerts": [
+    {
+      "_id": {
+        "$oid": "fixture-d8229290"
+      },
+      "Activation": {
+        "$date": {
+          "$numberLong": "1792735200000"
+        }
+      },
+      "Expiry": {
+        "$date": {
+          "$numberLong": "1792740600000"
+        }
+      },
+      "MissionInfo": {
+        "missionType": "MT_MOBILE_DEFENSE",
+        "faction": "FC_INFESTATION",
+        "location": "SolNode175",
+        "levelOverride": "/Lotus/Levels/Proc/Infestation/InfestedCorpusShipMobileDefense",
+        "enemySpec": "/Lotus/Types/Game/EnemySpecs/InfestedSquadA",
+        "minEnemyLevel": 50,
+        "maxEnemyLevel": 50,
+        "difficulty": 1,
+        "seed": 1,
+        "extraEnemySpec": "",
+        "missionReward": {
+          "credits": 17000,
+          "countedItems": [
+            {
+              "ItemType": "/Lotus/Types/Gameplay/Events/RoadToTauEvent/RoadToTauEventResource",
+              "ItemCount": 50
+            }
+          ]
+        },
+        "descText": "/Lotus/Language/TauPrologue/EventAlertTitle",
+        "leadersAlwaysAllowed": true
+      },
+      "Tag": "RoadToTauEvent",
+      "Icon": "/Lotus/Interface/Icons/StoreIcons/Resources/Events/Moonflesh.png"
+    }
+  ]
+}

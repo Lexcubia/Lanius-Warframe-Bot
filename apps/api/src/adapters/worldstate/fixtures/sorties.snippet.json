@@ -1,0 +1,44 @@
+{
+  "Sorties": [
+    {
+      "_id": {
+        "$oid": "fixture-4a292196"
+      },
+      "Activation": {
+        "$date": {
+          "$numberLong": "1792684800000"
+        }
+      },
+      "Expiry": {
+        "$date": {
+          "$numberLong": "1792771200000"
+        }
+      },
+      "Reward": "/Lotus/Types/Game/MissionDecks/SortieRewards",
+      "Seed": 1,
+      "Boss": "SORTIE_BOSS_CORRUPTED_VOR",
+      "ExtraDrops": [],
+      "Variants": [
+        {
+          "missionType": "MT_EXTERMINATION",
+          "modifierType": "SORTIE_MODIFIER_SLASH",
+          "node": "SolNode412",
+          "tileset": "OrokinVoidTileset"
+        },
+        {
+          "missionType": "MT_TERRITORY",
+          "modifierType": "SORTIE_MODIFIER_EXIMUS",
+          "node": "SolNode407",
+          "tileset": "OrokinVoidTileset"
+        },
+        {
+          "missionType": "MT_MOBILE_DEFENSE",
+          "modifierType": "SORTIE_MODIFIER_LOW_ENERGY",
+          "node": "SolNode405",
+          "tileset": "OrokinVoidTileset"
+        }
+      ],
+      "Twitter": true
+    }
+  ]
+}

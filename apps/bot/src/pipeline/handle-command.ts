@@ -122,6 +122,24 @@ export async function handleCommand(
     locale,
   };
 
+  // Wave 0：任务模块 catalog / ModuleId 已占坑；完整图卡与 mapper 待 Wave 1。
+  if (
+    intent.type === 'sortie' ||
+    intent.type === 'archon' ||
+    intent.type === 'circuit' ||
+    intent.type === 'bounties' ||
+    intent.type === 'arbitration' ||
+    intent.type === 'alerts' ||
+    intent.type === 'archimedea'
+  ) {
+    const stub =
+      locale === 'en'
+        ? 'Data ingest in progress — check back after the next update.'
+        : '数据接入中，请稍后再试。';
+    const sent = await deps.qq.sendMarkdown(target, stub);
+    return sent.ok ? `${intent.type}-stub` : `send-failed:${sent.detail ?? 'unknown'}`;
+  }
+
   if (intent.type === 'help' || intent.type === 'unknown') {
     const envelope = await api
       .getHelp(intent.type === 'help' ? intent.module : undefined)
