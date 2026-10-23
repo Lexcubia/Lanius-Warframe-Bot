@@ -13,7 +13,12 @@
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# 允许 workflow 显式传入仓库根（脚本可能被复制到 /tmp 执行）
+if [ -n "${LANIUS_REPO_ROOT:-}" ]; then
+  REPO_ROOT="${LANIUS_REPO_ROOT}"
+else
+  REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+fi
 REF="${LANIUS_UPDATE_REF:-develop}"
 COMPOSE_FILE="${REPO_ROOT}/deploy/docker-compose.app.yml"
 

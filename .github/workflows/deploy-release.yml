@@ -192,12 +192,13 @@ jobs:
             REF='${{ steps.ver.outputs.ref }}'
             REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
             cd "${DEPLOY_DIR}"
-            # 先 fetch 目标 ref，并用该 ref 上的脚本执行（避免跑到旧 checkout 里的旧脚本）
+            # 先 fetch，并用目标 ref 上的脚本（写入 deploy/ 且设置 LANIUS_REPO_ROOT，避免 /tmp 把 repo 解析成 /）
             git -C "${REPO_ROOT}" fetch origin --prune '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
-            git -C "${REPO_ROOT}" show "${REF}:deploy/update-container.sh" > /tmp/lanius-update-container.sh
-            chmod +x /tmp/lanius-update-container.sh
+            git -C "${REPO_ROOT}" show "${REF}:deploy/update-container.sh" > "${DEPLOY_DIR}/update-container.ref.sh"
+            chmod +x "${DEPLOY_DIR}/update-container.ref.sh"
             export LANIUS_UPDATE_REF="${REF}"
-            bash /tmp/lanius-update-container.sh
+            export LANIUS_REPO_ROOT="${REPO_ROOT}"
+            bash "${DEPLOY_DIR}/update-container.ref.sh"
             # 双保险：无论脚本版本如何，强制 recreate + restart
             docker compose -f "${DEPLOY_DIR}/docker-compose.app.yml" up -d --force-recreate --remove-orphans
             docker compose -f "${DEPLOY_DIR}/docker-compose.app.yml" restart lanius-app

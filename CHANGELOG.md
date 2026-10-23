@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-10-23
+
+### Fixed
+
+- `update-container.sh` 支持 `LANIUS_REPO_ROOT`；Deploy 将目标 ref 脚本写到 `deploy/update-container.ref.sh` 再执行，修复脚本落在 `/tmp` 时把仓库根误解析为 `/`（git exit 128）。
+
 ## [0.4.3] - 2026-10-23
 
 ### Fixed
