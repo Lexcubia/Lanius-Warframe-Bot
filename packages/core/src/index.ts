@@ -111,8 +111,10 @@ export {
 } from './dto/market.js';
 
 export {
+  expandQueryCandidates,
   resolveBestItem,
   scoreItemMatch,
+  scoreItemMatchWithAliases,
   type ItemIndexRow,
   type ResolvedItemHit,
 } from './market/resolve-item.js';

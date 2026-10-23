@@ -36,6 +36,44 @@ function createMemoryCache(): CacheStore {
 }
 
 describe('MarketService.searchOrders', () => {
+  it('locks latron_prime_set for 拉特昂 / 拉特龙 aliases', async () => {
+    const client = {
+      async listItems(language: string) {
+        if (language === 'en') {
+          return [
+            { url_name: 'latron_prime_set', item_name: 'Latron Prime Set' },
+            { url_name: 'latron_wraith_set', item_name: 'Latron Wraith Set' },
+            { url_name: 'latron_prime_barrel', item_name: 'Latron Prime Barrel' },
+          ];
+        }
+        return [
+          { url_name: 'latron_prime_set', item_name: '拉特昂 Prime 一套' },
+          { url_name: 'latron_wraith_set', item_name: '拉特昂·亡魂 一套' },
+          { url_name: 'latron_prime_barrel', item_name: '拉特昂 Prime 枪管' },
+        ];
+      },
+      async listOrders() {
+        return [
+          {
+            order_type: 'sell' as const,
+            platinum: 50,
+            quantity: 1,
+            user: { ingame_name: 'A', status: 'online' },
+          },
+        ];
+      },
+    } as unknown as WarframeMarketClient;
+
+    const service = new MarketService({
+      cache: createMemoryCache(),
+      client,
+    });
+    for (const query of ['拉特昂', '拉特龙']) {
+      const page = await service.searchOrders({ query, page: 1, pageSize: 10 });
+      expect(page.resolved.urlName).toBe('latron_prime_set');
+    }
+  });
+
   it('locks best item, filters sell+online, sorts asc, paginates 10', async () => {
     const client = {
       async listItems(language: string) {

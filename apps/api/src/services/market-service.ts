@@ -62,16 +62,17 @@ export class MarketService {
     );
     const page = Math.max(1, input.page || 1);
 
-    const index = await this.getItemIndex('zh-hans');
-    const hit = resolveBestItem(q, index);
+    const zhIndex = await this.getItemIndex('zh-hans');
+    const enIndex = await this.getItemIndex('en');
+    const hit = resolveBestItem(q, mergeIndexRows(zhIndex, enIndex));
     if (!hit) {
       throw notFoundError(`未匹配到物品：${q} / No market item matched: ${q}`);
     }
 
-    const enIndex = await this.getItemIndex('en');
     const enName =
       enIndex.find((row) => row.urlName === hit.urlName)?.itemName ??
       hit.urlName.replace(/_/g, ' ');
+    const zhName = zhIndex.find((row) => row.urlName === hit.urlName)?.itemName ?? hit.itemName;
 
     const listings = await this.loadSellListings(hit.urlName);
     const filtered =
@@ -88,7 +89,7 @@ export class MarketService {
       query: q,
       resolved: {
         urlName: hit.urlName,
-        name: { zh: hit.itemName, en: enName },
+        name: { zh: zhName, en: enName },
       },
       page,
       pageSize,
@@ -108,7 +109,8 @@ export class MarketService {
    * @returns 索引行
    */
   private async getItemIndex(language: 'zh-hans' | 'en'): Promise<ItemIndexRow[]> {
-    const key = `wfm:items:index:${language}`;
+    // v2 前缀：避免旧 v1 空索引缓存污染。
+    const key = `wfm:v2:items:index:${language}`;
     const fresh = await this.cache.getFresh<ItemIndexRow[]>(key);
     if (fresh) {
       return fresh.value;
@@ -129,7 +131,7 @@ export class MarketService {
    * @returns 规范化卖单列表
    */
   private async loadSellListings(urlName: string): Promise<MarketListingDto[]> {
-    const key = `wfm:item:sells:${urlName}`;
+    const key = `wfm:v2:item:sells:${urlName}`;
     const cached = await this.cache.getFresh<MarketListingDto[]>(key);
     if (cached) {
       return cached.value;
@@ -175,4 +177,24 @@ function normalizeSellerStatus(raw: string | undefined): MarketSellerStatus | nu
     return raw;
   }
   return null;
+}
+
+/**
+ * 按 urlName 合并中英索引行（同 slug 保留先出现的中文名，英文侧仅补缺）。
+ *
+ * @param primary - 优先行（通常 zh-hans）
+ * @param secondary - 补充行（通常 en）
+ * @returns 去重后的索引
+ */
+function mergeIndexRows(primary: ItemIndexRow[], secondary: ItemIndexRow[]): ItemIndexRow[] {
+  const map = new Map<string, ItemIndexRow>();
+  for (const row of primary) {
+    map.set(row.urlName, row);
+  }
+  for (const row of secondary) {
+    if (!map.has(row.urlName)) {
+      map.set(row.urlName, row);
+    }
+  }
+  return [...map.values()];
 }

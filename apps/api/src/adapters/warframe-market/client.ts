@@ -220,9 +220,14 @@ export class WarframeMarketClient {
     weaponUrlName: string,
     options: WfmRivenAuctionSearchOptions = {},
   ): Promise<WfmAuctionRow[]> {
+    const slug = weaponUrlName.trim();
+    // 空 slug 会让上游直接 HTTP 400；在此拦截为业务层可理解的上游错误。
+    if (!slug) {
+      throw upstreamUnavailableError('Warframe Market riven weapon slug is empty');
+    }
     const qs = new URLSearchParams({
       type: 'riven',
-      weapon_url_name: weaponUrlName,
+      weapon_url_name: slug,
       sort_by: 'price_asc',
     });
     if (options.rank !== undefined) {

@@ -68,15 +68,22 @@ export class RivenService {
     const page = Math.max(1, input.page || 1);
 
     const zhIndex = await this.getRivenItemIndex('zh-hans');
-    const hit = resolveBestItem(q, zhIndex);
+    const enIndex = await this.getRivenItemIndex('en');
+    // 中英索引合并打分，避免只搜一侧漏掉英文 slug / 中文别名。
+    const hit = resolveBestItem(q, mergeIndexRows(zhIndex, enIndex));
     if (!hit) {
       throw notFoundError(`未匹配到紫卡武器：${q} / No riven weapon matched: ${q}`);
     }
+    // 上游拍卖要求非空 weapon slug；空串会触发 WFM HTTP 400。
+    if (!hit.urlName.trim()) {
+      throw notFoundError(`未匹配到紫卡武器：${q} / No riven weapon matched: ${q}`);
+    }
 
-    const enIndex = await this.getRivenItemIndex('en');
     const enName =
       enIndex.find((row) => row.urlName === hit.urlName)?.itemName ??
+      zhIndex.find((row) => row.urlName === hit.urlName)?.itemName ??
       hit.urlName.replace(/_/g, ' ');
+    const zhName = zhIndex.find((row) => row.urlName === hit.urlName)?.itemName ?? hit.itemName;
 
     const listings = await this.loadAuctionListings(hit.urlName, {
       rank: input.rank,
@@ -108,7 +115,7 @@ export class RivenService {
       query: q,
       resolved: {
         urlName: hit.urlName,
-        name: { zh: hit.itemName, en: enName },
+        name: { zh: zhName, en: enName },
       },
       page,
       pageSize,
@@ -131,7 +138,7 @@ export class RivenService {
    * @returns 索引行
    */
   private async getRivenItemIndex(language: 'zh-hans' | 'en'): Promise<ItemIndexRow[]> {
-    const key = `wfm:riven:items:${language}`;
+    const key = `wfm:v2:riven:items:${language}`;
     const fresh = await this.cache.getFresh<ItemIndexRow[]>(key);
     if (fresh) {
       return fresh.value;
@@ -157,7 +164,7 @@ export class RivenService {
     upstreamFilter: { rank?: number; mastery?: number },
   ): Promise<RivenListingDto[]> {
     const filterKey = [upstreamFilter.rank ?? 'any', upstreamFilter.mastery ?? 'any'].join(':');
-    const key = `wfm:riven:auctions:${weaponUrlName}:${filterKey}`;
+    const key = `wfm:v2:riven:auctions:${weaponUrlName}:${filterKey}`;
     const cached = await this.cache.getFresh<RivenListingDto[]>(key);
     if (cached) {
       return cached.value;
@@ -251,9 +258,35 @@ function pickAuctionPrice(row: WfmAuctionRow): number | null {
  * @param raw - 上游 status
  * @returns 状态或 null
  */
+/**
+ * 仅保留明确 online / ingame。
+ *
+ * @param raw - 上游 status
+ * @returns 状态或 null
+ */
 function normalizeSellerStatus(raw: string | undefined): MarketSellerStatus | null {
   if (raw === 'online' || raw === 'ingame') {
     return raw;
   }
   return null;
+}
+
+/**
+ * 按 urlName 合并中英紫卡武器索引。
+ *
+ * @param primary - 优先行（zh-hans）
+ * @param secondary - 补充行（en）
+ * @returns 去重索引
+ */
+function mergeIndexRows(primary: ItemIndexRow[], secondary: ItemIndexRow[]): ItemIndexRow[] {
+  const map = new Map<string, ItemIndexRow>();
+  for (const row of primary) {
+    map.set(row.urlName, row);
+  }
+  for (const row of secondary) {
+    if (!map.has(row.urlName)) {
+      map.set(row.urlName, row);
+    }
+  }
+  return [...map.values()];
 }
