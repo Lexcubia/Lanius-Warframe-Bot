@@ -6,6 +6,13 @@
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-23
+
+### Fixed
+
+- Deploy 先 `git show <ref>:deploy/update-container.sh` 再执行，避免服务器旧 checkout 里的旧脚本在 reset 后仍不跑 `--force-recreate`。
+- workflow 层再强制 `compose up --force-recreate` + `restart`，并轮询健康检查直到 `uptimeSec ≤ 120`。
+
 ## [0.4.2] - 2026-10-23
 
 ### Fixed

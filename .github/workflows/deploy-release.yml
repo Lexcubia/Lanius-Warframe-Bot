@@ -190,21 +190,34 @@ jobs:
             set -euo pipefail
             DEPLOY_DIR='${{ secrets.DEPLOY_PATH }}'
             REF='${{ steps.ver.outputs.ref }}'
+            REPO_ROOT="$(cd "${DEPLOY_DIR}/.." && pwd)"
             cd "${DEPLOY_DIR}"
-            # 容器热启动：源码挂载进容器，git 对齐到目标 ref 后重建 card-host/web 并重启容器
+            # 先 fetch 目标 ref，并用该 ref 上的脚本执行（避免跑到旧 checkout 里的旧脚本）
+            git -C "${REPO_ROOT}" fetch origin --prune '+refs/heads/*:refs/remotes/origin/*' '+refs/tags/*:refs/tags/*'
+            git -C "${REPO_ROOT}" show "${REF}:deploy/update-container.sh" > /tmp/lanius-update-container.sh
+            chmod +x /tmp/lanius-update-container.sh
             export LANIUS_UPDATE_REF="${REF}"
-            bash ./update-container.sh
-            docker logs lanius-lanius-app-1 --tail 100 2>&1 || true
-            # 部署后必须换新进程：uptimeSec 过大说明未真正重启
-            HEALTH_JSON="$(curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" \
-              || curl -fsS "http://127.0.0.1/api/lanius/v1/health")"
-            echo "${HEALTH_JSON}"
-            node -e '
-              const j = JSON.parse(process.argv[1]);
-              const u = j?.data?.uptimeSec;
-              if (typeof u !== "number" || u > 120) {
-                console.error("deploy health uptimeSec too high:", u);
+            bash /tmp/lanius-update-container.sh
+            # 双保险：无论脚本版本如何，强制 recreate + restart
+            docker compose -f "${DEPLOY_DIR}/docker-compose.app.yml" up -d --force-recreate --remove-orphans
+            docker compose -f "${DEPLOY_DIR}/docker-compose.app.yml" restart lanius-app
+            docker logs lanius-lanius-app-1 --tail 80 2>&1 || true
+            # 等待新进程就绪；uptimeSec 过大说明未真正换码
+            HEALTH_JSON=''
+            for i in 1 2 3 4 5 6 7 8 9 10; do
+              sleep 3
+              HEALTH_JSON="$(curl -fsS "https://${DOMAIN:-warframe.lexcubia.com}/api/lanius/v1/health" \
+                || curl -fsS "http://127.0.0.1/api/lanius/v1/health" || true)"
+              echo "health_try_${i}=${HEALTH_JSON}"
+              if node -e '
+                const j = JSON.parse(process.argv[1] || "{}");
+                const u = j?.data?.uptimeSec;
+                if (typeof u === "number" && u <= 120) process.exit(0);
                 process.exit(1);
-              }
-              console.log("deploy health ok, uptimeSec=", u);
-            ' "${HEALTH_JSON}"
+              ' "${HEALTH_JSON}"; then
+                echo "deploy health ok"
+                exit 0
+              fi
+            done
+            echo "deploy health uptimeSec still too high after recreate" >&2
+            exit 1
