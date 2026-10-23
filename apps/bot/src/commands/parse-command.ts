@@ -21,7 +21,7 @@ export type BotIntent =
   | { type: 'fissures'; filter?: FissureQueryFilter }
   | { type: 'invasions' }
   | { type: 'nightwave' }
-  /** Wave 0 占位模块：mapper 未就绪时回「数据接入中」 */
+  /** Wave 1 并行模块：circuit 已接线；其余未就绪时回「数据接入中」 */
   | { type: 'sortie' }
   | { type: 'archon' }
   | { type: 'circuit' }

@@ -196,10 +196,12 @@ describe('mapWorldstate', () => {
       fetchedAt,
     );
 
-    // alerts + archimedea 已接通；其余任务模块仍由 Wave 1 各 PR 填入。
+    // Wave 1：alerts + archimedea + circuit 已接通；其余模块仍由并行 PR 填入。
     expect(dto.sortie).toBeNull();
     expect(dto.archon).toBeNull();
-    expect(dto.circuit).toBeNull();
+    expect(dto.circuit).not.toBeNull();
+    expect(dto.circuit?.normalChoices.map((row) => row.key)).toEqual(['Hydroid']);
+    expect(dto.circuit?.hardChoices.map((row) => row.key)).toEqual(['Dera']);
     expect(dto.bounties).toEqual([]);
     expect(dto.arbitration).toBeNull();
     expect(dto.alerts).toHaveLength(1);

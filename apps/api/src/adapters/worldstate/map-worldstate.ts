@@ -2,6 +2,7 @@ import type { CatalogItemDto, InvasionDto, NightwaveDto, Realm, WorldstateDto } 
 
 import { mapAlerts } from './map-alerts.js';
 import { mapArchimedea } from './map-archimedea.js';
+import { mapCircuit } from './map-circuit.js';
 import { mapOpenWorldCycles } from './map-cycles.js';
 import { mapFissures } from './map-fissures.js';
 import { NIGHTWAVE_KIND_LABELS, resolveNightwaveChallengeKind } from './nightwave-kind.js';
@@ -41,7 +42,7 @@ export function mapWorldstate(
   const nowMs = Date.parse(fetchedAt);
   const snapshotNow = Number.isFinite(nowMs) ? nowMs : Date.now();
 
-  // Wave 1：alerts + archimedea 已接通；仲裁由服务层社区源挂载；其余模块仍空安全默认。
+  // Wave 1：alerts + archimedea + circuit 已接通；仲裁由服务层社区源挂载；其余模块仍空安全默认。
   return {
     realm,
     fetchedAt,
@@ -51,7 +52,7 @@ export function mapWorldstate(
     nightwave: mapNightwave(raw.SeasonInfo),
     sortie: null,
     archon: null,
-    circuit: null,
+    circuit: mapCircuit(raw, snapshotNow),
     bounties: [],
     // 官方 worldState 无仲裁；占位 null，由 WorldstateService.loadArbitration 覆盖
     arbitration: null,

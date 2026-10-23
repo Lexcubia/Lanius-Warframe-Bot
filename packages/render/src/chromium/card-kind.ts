@@ -9,6 +9,7 @@ export type CardKind =
   | 'alerts'
   | 'arbitration'
   | 'archimedea'
+  | 'circuit'
   | 'help'
   | 'market'
   | 'riven'

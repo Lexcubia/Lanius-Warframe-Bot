@@ -11,6 +11,7 @@ interface Window {
       | 'alerts'
       | 'arbitration'
       | 'archimedea'
+      | 'circuit'
       | 'help'
       | 'market'
       | 'riven'
