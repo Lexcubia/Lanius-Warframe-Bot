@@ -1,7 +1,7 @@
 {
   "name": "lanius-warframe-bot",
   "private": true,
-  "version": "0.4.2",
+  "version": "0.4.3",
   "description": "Lanius-Warframe-Bot — Warframe query API with QQ/web clients (monorepo).",
   "packageManager": "pnpm@9.15.0",
   "engines": {
