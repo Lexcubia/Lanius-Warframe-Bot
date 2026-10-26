@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { WarframeMarketClient, resolveWfmV2BaseUrl } from './client.js';
+import { WarframeMarketClient, WFM_USER_AGENT, resolveWfmV2BaseUrl } from './client.js';
 
 describe('resolveWfmV2BaseUrl', () => {
   it('upgrades legacy v1 config roots to v2', () => {
@@ -224,5 +224,23 @@ describe('WarframeMarketClient v2 mapping', () => {
     const client = new WarframeMarketClient({ fetchImpl });
     const rows = await client.searchRivenAuctions('latron');
     expect(rows).toHaveLength(1);
+  });
+
+  it('sends identifiable User-Agent with Platform and Language', async () => {
+    const fetchImpl = vi.fn(async (_url: string, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      expect(headers.get('User-Agent')).toBe(WFM_USER_AGENT);
+      expect(headers.get('Accept')).toBe('application/json');
+      expect(headers.get('Platform')).toBe('pc');
+      expect(headers.get('Language')).toBe('zh-hans');
+      return new Response(JSON.stringify({ data: [] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }) as unknown as typeof fetch;
+
+    const client = new WarframeMarketClient({ fetchImpl });
+    await client.listItems('zh-hans');
+    expect(fetchImpl).toHaveBeenCalledOnce();
   });
 });

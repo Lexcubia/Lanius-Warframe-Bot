@@ -7,9 +7,16 @@ import { upstreamUnavailableError } from '../../lib/http-error.js';
 export const WFM_API_BASE = 'https://api.warframe.market/v2';
 
 /**
- * 仍可用的 v1 根（紫卡拍卖搜索暂未迁到 v2）。
+ * 仍可用的 v1 根（紫卡拍卖搜索暂未迁到 v2；`/v2/auctions/*` 尚无对等路由）。
  */
 export const WFM_API_V1_BASE = 'https://api.warframe.market/v1';
+
+/**
+ * WFM 要求可识别的 User-Agent；Node fetch 缺省 UA 会被 Cloudflare 拦成 403 挑战页。
+ * 勿伪装成浏览器 UA（见 docs.warframe.market Rules）。
+ */
+export const WFM_USER_AGENT =
+  'Lanius-Warframe-Bot (+https://github.com/Lexcubia/Lanius-Warframe-Bot)';
 
 /**
  * WFM 展示语言（v2 物品在 `i18n` 内同时带多语种名）。
@@ -362,11 +369,12 @@ export class WarframeMarketClient {
   }
 
   /**
-   * GET JSON（Platform + Language；可切 v1/v2 根）。
+   * GET JSON（Platform + Language + 可识别 User-Agent；可切 v1/v2 根）。
    *
    * @param path - 路径（含 query）
    * @param options - 可选覆盖根 URL / Language
    * @returns 解析后的 JSON
+   * @throws 上游非 2xx / 超时时抛出 `UPSTREAM_UNAVAILABLE`（含 `Warframe Market HTTP ${status}`）
    */
   private async getJson<T>(
     path: string,
@@ -377,11 +385,13 @@ export class WarframeMarketClient {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
+      // Cloudflare 对无 UA 的 Node fetch 返回 403「Just a moment…」；须自报 Lanius 身份。
       const response = await this.fetchImpl(`${root}${path}`, {
         headers: {
           Accept: 'application/json',
           Language: language,
           Platform: 'pc',
+          'User-Agent': WFM_USER_AGENT,
         },
         signal: controller.signal,
       });
