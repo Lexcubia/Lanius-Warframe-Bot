@@ -9,6 +9,7 @@ import type { CardSkinId } from './skins.js';
 
 /**
  * 仲裁 QQ 截图卡：单节点 · 任务类型 · 敌对阵营；社区源空态友好提示。
+ * 键值行标签左、值右铺满宽；节点与任务类型同排。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -106,33 +107,43 @@ const remaining = computed((): string => {
 
 <style scoped>
 .arb__hero {
-  margin-bottom: 8px;
-  padding-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+  padding-bottom: 5px;
   border-bottom: 1px solid var(--lanius-border);
+  width: 100%;
 }
 .arb__node {
-  margin: 0 0 2px;
-  font-size: 15px;
+  margin: 0;
+  font-size: var(--lanius-type-lead, 16px);
   font-weight: 700;
   color: var(--lanius-text);
   line-height: 1.25;
+  min-width: 0;
 }
 .arb__mission {
   margin: 0;
-  font-size: 12px;
-  font-weight: 600;
+  flex-shrink: 0;
+  font-size: var(--lanius-type-body, 14px);
+  font-weight: 700;
   color: var(--lanius-accent-dim);
+  text-align: right;
 }
 .arb__meta {
   margin: 0;
   display: grid;
-  gap: 4px;
+  gap: 5px;
+  width: 100%;
 }
 .arb__row {
   display: flex;
   justify-content: space-between;
-  gap: 12px;
-  font-size: 11px;
+  gap: 16px;
+  font-size: var(--lanius-type-body, 14px);
+  width: 100%;
 }
 .arb__row dt {
   margin: 0;
@@ -141,9 +152,13 @@ const remaining = computed((): string => {
 }
 .arb__row dd {
   margin: 0;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--lanius-text);
   text-align: right;
+  min-width: 0;
+}
+.arb__row--muted {
+  font-size: var(--lanius-type-meta, 12px);
 }
 .arb__row--muted dd {
   font-weight: 500;
@@ -151,7 +166,7 @@ const remaining = computed((): string => {
 }
 .arb__empty {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-body, 14px);
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 4px;

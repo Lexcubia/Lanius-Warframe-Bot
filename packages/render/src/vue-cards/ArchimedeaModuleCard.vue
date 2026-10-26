@@ -14,7 +14,7 @@ import QqCardShell from './QqCardShell.vue';
 import type { CardSkinId } from './skins.js';
 
 /**
- * 科研 QQ 截图卡：分层标题 + 紧凑任务行（偏差/风险一行）。
+ * 科研 QQ 截图卡：分层标题 + 任务行；偏差|风险两栏铺满。
  * 独立于警报；可按 `kind` 只展示精英或时光。
  */
 const props = defineProps<{
@@ -220,6 +220,7 @@ const seasonViews = computed((): SeasonView[] => {
 <style scoped>
 .arc__season {
   margin-bottom: 6px;
+  width: 100%;
 }
 .arc__season:last-child {
   margin-bottom: 0;
@@ -230,19 +231,20 @@ const seasonViews = computed((): SeasonView[] => {
   align-items: baseline;
   gap: 8px;
   margin-bottom: 2px;
+  width: 100%;
 }
 .arc__season-title {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--lanius-type-meta, 12px);
   font-weight: 700;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   color: var(--lanius-accent-dim);
 }
 .arc__season[data-kind='hex'] .arc__season-title {
   color: var(--lanius-warn);
 }
 .arc__expiry {
-  font-size: 10px;
+  font-size: var(--lanius-type-caption, 11px);
   color: var(--lanius-text-muted);
   flex-shrink: 0;
 }
@@ -253,19 +255,20 @@ const seasonViews = computed((): SeasonView[] => {
   border-top: 1px solid var(--lanius-border);
 }
 .arc__mission {
-  padding: 3px 2px 4px;
+  padding: 4px 0 5px;
   border-bottom: 1px solid var(--lanius-border);
 }
 .arc__mission-main {
   display: flex;
   align-items: baseline;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: var(--lanius-type-body, 14px);
   min-width: 0;
+  width: 100%;
 }
 .arc__idx {
   flex-shrink: 0;
-  width: 1.1em;
+  width: 1.15em;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--lanius-text-muted);
@@ -273,22 +276,29 @@ const seasonViews = computed((): SeasonView[] => {
 .arc__type {
   font-weight: 700;
   color: var(--lanius-text);
+  flex: 1;
+  min-width: 0;
 }
 .arc__faction {
   color: var(--lanius-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
+  flex-shrink: 0;
+  max-width: 42%;
+  margin-left: auto;
+  text-align: right;
+  font-weight: 600;
 }
 .arc__mods {
   display: flex;
-  flex-wrap: wrap;
   gap: 2px 10px;
-  margin: 2px 0 0 1.4em;
-  font-size: 10px;
+  margin: 3px 0 0 1.4em;
+  font-size: var(--lanius-type-caption, 11px);
   line-height: 1.35;
   color: var(--lanius-text-muted);
+  width: calc(100% - 1.4em);
+  box-sizing: border-box;
 }
 .arc__mods em {
   font-style: normal;
@@ -296,10 +306,18 @@ const seasonViews = computed((): SeasonView[] => {
   color: var(--lanius-accent-dim);
   margin-right: 3px;
 }
+.arc__dev,
+.arc__risk {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .arc__vars {
   margin: 4px 0 0;
-  font-size: 10px;
-  line-height: 1.4;
+  font-size: var(--lanius-type-caption, 11px);
+  line-height: 1.35;
   color: var(--lanius-text-muted);
 }
 .arc__vars em {
@@ -311,14 +329,14 @@ const seasonViews = computed((): SeasonView[] => {
 .arc__empty,
 .arc__empty-inline {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-body, 14px);
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 10px 0;
 }
 .arc__empty-inline {
   text-align: left;
-  padding: 4px 2px;
-  font-size: 11px;
+  padding: 4px 0;
+  font-size: var(--lanius-type-meta, 12px);
 }
 </style>

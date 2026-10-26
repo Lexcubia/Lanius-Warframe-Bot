@@ -48,7 +48,7 @@ withDefaults(
   width: min(100%, var(--lanius-card-width, 640px));
   max-width: 100%;
   min-width: 0;
-  padding: var(--lanius-card-padding, 8px);
+  padding: var(--lanius-card-padding, 6px);
   background: var(--lanius-shell-bg);
   color: var(--lanius-text);
   font-family: var(--lanius-font-body);
@@ -63,8 +63,8 @@ withDefaults(
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 4px;
-  padding-bottom: 4px;
+  margin-bottom: 3px;
+  padding-bottom: 3px;
   border-bottom: 1px solid var(--lanius-border);
 }
 
@@ -85,7 +85,7 @@ withDefaults(
 
 .lanius-qq-shell__title {
   margin: 0;
-  font-size: 17px;
+  font-size: var(--lanius-type-shell-title, 18px);
   font-weight: 700;
   color: var(--lanius-brand);
   font-family: var(--lanius-font-display);
@@ -94,18 +94,19 @@ withDefaults(
 
 .lanius-qq-shell__sub {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-shell-sub, 12px);
   color: var(--lanius-text-muted);
   flex-shrink: 0;
 }
 
 .lanius-qq-shell__stale {
-  margin: 0 0 4px;
-  font-size: 12px;
+  margin: 0 0 3px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-warn);
 }
 
 .lanius-qq-shell__body {
   padding: 2px 0 0;
+  min-width: 0;
 }
 </style>

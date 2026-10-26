@@ -9,6 +9,7 @@ import type { CardSkinId } from './skins.js';
 
 /**
  * 执行官狩猎 QQ 截图卡：Boss + 三步任务链（通常无修正）。
+ * 单列铺满：任务类型左、节点右跨满行宽。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -71,24 +72,29 @@ const expiryLabel = computed(() => {
 });
 
 /**
- * 单步任务主文案（类型 · 节点）。
+ * 单步任务类型文案。
  *
  * @param mission - 任务步
- * @returns 主行
+ * @returns 类型；缺省 —
  */
-function missionPrimary(mission: SortieMissionDto): string {
-  const parts: string[] = [];
+function missionType(mission: SortieMissionDto): string {
   if (mission.missionType) {
-    parts.push(label(mission.missionType));
-  } else if (mission.missionTypeKey) {
-    parts.push(mission.missionTypeKey);
+    return label(mission.missionType);
   }
+  return mission.missionTypeKey ?? '—';
+}
+
+/**
+ * 单步节点文案。
+ *
+ * @param mission - 任务步
+ * @returns 节点；缺省空串
+ */
+function missionNode(mission: SortieMissionDto): string {
   if (mission.node) {
-    parts.push(label(mission.node));
-  } else if (mission.nodeKey) {
-    parts.push(mission.nodeKey);
+    return label(mission.node);
   }
-  return parts.join(' · ') || '—';
+  return mission.nodeKey ?? '';
 }
 </script>
 
@@ -115,7 +121,10 @@ function missionPrimary(mission: SortieMissionDto): string {
           :class="{ 'archon__row--zebra': index % 2 === 1 }"
         >
           <span class="archon__idx">{{ index + 1 }}</span>
-          <span class="archon__primary">{{ missionPrimary(mission) }}</span>
+          <div class="archon__primary">
+            <span class="archon__type">{{ missionType(mission) }}</span>
+            <span v-if="missionNode(mission)" class="archon__node">{{ missionNode(mission) }}</span>
+          </div>
         </li>
       </ol>
       <p v-else class="archon__empty">
@@ -134,16 +143,18 @@ function missionPrimary(mission: SortieMissionDto): string {
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
+  width: 100%;
 }
 .archon__boss {
-  font-size: 13px;
+  font-size: var(--lanius-type-lead, 16px);
   font-weight: 700;
   color: var(--lanius-text);
+  min-width: 0;
 }
 .archon__expiry {
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text-muted);
 }
 .archon__list {
@@ -156,34 +167,51 @@ function missionPrimary(mission: SortieMissionDto): string {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 4px 2px;
+  padding: 5px 0;
   border-bottom: 1px solid var(--lanius-border);
+  width: 100%;
+  box-sizing: border-box;
 }
 .archon__row--zebra {
   background: color-mix(in srgb, var(--lanius-warn) 8%, transparent);
 }
 .archon__idx {
   flex-shrink: 0;
-  width: 14px;
-  font-size: 11px;
+  width: 1.15em;
+  font-size: var(--lanius-type-body, 14px);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--lanius-warn);
-  line-height: 1.4;
+  line-height: 1.35;
 }
 .archon__primary {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.archon__type {
+  font-size: var(--lanius-type-body, 14px);
+  font-weight: 700;
+  color: var(--lanius-text);
+  min-width: 0;
+}
+.archon__node {
+  flex-shrink: 0;
+  max-width: 58%;
+  font-size: var(--lanius-type-body, 14px);
   font-weight: 600;
   color: var(--lanius-text);
+  text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .archon__empty {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-body, 14px);
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 0;

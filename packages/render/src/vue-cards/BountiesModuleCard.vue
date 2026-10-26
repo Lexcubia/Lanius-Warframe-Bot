@@ -9,6 +9,7 @@ import type { CardSkinId } from './skins.js';
 
 /**
  * 赏金 QQ 截图卡：按联盟分节；Job 行含等级与奖励图标；空 Jobs 诚实空态。
+ * 联盟名|刷新、Job 标题|等级键值铺满；正文字号偏大。
  */
 const props = defineProps<{
   worldstate: WorldstateDto;
@@ -203,8 +204,10 @@ function expiryLabel(expiryIso: string | undefined): string {
 
 <style scoped>
 .bounty {
-  padding: 6px 2px 8px;
+  padding: 5px 0 6px;
   border-bottom: 1px solid var(--lanius-border);
+  width: 100%;
+  box-sizing: border-box;
 }
 .bounty:last-child {
   border-bottom: none;
@@ -216,9 +219,10 @@ function expiryLabel(expiryIso: string | undefined): string {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
-  font-size: 14px;
-  margin-bottom: 4px;
+  gap: 12px;
+  font-size: var(--lanius-type-lead, 16px);
+  margin-bottom: 3px;
+  width: 100%;
 }
 .bounty__head strong {
   color: var(--lanius-brand);
@@ -226,13 +230,13 @@ function expiryLabel(expiryIso: string | undefined): string {
 }
 .bounty__expiry {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-meta, 12px);
   font-variant-numeric: tabular-nums;
   color: var(--lanius-text-muted);
 }
 .bounty__empty-jobs {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text-muted);
   padding: 2px 0 4px;
 }
@@ -240,17 +244,19 @@ function expiryLabel(expiryIso: string | undefined): string {
   list-style: none;
   margin: 0;
   padding: 0;
+  width: 100%;
 }
 .bounty__job {
-  padding: 4px 0 5px;
+  padding: 3px 0 4px;
 }
 .bounty__job-head {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  gap: 8px;
-  font-size: 13px;
-  margin-bottom: 3px;
+  gap: 12px;
+  font-size: var(--lanius-type-body, 14px);
+  margin-bottom: 2px;
+  width: 100%;
 }
 .bounty__job-title {
   font-weight: 700;
@@ -262,22 +268,23 @@ function expiryLabel(expiryIso: string | undefined): string {
 }
 .bounty__job-lv {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--lanius-type-meta, 12px);
   font-variant-numeric: tabular-nums;
   color: var(--lanius-text-muted);
 }
 .bounty__rewards {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 8px;
+  gap: 3px 10px;
   align-items: center;
+  width: 100%;
 }
 .bounty__reward {
   display: inline-flex;
   align-items: center;
   gap: 3px;
   max-width: 100%;
-  font-size: 11px;
+  font-size: var(--lanius-type-meta, 12px);
   color: var(--lanius-text);
 }
 .bounty__reward-name {
@@ -285,11 +292,11 @@ function expiryLabel(expiryIso: string | undefined): string {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 9em;
+  max-width: 14em;
 }
 .bounty__more,
 .bounty__more-jobs {
-  font-size: 11px;
+  font-size: var(--lanius-type-caption, 11px);
   color: var(--lanius-text-muted);
 }
 .bounty__more-jobs {
@@ -297,12 +304,12 @@ function expiryLabel(expiryIso: string | undefined): string {
 }
 .bounty__unresolved {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--lanius-type-caption, 11px);
   color: var(--lanius-text-muted);
 }
 .bounty__empty {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--lanius-type-body, 14px);
   color: var(--lanius-text-muted);
   text-align: center;
   padding: 12px 0;
