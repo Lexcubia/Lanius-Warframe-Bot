@@ -6,6 +6,12 @@
 
 ## [Unreleased]
 
+## [0.6.1] - 2026-10-26
+
+### Fixed
+
+- Warframe Market：出站请求补齐 User-Agent，避免 Cloudflare 403 导致 `/wm` / `/zk` 失败（#101）。
+
 ## [0.6.0] - 2026-10-23
 
 ### Added
