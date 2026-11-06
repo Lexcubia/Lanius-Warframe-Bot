@@ -6,6 +6,7 @@ import {
   renderBountiesCard,
   renderCircuitCard,
   renderArchonCard,
+  renderDenseListCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -13,10 +14,15 @@ import {
   renderNightwaveCard,
   renderRivenCard,
   renderSortieCard,
+  renderValenceCard,
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
+  renderWave2LinesCard,
+  renderWikiCard,
   renderWorldstateCard,
+  type CardSkinId,
+  type DenseListCardPayload,
 } from '@lanius/render';
 import {
   applyBountyMapFilter,
@@ -47,10 +53,28 @@ import {
   rivenWhisperLines,
 } from '../formatters/market-text.js';
 import {
+  formatDispositionText,
+  formatDucatsText,
+  formatLichAuctionsText,
+  formatMarketRankText,
+  formatMarketTrendText,
+  formatOpenRelicText,
+  formatPartsText,
+  formatRelicText,
+  formatRivenAnalysisText,
+  formatRivenRangesText,
+  formatRivenSpliceText,
+} from '../formatters/wave2-text.js';
+import {
   formatRotationText,
   formatVarziaText,
   formatVoidTraderText,
 } from '../formatters/traders-text.js';
+import {
+  formatTranslateText,
+  formatValenceText,
+  formatWikiText,
+} from '../formatters/wiki-tools-text.js';
 import { formatArchimedeaText } from '../formatters/archimedea-text.js';
 import {
   formatAlertsText,
@@ -64,22 +88,63 @@ import {
   formatSortieText,
   formatWorldstateText,
 } from '../formatters/worldstate-text.js';
+import {
+  acrithisCardPayload,
+  arbTableCardPayload,
+  calendarCardPayload,
+  clanRewardsCardPayload,
+  conclaveCardPayload,
+  constructionCardPayload,
+  dailyDealsCardPayload,
+  descendiaCardPayload,
+  eventsCardPayload,
+  flashSalesCardPayload,
+  incarnonCardPayload,
+  incursionsCardPayload,
+  kuvaCardPayload,
+  newsCardPayload,
+  shopCardPayload,
+  synthCardPayload,
+  timersCardPayload,
+  voidStormsCardPayload,
+} from '../formatters/wave1-cards.js';
+import {
+  formatAcrithisText,
+  formatArbTableText,
+  formatCalendar1999Text,
+  formatClanRewardsText,
+  formatConclaveText,
+  formatConstructionText,
+  formatDailyDealsText,
+  formatDescendiaText,
+  formatEssenceShopText,
+  formatEventsText,
+  formatFlashSalesText,
+  formatIncarnonText,
+  formatIncursionsText,
+  formatKuvaText,
+  formatNewsText,
+  formatSynthTargetsText,
+  formatTimersText,
+  formatVoidStormsText,
+} from '../formatters/wave1-text.js';
 import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
 import { buildHelpShortcutKeyboard } from '../qq/build-help-keyboard.js';
 import { buildMarketPageKeyboard, marketPageMarkdownHint } from '../qq/build-market-keyboard.js';
 import { buildRivenPageKeyboard, rivenPageMarkdownHint } from '../qq/build-riven-keyboard.js';
+import { buildWave2PageKeyboard } from '../qq/build-wave2-keyboard.js';
 
 /**
- * QQ 图片模式卡片皮肤（与 render capture 约定一致）。
+ * QQ 图片模式卡片皮肤（与 `@lanius/render` `CardSkinId` 一致）。
  */
-export type CardSkin = 'light' | 'dark';
+export type CardSkin = CardSkinId;
 
 /**
  * 进程级回复偏好（由 `bot.defaultReplyMode` / `bot.defaultCardSkin` 初始化；无 QQ 指令切换）。
  */
 export type SessionPrefs = {
   replyMode: 'text' | 'image';
-  /** 图片模式卡片亮/暗色皮肤（后台配置） */
+  /** 图片模式卡片皮肤（后台配置；默认 orokin） */
   cardSkin: CardSkin;
   locale: Locale;
 };
@@ -88,7 +153,7 @@ export type SessionPrefs = {
  * 为 render*Card 入参附加 `skin`（与 `@lanius/render` 的 `skin?` / `resolveCardSkin` 对齐）。
  *
  * @param input - 原卡片渲染入参
- * @param skin - 会话当前卡片皮肤（`light` | `dark`）
+ * @param skin - 会话当前卡片皮肤（`orokin` | `dark` | `light`）
  * @returns 带 `skin` 字段的入参，供图片模式截图使用
  */
 function withCardSkin<T extends object>(input: T, skin: CardSkin): T & { skin: CardSkin } {
@@ -139,7 +204,220 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 1：sortie / archon / bounties / alerts / arbitration / archimedea / circuit 已接通。
+  // SDJK Wave1：挂在 `/v1/worldstate` 切片上的模块
+  if (
+    intent.type === 'dailyDeals' ||
+    intent.type === 'news' ||
+    intent.type === 'kuva' ||
+    intent.type === 'synthTargets' ||
+    intent.type === 'construction' ||
+    intent.type === 'voidStorms' ||
+    intent.type === 'events' ||
+    intent.type === 'conclave' ||
+    intent.type === 'clanRewards' ||
+    intent.type === 'flashSales' ||
+    intent.type === 'calendar1999' ||
+    intent.type === 'descendia'
+  ) {
+    const kind = intent.type;
+    const envelope = await api.getWorldstate(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const ws = envelope.data;
+    const text =
+      kind === 'dailyDeals'
+        ? formatDailyDealsText(ws, locale, { stale: envelope.meta.stale })
+        : kind === 'news'
+          ? formatNewsText(ws, locale, { stale: envelope.meta.stale })
+          : kind === 'kuva'
+            ? formatKuvaText(ws, locale)
+            : kind === 'synthTargets'
+              ? formatSynthTargetsText(ws, locale)
+              : kind === 'construction'
+                ? formatConstructionText(ws, locale)
+                : kind === 'voidStorms'
+                  ? formatVoidStormsText(ws, locale)
+                  : kind === 'events'
+                    ? formatEventsText(ws, locale)
+                    : kind === 'conclave'
+                      ? formatConclaveText(ws, locale)
+                      : kind === 'clanRewards'
+                        ? formatClanRewardsText(ws, locale)
+                        : kind === 'flashSales'
+                          ? formatFlashSalesText(ws, locale)
+                          : kind === 'calendar1999'
+                            ? formatCalendar1999Text(ws, locale)
+                            : formatDescendiaText(ws, locale);
+    const denseList: DenseListCardPayload =
+      kind === 'dailyDeals'
+        ? dailyDealsCardPayload(ws, locale)
+        : kind === 'news'
+          ? newsCardPayload(ws, locale)
+          : kind === 'kuva'
+            ? kuvaCardPayload(ws, locale)
+            : kind === 'synthTargets'
+              ? synthCardPayload(ws, locale)
+              : kind === 'construction'
+                ? constructionCardPayload(ws, locale)
+                : kind === 'voidStorms'
+                  ? voidStormsCardPayload(ws, locale)
+                  : kind === 'events'
+                    ? eventsCardPayload(ws, locale)
+                    : kind === 'conclave'
+                      ? conclaveCardPayload(ws, locale)
+                      : kind === 'clanRewards'
+                        ? clanRewardsCardPayload(ws, locale)
+                        : kind === 'flashSales'
+                          ? flashSalesCardPayload(ws, locale)
+                          : kind === 'calendar1999'
+                            ? calendarCardPayload(ws, locale)
+                            : descendiaCardPayload(ws, locale);
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin({ denseList, locale, stale: envelope.meta.stale }, deps.prefs.cardSkin),
+        ),
+      label: kind,
+    });
+  }
+
+  if (intent.type === 'timers') {
+    const envelope = await api.getTimers(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatTimersText(envelope.data, locale, { stale: envelope.meta.stale }),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            {
+              denseList: timersCardPayload(envelope.data, locale),
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'timers',
+    });
+  }
+
+  if (intent.type === 'arbTable') {
+    const envelope = await api.getArbTable(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatArbTableText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: arbTableCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'arbTable',
+    });
+  }
+
+  if (intent.type === 'steelPath' || intent.type === 'sliverShop') {
+    const envelope =
+      intent.type === 'steelPath'
+        ? await api.getSteelPath(publicQuery)
+        : await api.getSliverShop(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatEssenceShopText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: shopCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: intent.type,
+    });
+  }
+
+  if (intent.type === 'incursions') {
+    const envelope = await api.getIncursions(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatIncursionsText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: incursionsCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'incursions',
+    });
+  }
+
+  if (intent.type === 'incarnon') {
+    const envelope = await api.getIncarnon(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatIncarnonText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: incarnonCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'incarnon',
+    });
+  }
+
+  if (intent.type === 'acrithis') {
+    const envelope = await api.getAcrithis(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatAcrithisText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: acrithisCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'acrithis',
+    });
+  }
 
   if (intent.type === 'archimedea') {
     const envelope = await api.getWorldstate(publicQuery);
@@ -317,6 +595,383 @@ export async function handleCommand(
     });
   }
 
+  if (intent.type === 'marketTrend') {
+    const envelope = await api.getMarketTrend(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatMarketTrendText(envelope.data, locale);
+    const title = locale === 'en' ? 'Price trend' : '价格趋势';
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin({ title, kicker: 'TREND', lines, locale }, deps.prefs.cardSkin),
+        ),
+      label: 'marketTrend',
+    });
+  }
+
+  if (intent.type === 'marketRank') {
+    const envelope = await api.getMarketRank(
+      {
+        category: intent.category as
+          | 'all'
+          | 'warframe'
+          | 'primary'
+          | 'secondary'
+          | 'melee'
+          | 'mod'
+          | 'arcane'
+          | 'part'
+          | 'relic'
+          | undefined,
+        page: intent.page,
+      },
+      gateCtx,
+    );
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatMarketRankText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const cat = data.category === 'all' ? '' : data.category;
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: `排行 ${cat}`.trim(),
+      page: data.page,
+      totalPages,
+      idPrefix: 'rank',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Market rank' : '市场排行',
+              kicker: 'RANK',
+              subtitle: `p${data.page}/${totalPages}`,
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'marketRank',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'ducats') {
+    const envelope = await api.getDucats({ tier: intent.tier, page: intent.page }, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatDucatsText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const root = data.tier === 'gold' ? '金垃圾' : data.tier === 'silver' ? '银垃圾' : '铜垃圾';
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: root,
+      page: data.page,
+      totalPages,
+      idPrefix: 'ducats',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Ducat junk' : '杜卡德垃圾',
+              kicker: 'DUCATS',
+              subtitle: `p${data.page}/${totalPages}`,
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'ducats',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'rivenAnalysis') {
+    const envelope = await api.getRivenAnalysis(intent.text, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatRivenAnalysisText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Riven analysis' : '紫卡分析',
+              kicker: 'RIVEN',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'rivenAnalysis',
+    });
+  }
+
+  if (intent.type === 'rivenRanges') {
+    const envelope = await api.getRivenRanges(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatRivenRangesText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Stat ranges' : '词条范围',
+              kicker: 'RANGES',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'rivenRanges',
+    });
+  }
+
+  if (intent.type === 'rivenSplice') {
+    const envelope = await api.getRivenSplice(intent.query ?? '', gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatRivenSpliceText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Riven splicer' : '紫卡融合',
+              kicker: 'SPLICE',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'rivenSplice',
+    });
+  }
+
+  if (intent.type === 'disposition') {
+    const envelope = await api.getDisposition(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatDispositionText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Disposition' : '紫卡倾向',
+              kicker: 'DISP',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'disposition',
+    });
+  }
+
+  if (intent.type === 'lichAuctions') {
+    const envelope = await api.getLichAuctions(
+      {
+        q: intent.query,
+        element: intent.element,
+        damageMax: intent.damageMax,
+        page: intent.page,
+      },
+      gateCtx,
+    );
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatLichAuctionsText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: `玄骸 ${intent.query}${intent.element ? ` ${intent.element}` : ''}`,
+      page: data.page,
+      totalPages,
+      idPrefix: 'lich',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Lich auctions' : '玄骸拍卖',
+              kicker: 'LICH',
+              subtitle: `p${data.page}/${totalPages}`,
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'lichAuctions',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'relic') {
+    const envelope = await api.getRelic(intent.query ?? '', intent.page, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatRelicText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard =
+      data.mode === 'tierList'
+        ? buildWave2PageKeyboard({
+            locale,
+            enter: target.scene === 'c2c',
+            commandBase: `遗物 ${intent.query ?? ''}`.trim(),
+            page: data.page,
+            totalPages,
+            idPrefix: 'relic',
+          })
+        : null;
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Relic' : '遗物',
+              kicker: 'RELIC',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'relic',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'parts') {
+    const envelope = await api.getParts(intent.query, intent.page, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatPartsText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: `部件 ${intent.query}`,
+      page: data.page,
+      totalPages,
+      idPrefix: 'parts',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Parts' : '部件来源',
+              kicker: 'PARTS',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'parts',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'openRelic') {
+    const envelope = await api.getOpenRelic(gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatOpenRelicText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Open relic' : '开核桃',
+              kicker: 'FARM',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'openRelic',
+    });
+  }
+
   if (intent.type === 'subscribe') {
     return handleSubscribe(intent, target, deps, api, gateCtx, locale);
   }
@@ -400,6 +1055,78 @@ export async function handleCommand(
           ),
         ),
       label: kind === 'tenet' ? 'tenetRotation' : 'codaRotation',
+    });
+  }
+
+  if (intent.type === 'wiki') {
+    const envelope = await api.getWiki(intent.query, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatWikiText(envelope.data, locale, { stale: envelope.meta.stale });
+    const linkFooter =
+      locale === 'en' ? `Link: ${envelope.data.pageUrl}` : `🔗 wiki 链接：${envelope.data.pageUrl}`;
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWikiCard(
+          withCardSkin(
+            {
+              wiki: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'wiki',
+      // 嵌图时把可点链接放在 footer，避免 URL 烧死在 PNG 里
+      footerMarkdown: linkFooter,
+    });
+  }
+
+  if (intent.type === 'translate') {
+    const envelope = await api.getTranslate(intent.query, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    // 对齐 SDJK：翻译默认纯文本，不渲图（避免把对照表锁进 PNG）
+    const text = formatTranslateText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: false,
+      render: async () => Buffer.alloc(0),
+      label: 'translate',
+    });
+  }
+
+  if (intent.type === 'valence') {
+    const envelope = await api.getValence(intent.tokens, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatValenceText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderValenceCard(
+          withCardSkin(
+            {
+              valence: envelope.data,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'valence',
     });
   }
 
@@ -649,10 +1376,13 @@ async function handleSubscribe(
         ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
         : [
             zh ? '当前订阅：' : 'Subscriptions:',
-            ...rows.map((row) => `· ${row.moduleId} (${row.frequency})`),
+            ...rows.map((row) => {
+              const filter = row.filterArgs ? ` [${row.filterArgs}]` : '';
+              return `· ${row.moduleId}${filter} (${row.frequency})`;
+            }),
             zh
-              ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
-              : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
+              ? '示例：/订阅 裂隙 变更时 · /订阅 夜灵 · /订阅 裂隙 钢铁 · /订阅 退订 裂隙'
+              : 'e.g. /subscribe fissures on_change · /subscribe cetus · /subscribe off fissures',
           ];
     const sent = await deps.qq.sendText(target, lines.join('\n'));
     return sent.ok ? 'subscribe-list' : `send-failed:${sent.detail ?? 'unknown'}`;
@@ -666,11 +1396,16 @@ async function handleSubscribe(
       scene,
       targetId: gateCtx.targetId,
       moduleId: intent.moduleId,
+      // 未指定筛选时关闭该模块全部订阅；周期别名等自带 filterArgs 则精确关闭
+      ...(intent.filterArgs !== undefined ? { filterArgs: intent.filterArgs } : {}),
     });
     if (!envelope.ok) {
       return sendFail(deps, target, locale, envelope.error.message);
     }
-    const msg = zh ? `已退订：${intent.moduleId}` : `Unsubscribed: ${intent.moduleId}`;
+    const filter = intent.filterArgs ? ` [${intent.filterArgs}]` : '';
+    const msg = zh
+      ? `已退订：${intent.moduleId}${filter}`
+      : `Unsubscribed: ${intent.moduleId}${filter}`;
     const sent = await deps.qq.sendText(target, msg);
     return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
   }
@@ -684,14 +1419,16 @@ async function handleSubscribe(
     targetId: gateCtx.targetId,
     moduleId: intent.moduleId,
     frequency,
+    filterArgs: intent.filterArgs ?? null,
     userId: gateCtx.userId,
   });
   if (!envelope.ok) {
     return sendFail(deps, target, locale, envelope.error.message);
   }
+  const filter = intent.filterArgs ? ` [${intent.filterArgs}]` : '';
   const msg = zh
-    ? `已订阅 ${intent.moduleId}（频率：${frequency}）`
-    : `Subscribed ${intent.moduleId} (${frequency})`;
+    ? `已订阅 ${intent.moduleId}${filter}（频率：${frequency}）`
+    : `Subscribed ${intent.moduleId}${filter} (${frequency})`;
   const sent = await deps.qq.sendText(target, msg);
   return sent.ok ? 'subscribe-on' : `send-failed:${sent.detail ?? 'unknown'}`;
 }

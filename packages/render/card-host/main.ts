@@ -4,9 +4,11 @@ import type {
   Locale,
   MarketSearchDto,
   RivenSearchDto,
+  ValenceFusionDto,
   VarziaDto,
   VoidTraderDto,
   WeaponRotationDto,
+  WikiDto,
   WorldstateDto,
 } from '@lanius/core';
 import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
@@ -23,6 +25,7 @@ import {
   CircuitModuleCard,
   ArchonModuleCard,
   CyclesModuleCard,
+  DenseListModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
   InvasionsModuleCard,
@@ -34,7 +37,11 @@ import {
   VarziaModuleCard,
   VoidTraderModuleCard,
   WeaponRotationModuleCard,
+  Wave2LinesCard,
+  WikiModuleCard,
+  ValenceModuleCard,
   type CardSkinId,
+  type DenseListCardPayload,
 } from '../src/vue-cards/index.js';
 import '../src/vue-cards/dense-tokens.css';
 
@@ -58,9 +65,13 @@ export type CardHostKind =
   | 'help'
   | 'market'
   | 'riven'
+  | 'wave2Lines'
   | 'voidTrader'
   | 'varzia'
-  | 'weaponRotation';
+  | 'weaponRotation'
+  | 'wiki'
+  | 'valence'
+  | 'denseList';
 
 /**
  * Playwright `page.evaluate` 注入的挂载载荷。
@@ -69,7 +80,7 @@ export type CardHostPayload = {
   kind: CardHostKind;
   locale: Locale;
   stale?: boolean;
-  /** QQ 皮肤 id（非法值回落 light） */
+  /** QQ 皮肤 id（非法值回落 orokin） */
   skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
   /** 科研子类过滤（仅 archimedea） */
@@ -77,9 +88,13 @@ export type CardHostPayload = {
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
+  wave2?: { title: string; kicker: string; subtitle?: string; lines: string[] };
   voidTrader?: VoidTraderDto;
   varzia?: VarziaDto;
   weaponRotation?: WeaponRotationDto;
+  wiki?: WikiDto;
+  valence?: ValenceFusionDto;
+  denseList?: DenseListCardPayload;
 };
 
 /**
@@ -133,12 +148,20 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return MarketModuleCard;
     case 'riven':
       return RivenModuleCard;
+    case 'wave2Lines':
+      return Wave2LinesCard;
     case 'voidTrader':
       return VoidTraderModuleCard;
     case 'varzia':
       return VarziaModuleCard;
     case 'weaponRotation':
       return WeaponRotationModuleCard;
+    case 'wiki':
+      return WikiModuleCard;
+    case 'valence':
+      return ValenceModuleCard;
+    case 'denseList':
+      return DenseListModuleCard;
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown card kind: ${_exhaustive}`);
@@ -175,12 +198,23 @@ function mountCard(payload: CardHostPayload): void {
     props.market = payload.market;
   } else if (payload.kind === 'riven') {
     props.riven = payload.riven;
+  } else if (payload.kind === 'wave2Lines') {
+    props.title = payload.wave2?.title ?? '';
+    props.kicker = payload.wave2?.kicker ?? 'LANIUS';
+    props.subtitle = payload.wave2?.subtitle;
+    props.lines = payload.wave2?.lines ?? [];
   } else if (payload.kind === 'voidTrader') {
     props.voidTrader = payload.voidTrader;
   } else if (payload.kind === 'varzia') {
     props.varzia = payload.varzia;
   } else if (payload.kind === 'weaponRotation') {
     props.rotation = payload.weaponRotation;
+  } else if (payload.kind === 'wiki') {
+    props.wiki = payload.wiki;
+  } else if (payload.kind === 'valence') {
+    props.valence = payload.valence;
+  } else if (payload.kind === 'denseList') {
+    props.payload = payload.denseList;
   } else if (payload.kind === 'archimedea') {
     props.worldstate = payload.worldstate;
     if (payload.archimedeaKind) {

@@ -4,14 +4,17 @@ import type {
   Locale,
   MarketSearchDto,
   RivenSearchDto,
+  ValenceFusionDto,
   VarziaDto,
   VoidTraderDto,
   WeaponRotationDto,
+  WikiDto,
   WorldstateDto,
 } from '@lanius/core';
 import { laniusTokens } from '@lanius/ui/tokens';
 import type { Page } from 'playwright';
 
+import type { DenseListCardPayload } from '../vue-cards/dense-list-types.js';
 import { resolveCardSkin, type CardSkinId } from '../vue-cards/skins.js';
 import type { CardKind } from './card-kind.js';
 import { ensureBrowser, shutdownBrowser } from './ensure-browser.js';
@@ -25,7 +28,7 @@ export type CaptureVueCardInput = {
   locale: Locale;
   stale?: boolean;
   /**
-   * QQ 卡片皮肤；非法或空值由 `resolveCardSkin` 回落为 `light`。
+   * QQ 卡片皮肤；非法或空值由 `resolveCardSkin` 回落为 `orokin`。
    * 不驱动公开站主题。
    */
   skin?: CardSkinId | string;
@@ -38,9 +41,14 @@ export type CaptureVueCardInput = {
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
+  wave2?: { title: string; kicker: string; subtitle?: string; lines: string[] };
   voidTrader?: VoidTraderDto;
   varzia?: VarziaDto;
   weaponRotation?: WeaponRotationDto;
+  wiki?: WikiDto;
+  valence?: ValenceFusionDto;
+  /** Wave1 密列表载荷（`kind=denseList`） */
+  denseList?: DenseListCardPayload;
 };
 
 /**
@@ -57,15 +65,12 @@ type CardHostGlobals = {
 const CARD_ROOT_SELECTOR = '[data-lanius-card-root]';
 
 /**
- * 按卡片类型决定逻辑宽度。信条/终幕武器名与加成进度条较长，加宽以容纳数值。
+ * 返回 QQ 卡片逻辑宽度（Wave 0 起统一 Orokin 宽幅 ~1000）。
  *
- * @param kind - 卡片类型
+ * @param _kind - 卡片类型（保留入参供日后按 kind 微调）
  * @returns 逻辑宽度像素
  */
-function cardWidthFor(kind: CardKind): number {
-  if (kind === 'weaponRotation') {
-    return 560;
-  }
+function cardWidthFor(_kind: CardKind): number {
   return laniusTokens.card.width;
 }
 

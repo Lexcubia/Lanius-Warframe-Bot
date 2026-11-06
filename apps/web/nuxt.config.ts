@@ -22,15 +22,15 @@ export default defineNuxtConfig({
       link: [
         {
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@500;700;900&display=swap',
+          href: 'https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&display=swap',
         },
       ],
-      // 公开站固定亮色暖底；仅 Admin 路径才恢复本地暗色偏好
+      // 公开站固定 Orokin 暗金；仅 Admin 路径才恢复本地暗色偏好
       script: [
         {
           key: 'lanius-color-mode',
           innerHTML:
-            "(function(){try{var p=location.pathname;var admin=p==='/admin'||/\\/admin\\/?$/.test(p);if(!admin){document.documentElement.classList.remove('theme-dark');document.documentElement.style.colorScheme='light';document.documentElement.classList.add('theme-anime-boot');return;}var m=localStorage.getItem('lanius.colorMode');var d=m==='dark'||(m!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('theme-dark');document.documentElement.style.colorScheme='dark';}}catch(e){}})();",
+            "(function(){try{var p=location.pathname;var admin=p==='/admin'||/\\/admin\\/?$/.test(p);if(!admin){document.documentElement.classList.remove('theme-dark');document.documentElement.style.colorScheme='dark';document.documentElement.classList.add('theme-anime-boot');return;}var m=localStorage.getItem('lanius.colorMode');var d=m==='dark'||(m!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d){document.documentElement.classList.add('theme-dark');document.documentElement.style.colorScheme='dark';}}catch(e){}})();",
         },
       ],
     },

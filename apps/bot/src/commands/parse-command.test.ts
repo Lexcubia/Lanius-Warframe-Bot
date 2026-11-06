@@ -118,6 +118,17 @@ describe('parseCommand', () => {
     expect(parseCommand('/瓦奇娅').intent).toEqual({ type: 'varzia' });
     expect(parseCommand('/信条轮换').intent).toEqual({ type: 'tenetRotation' });
     expect(parseCommand('/终幕').intent).toEqual({ type: 'codaRotation' });
+    expect(parseCommand('/wiki 仲裁').intent).toEqual({ type: 'wiki', query: '仲裁' });
+    expect(parseCommand('/维基 Ash').intent).toEqual({ type: 'wiki', query: 'Ash' });
+    expect(parseCommand('/翻译 腐蚀投射').intent).toEqual({
+      type: 'translate',
+      query: '腐蚀投射',
+    });
+    expect(parseCommand('/武器融合 电60 火58').intent).toEqual({
+      type: 'valence',
+      tokens: ['电60', '火58'],
+    });
+    expect(parseCommand('/融合 44').intent).toEqual({ type: 'valence', tokens: ['44'] });
     expect(parseCommand('/订阅').intent).toEqual({
       type: 'subscribe',
       action: 'list',
@@ -128,10 +139,36 @@ describe('parseCommand', () => {
       moduleId: 'fissures',
       frequency: 'daily',
     });
+    expect(parseCommand('/订阅 裂隙 钢铁 变更时').intent).toEqual({
+      type: 'subscribe',
+      action: 'on',
+      moduleId: 'fissures',
+      filterArgs: '钢铁',
+      frequency: 'on_change',
+    });
+    expect(parseCommand('/订阅 夜灵').intent).toEqual({
+      type: 'subscribe',
+      action: 'on',
+      moduleId: 'worldstate',
+      filterArgs: 'cetus',
+      frequency: 'on_change',
+    });
+    expect(parseCommand('/订阅 钢路侵袭').intent).toEqual({
+      type: 'subscribe',
+      action: 'on',
+      moduleId: 'incursions',
+      frequency: 'on_change',
+    });
     expect(parseCommand('/订阅 退订 信条').intent).toEqual({
       type: 'subscribe',
       action: 'off',
       moduleId: 'tenetRotation',
+    });
+    expect(parseCommand('/订阅 退订 夜灵').intent).toEqual({
+      type: 'subscribe',
+      action: 'off',
+      moduleId: 'worldstate',
+      filterArgs: 'cetus',
     });
   });
 

@@ -1,14 +1,29 @@
 import {
   isRealmAvailable,
+  type AcrithisDto,
+  type ArbTableDto,
   type ArbitrationDto,
+  type EssenceShopDto,
+  type IncarnonRotationDto,
+  type IncursionsDto,
   type Locale,
   type Realm,
+  type TimersDto,
   type WorldstateDto,
 } from '@lanius/core';
 import type { Logger } from '@lanius/logger';
 
+import { fetchArbTable } from '../adapters/worldstate/arbi-table.js';
+import { buildTimersFromWorldstate } from '../adapters/worldstate/build-timers.js';
 import { mapArbitration } from '../adapters/worldstate/map-arbitration.js';
 import { fetchInternationalWorldstate } from '../adapters/worldstate/international.js';
+import {
+  fetchIncursions,
+  mapAcrithis,
+  mapIncarnonRotation,
+  mapSliverShop,
+  mapSteelPathShop,
+} from '../adapters/worldstate/map-shops-rotations.js';
 import { mapWorldstate, WORLDSTATE_SOURCE } from '../adapters/worldstate/map-worldstate.js';
 import type { UpstreamWorldstate } from '../adapters/worldstate/types.js';
 import {
@@ -157,6 +172,140 @@ export class WorldstateService {
   }
 
   /**
+   * 时效总览（聚合 worldstate + 侵袭/灵化/仲裁换场）。
+   *
+   * @param realm - 区服
+   * @param locale - 语言（预留）
+   * @returns TimersDto 与缓存元数据
+   */
+  async getTimers(
+    realm: Realm,
+    locale: Locale,
+  ): Promise<{
+    data: TimersDto;
+    cached: boolean;
+    cacheAgeMs: number;
+    stale: boolean;
+    source: string;
+  }> {
+    const ws = await this.getWorldstate(realm, locale);
+    const [incursions, incarnon] = await Promise.all([
+      this.getIncursions(realm),
+      Promise.resolve(mapIncarnonRotation(Date.parse(ws.data.fetchedAt) || Date.now())),
+    ]);
+    const nextArb = nextHourSwitchIso(Date.parse(ws.data.fetchedAt) || Date.now());
+    const timers = buildTimersFromWorldstate(ws.data, {
+      ...(incursions.expiry ? { incursionsExpiry: incursions.expiry } : {}),
+      ...(incarnon.expiry ? { incarnonExpiry: incarnon.expiry } : {}),
+      nextArbSwitchIso: nextArb,
+    });
+    return {
+      data: timers,
+      cached: ws.cached,
+      cacheAgeMs: ws.cacheAgeMs,
+      stale: ws.stale,
+      source: ws.source,
+    };
+  }
+
+  /**
+   * 仲裁约 14 日排期表（arbi.wf.wiki）。
+   *
+   * @param realm - 区服
+   * @returns ArbTableDto（失败时空 rows + sourceNote）
+   */
+  async getArbTable(realm: Realm): Promise<ArbTableDto> {
+    if (!isRealmAvailable(realm)) {
+      throw realmNotAvailableError(realm);
+    }
+    const cacheKey = `arb-table:${realm}`;
+    const fresh = await this.cache.getFresh<ArbTableDto>(cacheKey);
+    if (fresh) {
+      return fresh.value;
+    }
+    try {
+      const dto = await fetchArbTable({
+        timeoutMs: this.timeoutMs,
+        fetchImpl: this.fetchImpl,
+      });
+      await this.cache.set(cacheKey, dto, ARBITRATION_TTL_MS * 10);
+      return dto;
+    } catch (error) {
+      this.logger.warn(
+        { err: serializeError(error), realm, source: 'arbi.wf.wiki' },
+        'arb table fetch failed',
+      );
+      return {
+        fetchedAt: new Date().toISOString(),
+        rows: [],
+        sourceNote: {
+          zh: '仲裁排期暂不可用（arbi.wf.wiki）',
+          en: 'Arbitration schedule unavailable (arbi.wf.wiki)',
+        },
+      };
+    }
+  }
+
+  /**
+   * 钢铁精华商店。
+   *
+   * @returns EssenceShopDto
+   */
+  getSteelPathShop(): EssenceShopDto {
+    return mapSteelPathShop();
+  }
+
+  /**
+   * 碎银商店。
+   *
+   * @returns EssenceShopDto
+   */
+  getSliverShop(): EssenceShopDto {
+    return mapSliverShop();
+  }
+
+  /**
+   * 钢铁侵袭。
+   *
+   * @param realm - 区服
+   * @returns IncursionsDto
+   */
+  async getIncursions(realm: Realm): Promise<IncursionsDto> {
+    if (!isRealmAvailable(realm)) {
+      throw realmNotAvailableError(realm);
+    }
+    const cacheKey = `incursions:${realm}`;
+    const fresh = await this.cache.getFresh<IncursionsDto>(cacheKey);
+    if (fresh) {
+      return fresh.value;
+    }
+    const dto = await fetchIncursions({
+      timeoutMs: this.timeoutMs,
+      fetchImpl: this.fetchImpl,
+    });
+    await this.cache.set(cacheKey, dto, WORLDSTATE_TTL_MS);
+    return dto;
+  }
+
+  /**
+   * 本周灵化轮换。
+   *
+   * @returns IncarnonRotationDto
+   */
+  getIncarnon(): IncarnonRotationDto {
+    return mapIncarnonRotation();
+  }
+
+  /**
+   * 言录使货架（候选池）。
+   *
+   * @returns AcrithisDto
+   */
+  getAcrithis(): AcrithisDto {
+    return mapAcrithis();
+  }
+
+  /**
    * 拉取并映射仲裁社区源；任何失败 / 空数据均返回 `null`（不抛）。
    *
    * @param realm - 区服（用于缓存键；MVP 仅 international）
@@ -261,9 +410,27 @@ export class WorldstateService {
  * @param error - Caught value from try/catch.
  * @returns Plain object safe for structured logging (no secrets expected).
  */
+/**
+ * 转换为可日志化的普通对象。
+ *
+ * @param error - catch 值
+ * @returns 不含密钥的摘要
+ */
 function serializeError(error: unknown): { name: string; message: string } {
   if (error instanceof Error) {
     return { name: error.name, message: error.message };
   }
   return { name: 'UnknownError', message: String(error) };
+}
+
+/**
+ * 下一整点仲裁换场（不联网；与 SDJK `arbi.next_switch` 对齐）。
+ *
+ * @param nowMs - 当前毫秒
+ * @returns ISO 换场时刻
+ */
+function nextHourSwitchIso(nowMs: number): string {
+  const step = 3_600_000;
+  const next = Math.floor(nowMs / step) * step + step;
+  return new Date(next).toISOString();
 }

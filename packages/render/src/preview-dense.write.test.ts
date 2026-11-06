@@ -284,7 +284,7 @@ describe('dense QQ card previews (light/dark)', () => {
 
   it('writes market/help/invasions/riven/baro PNGs for both skins', async () => {
     mkdirSync(outDir, { recursive: true });
-    const skins: CardSkinId[] = ['light', 'dark'];
+    const skins: CardSkinId[] = ['orokin', 'dark'];
 
     for (const skin of skins) {
       const market = await renderMarketCard({ locale: 'zh', market: marketSample, skin });

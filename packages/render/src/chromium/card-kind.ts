@@ -16,6 +16,11 @@ export type CardKind =
   | 'help'
   | 'market'
   | 'riven'
+  | 'wave2Lines'
   | 'voidTrader'
   | 'varzia'
-  | 'weaponRotation';
+  | 'weaponRotation'
+  | 'wiki'
+  | 'valence'
+  /** SDJK Wave1 密列表卡（达沃/新闻/仲裁表/商店等） */
+  | 'denseList';

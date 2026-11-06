@@ -1,42 +1,67 @@
 /**
- * QQ 卡片 dense 间距与 light/dark 皮肤变量。
+ * QQ 卡片 dense 间距与 orokin/dark/light 皮肤变量。
  * 仅挂在 `[data-lanius-skin]`（QqCardShell 根）上，不影响 Web 站点主题。
+ * Orokin 色板对齐 SDJK ImageRenderer（暗金 + 暖白墨）。
  */
 
 [data-lanius-skin] {
-  --lanius-card-padding: 8px;
-  --lanius-card-gap: 4px;
-  --lanius-card-radius: 10px;
-  --lanius-font-display: 'Zen Maru Gothic', 'Noto Sans SC', sans-serif;
-  --lanius-font-body: 'Noto Sans SC', 'Source Sans 3', sans-serif;
+  --lanius-card-padding: 14px;
+  --lanius-card-gap: 6px;
+  --lanius-card-radius: 0;
+  /* 弃用 Zen Maru；CJK 统一 Noto Sans SC */
+  --lanius-font-display: 'Noto Sans SC', 'Noto Sans CJK SC', 'Source Han Sans SC', sans-serif;
+  --lanius-font-body: 'Noto Sans SC', 'Noto Sans CJK SC', 'Source Han Sans SC', sans-serif;
   --lanius-font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --lanius-type-shell-kicker: 13px;
+  --lanius-type-shell-title: 28px;
+  --lanius-type-shell-sub: 13px;
+  --lanius-type-lead: 18px;
+  --lanius-type-body: 16px;
+  --lanius-type-meta: 13px;
+  --lanius-type-caption: 12px;
+  /* 语义色（纪元/任务等芯片可复用） */
+  --lanius-gold: #d4b06a;
+  --lanius-gold-bright: #f0d79a;
+  --lanius-gold-dim: #7a643e;
+  --lanius-cyan: #6fd3e8;
+  --lanius-violet: #b48fe8;
+  --lanius-amber: #e8b26a;
+  --lanius-teal: #58b8a8;
+  --lanius-steel: #9fc3e8;
+  --lanius-ducat-gold: #f0d799;
+  --lanius-ducat-silver: #b2caec;
+  --lanius-ducat-bronze: #d6925c;
+  --lanius-panel-alt: #181e2b;
+  --lanius-panel-line: #342f26;
+  --lanius-hair: #282c36;
 }
 
-[data-lanius-skin='light'] {
-  --lanius-void: #fff8f2;
-  --lanius-panel: #ffffff;
-  --lanius-panel-raised: #fff4eb;
-  --lanius-border: #e4d5c8;
-  --lanius-border-bright: #c9b8a8;
-  --lanius-text: #2a3142;
-  --lanius-text-muted: #6b7385;
-  --lanius-accent: #4eb7e8;
-  --lanius-accent-dim: #2f8fc4;
-  --lanius-warn: #f0b429;
-  --lanius-danger: #ff7a6e;
-  --lanius-success: #5fd0b0;
-  --lanius-brand: #2a3142;
-  --lanius-highlight: #ff7a6e;
-  --lanius-bar-attack: #4eb7e8;
-  --lanius-bar-defend: #ffb38a;
-  --lanius-zebra: rgba(62, 78, 110, 0.04);
-  --lanius-shell-shadow: 0 8px 20px rgba(62, 78, 110, 0.1);
-  --lanius-shell-bg:
-    radial-gradient(420px 180px at 6% -20%, rgba(78, 183, 232, 0.18), transparent 60%),
-    radial-gradient(360px 160px at 96% 0%, rgba(255, 122, 110, 0.14), transparent 55%),
-    linear-gradient(180deg, var(--lanius-panel-raised) 0%, var(--lanius-void) 100%);
+/* SDJK Orokin 暗金（默认） */
+[data-lanius-skin='orokin'] {
+  --lanius-void: #0c0f16;
+  --lanius-panel: #131823;
+  --lanius-panel-raised: #181e2b;
+  --lanius-border: #342f26;
+  --lanius-border-bright: #7a643e;
+  --lanius-text: #ece8de;
+  --lanius-text-muted: #a8b0be;
+  --lanius-accent: #d4b06a;
+  --lanius-accent-dim: #7a643e;
+  --lanius-warn: #e8b26a;
+  --lanius-danger: #d86458;
+  --lanius-success: #6cc88a;
+  --lanius-brand: #f0d79a;
+  --lanius-highlight: #f0d79a;
+  --lanius-bar-attack: #6fd3e8;
+  --lanius-bar-defend: #d4b06a;
+  --lanius-zebra: rgba(212, 176, 106, 0.06);
+  --lanius-shell-shadow: none;
+  --lanius-shell-bg: linear-gradient(180deg, #0c0f16 0%, #090b11 100%);
+  --lanius-frame: #7a643e;
+  --lanius-ornament: #f0d79a;
 }
 
+/* 备选暗色（偏冷，非 Orokin） */
 [data-lanius-skin='dark'] {
   --lanius-void: #141822;
   --lanius-panel: #1c2230;
@@ -45,19 +70,43 @@
   --lanius-border-bright: #3d4660;
   --lanius-text: #e8ecf4;
   --lanius-text-muted: #9aa3b5;
-  --lanius-accent: #5ec4ef;
-  --lanius-accent-dim: #4eb7e8;
+  --lanius-accent: #d4b06a;
+  --lanius-accent-dim: #7a643e;
   --lanius-warn: #f0b429;
   --lanius-danger: #ff8a7e;
   --lanius-success: #5fd0b0;
-  --lanius-brand: #f0f3fa;
-  --lanius-highlight: #ff8a7e;
-  --lanius-bar-attack: #4eb7e8;
-  --lanius-bar-defend: #ffb38a;
+  --lanius-brand: #f0d79a;
+  --lanius-highlight: #f0d79a;
+  --lanius-bar-attack: #6fd3e8;
+  --lanius-bar-defend: #d4b06a;
   --lanius-zebra: rgba(255, 255, 255, 0.03);
   --lanius-shell-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-  --lanius-shell-bg:
-    radial-gradient(420px 180px at 6% -20%, rgba(78, 183, 232, 0.12), transparent 60%),
-    radial-gradient(360px 160px at 96% 0%, rgba(255, 122, 110, 0.1), transparent 55%),
-    linear-gradient(180deg, #1a2030 0%, #12161f 100%);
+  --lanius-shell-bg: linear-gradient(180deg, #1a2030 0%, #12161f 100%);
+  --lanius-frame: #3d4660;
+  --lanius-ornament: #d4b06a;
+}
+
+/* 备选亮色（保留兼容；非默认） */
+[data-lanius-skin='light'] {
+  --lanius-void: #f4f1ea;
+  --lanius-panel: #ffffff;
+  --lanius-panel-raised: #faf6ef;
+  --lanius-border: #d4b06a;
+  --lanius-border-bright: #7a643e;
+  --lanius-text: #2a3142;
+  --lanius-text-muted: #6b7385;
+  --lanius-accent: #b8923f;
+  --lanius-accent-dim: #7a643e;
+  --lanius-warn: #c9892e;
+  --lanius-danger: #d86458;
+  --lanius-success: #3a9a68;
+  --lanius-brand: #2a3142;
+  --lanius-highlight: #b8923f;
+  --lanius-bar-attack: #4a9bb8;
+  --lanius-bar-defend: #d4b06a;
+  --lanius-zebra: rgba(122, 100, 62, 0.06);
+  --lanius-shell-shadow: 0 8px 20px rgba(62, 78, 110, 0.08);
+  --lanius-shell-bg: linear-gradient(180deg, #faf6ef 0%, #f4f1ea 100%);
+  --lanius-frame: #b8923f;
+  --lanius-ornament: #7a643e;
 }

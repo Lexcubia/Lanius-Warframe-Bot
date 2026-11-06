@@ -1,0 +1,359 @@
+{
+  "melee_damage": [
+    165.0,
+    164.7,
+    219.6,
+    99.9,
+    164.7
+  ],
+  "crit_chance": [
+    149.99,
+    90.0,
+    149.99,
+    99.9,
+    180.0
+  ],
+  "crit_damage": [
+    120.0,
+    90.0,
+    90.0,
+    80.1,
+    90.0
+  ],
+  "multishot": [
+    90.0,
+    119.7,
+    119.7,
+    60.3,
+    null
+  ],
+  "fire_rate": [
+    60.03,
+    90.0,
+    74.7,
+    60.03,
+    54.9
+  ],
+  "attack_speed": [
+    60.03,
+    90.0,
+    74.7,
+    60.03,
+    54.9
+  ],
+  "status_chance": [
+    90.0,
+    90.0,
+    90.0,
+    60.3,
+    90.0
+  ],
+  "status_duration": [
+    99.99,
+    99.99,
+    99.99,
+    99.99,
+    99.99
+  ],
+  "range": [
+    null,
+    null,
+    null,
+    null,
+    1.94
+  ],
+  "initial_combo": [
+    null,
+    null,
+    null,
+    null,
+    24.5
+  ],
+  "combo_duration": [
+    null,
+    null,
+    null,
+    null,
+    8.1
+  ],
+  "heavy_attack_efficiency": [
+    null,
+    null,
+    null,
+    null,
+    73.44
+  ],
+  "extra_combo_count": [
+    null,
+    null,
+    null,
+    null,
+    58.77
+  ],
+  "combo_gain_chance": [
+    null,
+    null,
+    null,
+    null,
+    104.85
+  ],
+  "finisher_damage": [
+    null,
+    null,
+    null,
+    null,
+    119.7
+  ],
+  "slide_crit": [
+    null,
+    null,
+    null,
+    null,
+    120.0
+  ],
+  "slash_damage": [
+    119.97,
+    119.97,
+    119.97,
+    90.0,
+    119.7
+  ],
+  "impact_damage": [
+    119.97,
+    119.97,
+    119.97,
+    90.0,
+    119.7
+  ],
+  "puncture_damage": [
+    119.97,
+    119.97,
+    119.97,
+    90.0,
+    119.7
+  ],
+  "heat_damage": [
+    90.0,
+    90.0,
+    90.0,
+    119.7,
+    90.0
+  ],
+  "cold_damage": [
+    90.0,
+    90.0,
+    90.0,
+    119.7,
+    90.0
+  ],
+  "toxin_damage": [
+    90.0,
+    90.0,
+    90.0,
+    119.7,
+    90.0
+  ],
+  "electric_damage": [
+    90.0,
+    90.0,
+    90.0,
+    119.7,
+    90.0
+  ],
+  "damage_vs_grineer": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+  ],
+  "damage_vs_corpus": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+  ],
+  "damage_vs_infested": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+  ],
+  "magazine_capacity": [
+    50.0,
+    50.0,
+    50.0,
+    60.3,
+    null
+  ],
+  "ammo_max": [
+    49.95,
+    90.0,
+    90.0,
+    99.9,
+    null
+  ],
+  "projectile_speed": [
+    90.0,
+    90.0,
+    90.0,
+    null,
+    null
+  ],
+  "punch_through": [
+    2.7,
+    2.7,
+    2.7,
+    2.7,
+    null
+  ],
+  "reload_speed": [
+    50.0,
+    50.0,
+    50.0,
+    99.9,
+    null
+  ],
+  "recoil": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    null
+  ],
+  "zoom": [
+    59.99,
+    41.994,
+    80.1,
+    59.99,
+    null
+  ],
+  "gas_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "corrosive_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "viral_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "radiation_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "blast_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "magnetic_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "damage_vs_orokin": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+  ],
+  "damage_vs_scaldra": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+  ],
+  "damage_vs_techrot": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    45.0
+  ],
+  "weakpoint_damage": [
+    225.0,
+    225.0,
+    225.0,
+    225.0,
+    null
+  ],
+  "weakpoint_crit_chance": [
+    247.5,
+    247.5,
+    247.5,
+    247.5,
+    null
+  ],
+  "status_damage": [
+    90.0,
+    90.0,
+    90.0,
+    90.0,
+    90.0
+  ],
+  "ammo_efficiency": [
+    45.0,
+    45.0,
+    45.0,
+    45.0,
+    null
+  ],
+  "reload_holstered": [
+    90.0,
+    90.0,
+    90.0,
+    null,
+    null
+  ],
+  "melee_heavy_attack_damage": [
+    null,
+    null,
+    null,
+    null,
+    119.7
+  ],
+  "melee_heavy_attack_charge": [
+    null,
+    null,
+    null,
+    null,
+    119.7
+  ],
+  "melee_parry_angle": [
+    null,
+    null,
+    null,
+    null,
+    81.0
+  ],
+  "melee_slam_damage": [
+    null,
+    null,
+    null,
+    null,
+    119.7
+  ]
+}

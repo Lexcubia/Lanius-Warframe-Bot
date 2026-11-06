@@ -1,0 +1,268 @@
+{
+  "incarnon": {
+    "_note": "钢铁回廊灵化 9 周循环；锚点取自 Update 43 官方 patch notes（Week 9 自 2026-06-22 00:00 UTC 起）",
+    "epoch": "2026-06-22T00:00:00+00:00",
+    "anchor_week": 9,
+    "period_hours": 168,
+    "pick": 5,
+    "mode": "weekly_cycle",
+    "weeks": [
+      [
+        {
+          "en": "Braton",
+          "cn": "布莱顿",
+          "variant": "Braton / Mk1 / Prime / Vandal"
+        },
+        {
+          "en": "Lato",
+          "cn": "拉托",
+          "variant": "Lato / Prime / Vandal"
+        },
+        {
+          "en": "Skana",
+          "cn": "空刃",
+          "variant": "Skana / Prime / Prisma"
+        },
+        {
+          "en": "Paris",
+          "cn": "帕里斯",
+          "variant": "Paris / Mk1 / Prime"
+        },
+        {
+          "en": "Kunai",
+          "cn": "苦无",
+          "variant": "Kunai / Mk1"
+        }
+      ],
+      [
+        {
+          "en": "Boar",
+          "cn": "野猪",
+          "variant": "Boar / Prime"
+        },
+        {
+          "en": "Gammacor",
+          "cn": "咖玛腕甲枪",
+          "variant": "Gammacor / Synoid"
+        },
+        {
+          "en": "Angstrum",
+          "cn": "安格斯壮",
+          "variant": "Angstrum / Prisma"
+        },
+        {
+          "en": "Gorgon",
+          "cn": "蛇发女妖",
+          "variant": "Gorgon / Wraith / Prisma"
+        },
+        {
+          "en": "Anku",
+          "cn": "夺魂死神",
+          "variant": "Anku"
+        }
+      ],
+      [
+        {
+          "en": "Bo",
+          "cn": "玻之武杖",
+          "variant": "Bo / Mk1 / Prime"
+        },
+        {
+          "en": "Latron",
+          "cn": "拉特昂",
+          "variant": "Latron / Prime / Wraith"
+        },
+        {
+          "en": "Furis",
+          "cn": "盗贼",
+          "variant": "Furis / Mk1"
+        },
+        {
+          "en": "Furax",
+          "cn": "弗拉克斯",
+          "variant": "Furax / Mk1 / Wraith"
+        },
+        {
+          "en": "Strun",
+          "cn": "斯特朗",
+          "variant": "Strun / Mk1 / Prime / Wraith"
+        }
+      ],
+      [
+        {
+          "en": "Lex",
+          "cn": "雷克斯",
+          "variant": "Lex / Prime"
+        },
+        {
+          "en": "Magistar",
+          "cn": "执法者",
+          "variant": "Magistar / Sancti"
+        },
+        {
+          "en": "Boltor",
+          "cn": "螺钉步枪",
+          "variant": "Boltor / Prime / Telos"
+        },
+        {
+          "en": "Bronco",
+          "cn": "野马",
+          "variant": "Bronco / Prime"
+        },
+        {
+          "en": "Ceramic Dagger",
+          "cn": "陶瓷匕首",
+          "variant": "Ceramic Dagger"
+        }
+      ],
+      [
+        {
+          "en": "Torid",
+          "cn": "托里德",
+          "variant": "Torid"
+        },
+        {
+          "en": "Dual Toxocyst",
+          "cn": "毒囊双枪",
+          "variant": "Dual Toxocyst"
+        },
+        {
+          "en": "Dual Ichor",
+          "cn": "恶脓双斧",
+          "variant": "Dual Ichor"
+        },
+        {
+          "en": "Miter",
+          "cn": "米特尔",
+          "variant": "Miter"
+        },
+        {
+          "en": "Atomos",
+          "cn": "原子矿融炮",
+          "variant": "Atomos"
+        }
+      ],
+      [
+        {
+          "en": "Ack & Brunt",
+          "cn": "认知 & 冲击",
+          "variant": "Ack & Brunt"
+        },
+        {
+          "en": "Soma",
+          "cn": "月神",
+          "variant": "Soma / Prime"
+        },
+        {
+          "en": "Vasto",
+          "cn": "瓦斯托",
+          "variant": "Vasto / Prime"
+        },
+        {
+          "en": "Nami Solo",
+          "cn": "海波单剑",
+          "variant": "Nami Solo"
+        },
+        {
+          "en": "Burston",
+          "cn": "伯斯顿",
+          "variant": "Burston / Prime"
+        }
+      ],
+      [
+        {
+          "en": "Zylok",
+          "cn": "席尔火枪",
+          "variant": "Zylok / Prime"
+        },
+        {
+          "en": "Sibear",
+          "cn": "西伯利亚冰锤",
+          "variant": "Sibear"
+        },
+        {
+          "en": "Dread",
+          "cn": "恐惧",
+          "variant": "Dread"
+        },
+        {
+          "en": "Despair",
+          "cn": "绝望",
+          "variant": "Despair"
+        },
+        {
+          "en": "Hate",
+          "cn": "憎恨",
+          "variant": "Hate"
+        }
+      ],
+      [
+        {
+          "en": "Dera",
+          "cn": "德拉",
+          "variant": "Dera / Vandal"
+        },
+        {
+          "en": "Sybaris",
+          "cn": "席芭莉丝",
+          "variant": "Sybaris / Dex / Prime"
+        },
+        {
+          "en": "Cestra",
+          "cn": "锡斯特",
+          "variant": "Cestra"
+        },
+        {
+          "en": "Sicarus",
+          "cn": "暗杀者",
+          "variant": "Sicarus / Prime"
+        },
+        {
+          "en": "Okina",
+          "cn": "翁",
+          "variant": "Okina / Prime"
+        }
+      ],
+      [
+        {
+          "en": "Vectis",
+          "cn": "守望者",
+          "variant": "Vectis / Prime"
+        },
+        {
+          "en": "Stug",
+          "cn": "史特克",
+          "variant": "Stug"
+        },
+        {
+          "en": "Ballistica",
+          "cn": "布里斯提卡",
+          "variant": "Ballistica / Prime / Rakta"
+        },
+        {
+          "en": "Destreza",
+          "cn": "技巧之剑",
+          "variant": "Destreza / Prime"
+        },
+        {
+          "en": "Obex",
+          "cn": "奥比克斯",
+          "variant": "Obex / Prisma"
+        }
+      ]
+    ]
+  },
+  "acrithis": {
+    "_note": "言录使（Acrithis / Duviri 档案管理员）周常货单。官方周期：**每周一 00:00 UTC** 轮换 5 件 —— wiki《Acrithis》页原文「Resets every Monday 0:00 UTC」并带实时倒计时；《Reset》总表同，且 Update 32.3 已把各商人周常统一到周一（Palladino/Chipper/Teshin 等）。⚠️ DE《Update 33.0》补丁说明里那句「rotating at Sundays at 00:00 UTC」是 2023 年初版、已被后续调整覆盖，不要再引用它。时刻一律以 UTC 判定，卡面按北京时间（UTC+8）展示。",
+    "epoch": "2023-04-30T00:00:00+00:00",
+    "period_hours": 168,
+    "pick": 5,
+    "mode": "weekly_cycle",
+    "reset_weekday": 0,
+    "reset_hour_utc": 0,
+    "_reset_weekday_note": "0=周一 … 6=周日；0 即 wiki 当前的周一",
+    "items": [],
+    "_items_note": "DE 不下发本周实际 5 件（AcrithisVendorManifest 只有候选池 + 权重），本周货单见 core/data/de/acrichis_week.json（社区维护快照）。",
+    "_source": "https://wiki.warframe.com/w/Acrithis（实时抓取，含倒计时）；https://wiki.warframe.com/w/Reset"
+  }
+}

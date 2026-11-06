@@ -27,18 +27,9 @@ function toggle(): void {
 </script>
 
 <template>
-  <section
-    :id="moduleId"
-    class="mod"
-    :class="{ 'mod--open': open }"
-  >
+  <section :id="moduleId" class="mod" :class="{ 'mod--open': open }">
     <header class="mod__head">
-      <button
-        type="button"
-        class="mod__toggle"
-        :aria-expanded="open"
-        @click="toggle"
-      >
+      <button type="button" class="mod__toggle" :aria-expanded="open" @click="toggle">
         <span class="mod__chev" aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
         <span class="mod__titles">
           <span class="mod__title">{{ title }}</span>
@@ -56,11 +47,11 @@ function toggle(): void {
 <style scoped>
 .mod {
   scroll-margin-top: 5.5rem;
-  background: #fff;
-  border: 1px solid var(--anime-line, #e4d5c8);
-  border-radius: 16px;
+  background: var(--anime-panel, #131823);
+  border: 1px solid var(--anime-line, rgba(122, 100, 62, 0.55));
+  border-radius: 12px;
   /* 不用 backdrop-filter，避免叠出发灰半透明块 */
-  box-shadow: 0 2px 10px rgba(62, 78, 110, 0.05);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
   overflow: clip;
   transition:
     border-color 0.18s ease,
@@ -68,25 +59,25 @@ function toggle(): void {
 }
 
 .mod--open {
-  border-color: rgba(78, 183, 232, 0.35);
-  box-shadow: 0 8px 24px rgba(62, 78, 110, 0.08);
+  border-color: rgba(212, 176, 106, 0.55);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
 
 @media (hover: hover) {
   .mod:hover {
-    border-color: rgba(78, 183, 232, 0.4);
-    box-shadow: 0 6px 18px rgba(62, 78, 110, 0.09);
+    border-color: rgba(212, 176, 106, 0.65);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
   }
 }
 
 .mod__head {
   margin: 0;
-  background: #fff4eb;
+  background: #131823;
 }
 
 .mod--open .mod__head {
-  background: linear-gradient(180deg, #fff8f2 0%, #ffffff 100%);
-  border-bottom: 1px solid var(--anime-line, #e4d5c8);
+  background: linear-gradient(180deg, #181e2b 0%, #131823 100%);
+  border-bottom: 1px solid var(--anime-line, #342f26);
 }
 
 .mod__toggle {
@@ -100,23 +91,23 @@ function toggle(): void {
   background: transparent;
   cursor: pointer;
   text-align: left;
-  color: var(--anime-ink, #2a3142);
+  color: var(--anime-ink, #ece8de);
   font: inherit;
 }
 
 @media (hover: hover) {
   .mod__toggle:hover {
-    background: rgba(78, 183, 232, 0.06);
+    background: rgba(212, 176, 106, 0.08);
   }
 
   .mod__toggle:hover .mod__chev {
-    color: var(--anime-coral, #ff7a6e);
+    color: var(--anime-peach, #f0d79a);
   }
 }
 
 .mod__chev {
   width: 1rem;
-  color: var(--anime-sky-deep, #2f8fc4);
+  color: var(--anime-gold, #d4b06a);
   font-size: 0.75rem;
   line-height: 1;
   flex-shrink: 0;
@@ -136,11 +127,11 @@ function toggle(): void {
   font-weight: 700;
   font-size: 1rem;
   letter-spacing: -0.01em;
-  color: var(--anime-ink, #2a3142);
+  color: var(--anime-peach, #f0d79a);
 }
 
 .mod__sub {
-  color: var(--anime-muted, #6b7385);
+  color: var(--anime-muted, #a8b0be);
   font-size: 0.78rem;
   font-weight: 500;
 }
@@ -151,19 +142,15 @@ function toggle(): void {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #fff;
-  background: linear-gradient(
-    135deg,
-    var(--anime-coral, #ff7a6e),
-    var(--anime-peach, #ffb38a)
-  );
+  color: #0c0f16;
+  background: linear-gradient(135deg, var(--anime-gold, #d4b06a), var(--anime-peach, #f0d79a));
   padding: 0.2rem 0.48rem;
-  border-radius: 8px;
+  border-radius: 6px;
 }
 
 .mod__body {
   padding: 0.85rem 1rem 1rem;
-  background: #fff;
+  background: var(--anime-cream, #0c0f16);
   animation: mod-in 0.2s ease;
 }
 

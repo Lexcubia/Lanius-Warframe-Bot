@@ -24,7 +24,7 @@
     "stale": "Data may be slightly stale"
   },
   "home": {
-    "tagline": "World state, fissures, traders, and rotations — a handy Warframe board",
+    "tagline": "World state, missions, daily boards, and rotations — a handy Warframe board",
     "searchPlaceholder": "Search market items…",
     "searchHint": "Market / Riven / Help / Subscribe live on their own pages; jump chips scroll the board.",
     "searchButton": "Search",
@@ -40,15 +40,28 @@
     "modulesNav": "Modules",
     "mod": {
       "invasions": "Invasions",
-      "nightwave": "Nightwave"
+      "nightwave": "Nightwave",
+      "missions": "Missions",
+      "daily": "Daily",
+      "timers": "Timers"
     }
   },
   "tools": {
     "eyebrow": "Tools",
     "title": "Tools",
-    "lead": "More standalone tools are on the roadmap.",
-    "body": "This Tools page is still planned (drop tables, todos, etc.). Use the Home modules for world state and market queries.",
-    "backHome": "← Back home"
+    "lead": "Huiji deep-links, EN↔ZH names, and valence fusion — via Lanius API.",
+    "body": "Query below; full command docs are on Help. Market and Riven stay on their own pages.",
+    "backHome": "← Back home",
+    "wikiTitle": "Wiki deep-link",
+    "wikiPlaceholder": "Keyword…",
+    "translateTitle": "Name translate",
+    "translatePlaceholder": "Official name…",
+    "valenceTitle": "Valence fusion",
+    "valencePlaceholder": "e.g. elec60 heat58 or 44",
+    "query": "Query",
+    "loading": "Querying…",
+    "error": "Query failed",
+    "empty": "Enter a keyword to query."
   },
   "about": {
     "eyebrow": "About",
@@ -140,7 +153,7 @@
     "eyebrow": "Commands",
     "loading": "Loading help…",
     "error": "Failed to load help",
-    "qqHint": "Each QQ command is its own root (e.g. /worldstate, /help). A leading / is optional. Reply mode and card skin are set in the admin console.",
+    "qqHint": "Each QQ command is its own root (e.g. /worldstate, /help). A leading / is optional. Reply mode and card skin are set in the admin console. The help card includes Wave1–3 shortcut keys.",
     "aliases": "Aliases",
     "params": "Parameters",
     "required": "required",
@@ -148,7 +161,8 @@
     "examples": "Examples",
     "viewDetail": "Module detail",
     "backToList": "← All commands",
-    "moduleDetail": "Module: {module}"
+    "moduleDetail": "Module: {module}",
+    "statusTitle": "Coverage"
   },
   "admin": {
     "title": "Admin",

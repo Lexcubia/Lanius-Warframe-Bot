@@ -4,8 +4,9 @@
 
 /**
  * 已注册的 QQ 卡片皮肤 id。
+ * `orokin`：SDJK 暗金默认；`dark` / `light` 保留为后台可切换备选。
  */
-export type CardSkinId = 'light' | 'dark';
+export type CardSkinId = 'orokin' | 'dark' | 'light';
 
 /**
  * 皮肤元数据（扩展色板时只增注册项）。
@@ -20,20 +21,21 @@ export type CardSkinDef = {
 };
 
 /**
- * light / dark 两套皮肤（默认 light）。
+ * Orokin / dark / light 三套皮肤（默认 orokin）。
  */
 export const CARD_SKINS: readonly CardSkinDef[] = [
-  { id: 'light', labelZh: '亮色', labelEn: 'Light' },
+  { id: 'orokin', labelZh: '奥罗金', labelEn: 'Orokin' },
   { id: 'dark', labelZh: '暗色', labelEn: 'Dark' },
+  { id: 'light', labelZh: '亮色', labelEn: 'Light' },
 ] as const;
 
 /**
  * 默认皮肤（配置与非法 id 回落目标）。
  */
-export const DEFAULT_CARD_SKIN: CardSkinId = 'light';
+export const DEFAULT_CARD_SKIN: CardSkinId = 'orokin';
 
 /**
- * 将任意输入解析为合法皮肤 id；非法或空值回落 light。
+ * 将任意输入解析为合法皮肤 id；非法或空值回落 orokin。
  *
  * @param raw - 后台配置或 capture 入参（大小写不敏感；兼容中文别名）
  * @returns 合法 `CardSkinId`
@@ -43,6 +45,9 @@ export function resolveCardSkin(raw: string | null | undefined): CardSkinId {
     return DEFAULT_CARD_SKIN;
   }
   const key = String(raw).trim().toLowerCase();
+  if (key === 'orokin' || key === '奥罗金' || key === '暗金') {
+    return 'orokin';
+  }
   if (key === 'dark' || key === '暗色' || key === '夜间') {
     return 'dark';
   }

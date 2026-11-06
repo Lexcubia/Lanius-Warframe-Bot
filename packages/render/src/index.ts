@@ -15,6 +15,7 @@ export {
   renderBountiesCard,
   renderCircuitCard,
   renderArchonCard,
+  renderDenseListCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -25,9 +26,12 @@ export {
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
+  renderWikiCard,
+  renderValenceCard,
   renderWorldstateCard,
   type RenderWorldstateCardInput,
 } from './render-worldstate.js';
+export type { DenseListCardPayload, DenseListRow } from './vue-cards/dense-list-types.js';
 export {
   CARD_SKINS,
   DEFAULT_CARD_SKIN,
@@ -36,3 +40,4 @@ export {
   type CardSkinDef,
   type CardSkinId,
 } from './vue-cards/skins.js';
+export { renderWave2LinesCard, type RenderWave2LinesInput } from './render-wave2.js';

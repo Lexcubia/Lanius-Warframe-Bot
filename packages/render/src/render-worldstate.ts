@@ -1,6 +1,7 @@
 import type { Locale, WorldstateDto } from '@lanius/core';
 
 import { captureVueCard } from './chromium/capture-vue-card.js';
+import type { DenseListCardPayload } from './vue-cards/dense-list-types.js';
 import type { CardSkinId } from './vue-cards/skins.js';
 
 /**
@@ -10,7 +11,7 @@ export type RenderWorldstateCardInput = {
   worldstate: WorldstateDto;
   locale: Locale;
   stale?: boolean;
-  /** QQ 皮肤；缺省 light */
+  /** QQ 皮肤；缺省 orokin */
   skin?: CardSkinId | string;
 };
 
@@ -18,7 +19,7 @@ export type RenderWorldstateCardInput = {
  * 带可选皮肤的公共渲染字段。
  */
 type SkinOpt = {
-  /** QQ 皮肤；缺省 light */
+  /** QQ 皮肤；缺省 orokin */
   skin?: CardSkinId | string;
 };
 
@@ -261,6 +262,70 @@ export async function renderWeaponRotationCard(
     locale: input.locale,
     stale: input.stale,
     weaponRotation: input.rotation,
+    skin: input.skin,
+  });
+}
+
+/**
+ * 渲染 wiki 深链短简介卡片 PNG。
+ *
+ * @param input - WikiDto、locale 与可选皮肤
+ * @returns PNG 字节
+ */
+export async function renderWikiCard(
+  input: {
+    wiki: import('@lanius/core').WikiDto;
+    locale: import('@lanius/core').Locale;
+    stale?: boolean;
+  } & SkinOpt,
+): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'wiki',
+    locale: input.locale,
+    stale: input.stale,
+    wiki: input.wiki,
+    skin: input.skin,
+  });
+}
+
+/**
+ * 渲染效价融合卡片 PNG。
+ *
+ * @param input - ValenceFusionDto、locale 与可选皮肤
+ * @returns PNG 字节
+ */
+export async function renderValenceCard(
+  input: {
+    valence: import('@lanius/core').ValenceFusionDto;
+    locale: import('@lanius/core').Locale;
+  } & SkinOpt,
+): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'valence',
+    locale: input.locale,
+    valence: input.valence,
+    skin: input.skin,
+  });
+}
+
+/**
+ * 渲染 Wave1 密列表模块 PNG（达沃 / 新闻 / 仲裁表 / 商店等共用壳）。
+ *
+ * @param input - denseList 载荷与 locale / skin
+ * @returns PNG 字节
+ */
+export async function renderDenseListCard(
+  input: {
+    denseList: DenseListCardPayload;
+    locale: Locale;
+    stale?: boolean;
+  } & SkinOpt,
+): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'denseList',
+    locale: input.locale,
+    stale: input.stale,
+    denseList: input.denseList,
     skin: input.skin,
   });
 }

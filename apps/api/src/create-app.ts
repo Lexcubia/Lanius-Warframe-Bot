@@ -17,7 +17,10 @@ import { rivenRoutes } from './routes/riven.js';
 import { siteRoutes } from './routes/site.js';
 import { subscriptionRoutes } from './routes/subscriptions.js';
 import { traderRoutes } from './routes/traders.js';
+import { wave2Routes } from './routes/wave2.js';
+import { wikiToolsRoutes } from './routes/wiki-tools.js';
 import { worldstateRoutes } from './routes/worldstate.js';
+import { worldstateWave1Routes } from './routes/worldstate-wave1.js';
 
 /**
  * Builds the Hono application with `/v1` public routes and error mapping.
@@ -40,10 +43,13 @@ export function createApp(appContext: AppContext) {
   v1.route('/', helpRoutes());
   v1.route('/', siteRoutes());
   v1.route('/', worldstateRoutes());
+  v1.route('/', worldstateWave1Routes());
   v1.route('/', marketRoutes());
   v1.route('/', rivenRoutes());
+  v1.route('/', wave2Routes());
   v1.route('/', traderRoutes());
   v1.route('/', rotationRoutes());
+  v1.route('/', wikiToolsRoutes());
   v1.route('/', subscriptionRoutes());
   v1.route('/', pushRoutes());
   v1.route('/', adminRoutes());

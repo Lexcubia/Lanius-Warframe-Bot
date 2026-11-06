@@ -55,7 +55,8 @@ describe('ConfigDriver', () => {
     expect(driver.get('api').adminToken).toBe('secret-token');
     // bot.yaml 仅写 dryRun 时，回复形态/皮肤走 schema 默认（后台配置）
     expect(driver.get('bot').defaultReplyMode).toBe('image');
-    expect(driver.get('bot').defaultCardSkin).toBe('light');
+    expect(driver.get('bot').defaultCardSkin).toBe('orokin');
+    expect(driver.get('bot').commandPrefixPolicy).toBe('required');
     const desc = driver.describe('api');
     expect(desc.data.adminToken).toBe(SECRET_MASK);
     expect(desc.restartRequired).toContain('port');

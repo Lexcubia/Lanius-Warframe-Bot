@@ -3,13 +3,14 @@ host: '127.0.0.1'
 port: 8788
 apiBaseUrl: 'http://127.0.0.1:8787'
 defaultReplyMode: image
-# QQ 图片模式卡片默认皮肤（light|dark）；后台配置，非用户指令
-defaultCardSkin: light
+# QQ 图片模式卡片默认皮肤（orokin|dark|light）；后台配置，非用户指令
+defaultCardSkin: orokin
 dryRun: true
 publicSiteBaseUrl: 'http://127.0.0.1:8790'
 pushIntervalMs: 60000
 commandPrefix: '/'
-commandPrefixPolicy: optional
+# 默认要求前导符；Admin 仍可改 optional / bare
+commandPrefixPolicy: required
 image:
   maxPerUserPerMinute: 5
   renderTimeoutMs: 4000

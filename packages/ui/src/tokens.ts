@@ -1,44 +1,44 @@
 /**
  * Lanius 共享视觉 token，供 Web UI 与 QQ 卡片栅格化共用。
- * 暖底动漫风（对齐公开站 anime 主题）；十六进制色值须与 `tokens.css` 保持同步。
+ * Wave 0 起默认 Orokin 暗金（对齐 SDJK）；十六进制色值须与 `tokens.css` 保持同步。
  */
 export const laniusTokens = {
   color: {
-    /** 暖奶油底 */
-    void: '#fff8f2',
-    panel: '#ffffff',
-    panelRaised: '#fff4eb',
-    border: '#e4d5c8',
-    borderBright: '#c9b8a8',
-    text: '#2a3142',
-    textMuted: '#6b7385',
-    accent: '#4eb7e8',
-    accentDim: '#2f8fc4',
-    warn: '#f0b429',
-    danger: '#ff7a6e',
-    success: '#5fd0b0',
-    brand: '#2a3142',
-    highlight: '#ff7a6e',
+    /** Orokin 竖向底顶色 */
+    void: '#0c0f16',
+    panel: '#131823',
+    panelRaised: '#181e2b',
+    border: '#342f26',
+    borderBright: '#7a643e',
+    text: '#ece8de',
+    textMuted: '#a8b0be',
+    accent: '#d4b06a',
+    accentDim: '#7a643e',
+    warn: '#e8b26a',
+    danger: '#d86458',
+    success: '#6cc88a',
+    brand: '#f0d79a',
+    highlight: '#f0d79a',
     /** 入侵进度条：攻方 / 守方 */
-    barAttack: '#4eb7e8',
-    barDefend: '#ffb38a',
+    barAttack: '#6fd3e8',
+    barDefend: '#d4b06a',
   },
   font: {
-    display: '"Zen Maru Gothic", "Noto Sans SC", sans-serif',
-    body: '"Noto Sans SC", "Source Sans 3", sans-serif',
+    display: '"Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif',
+    body: '"Noto Sans SC", "Noto Sans CJK SC", "Source Han Sans SC", sans-serif',
     mono: '"IBM Plex Mono", ui-monospace, monospace',
   },
   card: {
     /**
-     * QQ 图片卡片逻辑宽度（移动端聊天气泡友好；约等于常见手机内容区）。
+     * QQ 图片卡片逻辑宽度（对齐 SDJK 960–1260 中段；约 1000）。
      * Web 看板勿依赖此值做响应式断点。
      */
-    width: 640,
-    /** 卡片外边距（内容区尽量铺满） */
-    padding: 12,
-    radius: 16,
+    width: 1000,
+    /** 卡片外边距 */
+    padding: 14,
+    radius: 0,
     /** 宫格 / 列表间距 */
-    gap: 8,
+    gap: 6,
   },
 } as const;
 

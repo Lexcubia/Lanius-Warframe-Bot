@@ -90,6 +90,7 @@ const stamp = computed(() => formatTimestamp(props.rotation.fetchedAt));
 <template>
   <QqCardShell
     :title="title"
+    kicker="WEAPON ROTATION"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

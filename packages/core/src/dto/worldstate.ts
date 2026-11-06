@@ -11,6 +11,20 @@ import {
   CircuitDtoSchema,
   SortieDtoSchema,
 } from './worldstate-missions.js';
+import {
+  Calendar1999DtoSchema,
+  ClanRewardDtoSchema,
+  ConclaveChallengeDtoSchema,
+  ConstructionDtoSchema,
+  DailyDealDtoSchema,
+  DescendiaDtoSchema,
+  EventDtoSchema,
+  FlashSaleDtoSchema,
+  KuvaDtoSchema,
+  NewsItemDtoSchema,
+  SynthTargetDtoSchema,
+  VoidStormDtoSchema,
+} from './worldstate-daily.js';
 
 /**
  * Localized display name pair used on worldstate entities.
@@ -188,6 +202,31 @@ export const WorldstateDtoSchema = z.object({
   alerts: z.array(AlertDtoSchema).default([]),
   /** 精英 / 时光科研；无数据时 `null` */
   archimedea: ArchimedeaDtoSchema.nullable().default(null),
+  // —— SDJK Wave1：日常 / 轮换缺口切片（可空安全）——
+  /** 达沃每日特惠 */
+  dailyDeals: z.array(DailyDealDtoSchema).default([]),
+  /** 官方新闻 Events */
+  news: z.array(NewsItemDtoSchema).default([]),
+  /** 赤毒虹吸（社区源停摆时 null 或空 missions + sourceNote） */
+  kuva: KuvaDtoSchema.nullable().default(null),
+  /** 结合目标（静态表） */
+  synthTargets: z.array(SynthTargetDtoSchema).default([]),
+  /** 舰队建造进度 */
+  construction: ConstructionDtoSchema.nullable().default(null),
+  /** 九重天虚空风暴 */
+  voidStorms: z.array(VoidStormDtoSchema).default([]),
+  /** 限时活动 Goals */
+  events: z.array(EventDtoSchema).default([]),
+  /** 武形秘仪挑战 */
+  conclave: z.array(ConclaveChallengeDtoSchema).default([]),
+  /** 氏族周奖励 */
+  clanRewards: z.array(ClanRewardDtoSchema).default([]),
+  /** 商城闪购 */
+  flashSales: z.array(FlashSaleDtoSchema).default([]),
+  /** 1999 日历 */
+  calendar1999: Calendar1999DtoSchema.nullable().default(null),
+  /** 沉沦之地 */
+  descendia: DescendiaDtoSchema.nullable().default(null),
 });
 
 /**

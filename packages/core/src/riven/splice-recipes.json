@@ -1,0 +1,240 @@
+[
+  {
+    "a": "toxin_damage",
+    "b": "heat_damage",
+    "result": "gas_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "toxin_damage",
+    "b": "electric_damage",
+    "result": "corrosive_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "toxin_damage",
+    "b": "cold_damage",
+    "result": "viral_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "heat_damage",
+    "b": "electric_damage",
+    "result": "radiation_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "heat_damage",
+    "b": "cold_damage",
+    "result": "blast_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "electric_damage",
+    "b": "cold_damage",
+    "result": "magnetic_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "damage_vs_grineer",
+    "b": "damage_vs_corpus",
+    "result": "damage_vs_orokin",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "damage_vs_infested",
+    "b": "damage_vs_grineer",
+    "result": "damage_vs_scaldra",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "damage_vs_corpus",
+    "b": "damage_vs_infested",
+    "result": "damage_vs_techrot",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "melee_damage",
+    "b": "status_chance",
+    "result": "status_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun",
+      "melee"
+    ]
+  },
+  {
+    "a": "magazine_capacity",
+    "b": "reload_speed",
+    "result": "ammo_efficiency",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun"
+    ]
+  },
+  {
+    "a": "recoil",
+    "b": "ammo_max",
+    "result": "ammo_efficiency",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun"
+    ]
+  },
+  {
+    "a": "ammo_max",
+    "b": "reload_speed",
+    "result": "reload_holstered",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol"
+    ]
+  },
+  {
+    "a": "ammo_max",
+    "b": "magazine_capacity",
+    "result": "reload_holstered",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol"
+    ]
+  },
+  {
+    "a": "crit_chance",
+    "b": "zoom",
+    "result": "weakpoint_crit_chance",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun"
+    ]
+  },
+  {
+    "a": "crit_chance",
+    "b": "multishot",
+    "result": "weakpoint_crit_chance",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun"
+    ]
+  },
+  {
+    "a": "melee_damage",
+    "b": "zoom",
+    "result": "weakpoint_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun"
+    ]
+  },
+  {
+    "a": "melee_damage",
+    "b": "multishot",
+    "result": "weakpoint_damage",
+    "classes": [
+      "rifle",
+      "shotgun",
+      "pistol",
+      "archgun"
+    ]
+  },
+  {
+    "a": "heavy_attack_efficiency",
+    "b": "extra_combo_count",
+    "result": "melee_heavy_attack_damage",
+    "classes": [
+      "melee"
+    ]
+  },
+  {
+    "a": "heavy_attack_efficiency",
+    "b": "combo_duration",
+    "result": "melee_heavy_attack_charge",
+    "classes": [
+      "melee"
+    ]
+  },
+  {
+    "a": "attack_speed",
+    "b": "range",
+    "result": "melee_parry_angle",
+    "classes": [
+      "melee"
+    ]
+  },
+  {
+    "a": "melee_damage",
+    "b": "attack_speed",
+    "result": "melee_slam_damage",
+    "classes": [
+      "melee"
+    ]
+  }
+]

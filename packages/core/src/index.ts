@@ -97,6 +97,68 @@ export {
 } from './dto/worldstate-missions.js';
 
 export {
+  AcrithisDtoSchema,
+  AcrithisOfferDtoSchema,
+  ArbTableDtoSchema,
+  ArbTableRowDtoSchema,
+  Calendar1999DtoSchema,
+  CalendarDayDtoSchema,
+  CalendarDayEventDtoSchema,
+  ClanRewardDtoSchema,
+  ClanRewardTierDtoSchema,
+  ConclaveChallengeDtoSchema,
+  ConstructionAssaultDtoSchema,
+  ConstructionDtoSchema,
+  ConstructionProjectDtoSchema,
+  DailyDealDtoSchema,
+  DescendiaDtoSchema,
+  DescendiaFloorDtoSchema,
+  EMPTY_WORLDSTATE_DAILY_SLICES,
+  EssenceShopDtoSchema,
+  EventDtoSchema,
+  FlashSaleDtoSchema,
+  IncarnonRotationDtoSchema,
+  IncarnonWeaponDtoSchema,
+  IncursionsDtoSchema,
+  KuvaDtoSchema,
+  NewsItemDtoSchema,
+  ShopOfferDtoSchema,
+  SynthTargetDtoSchema,
+  TimerRowDtoSchema,
+  TimersDtoSchema,
+  VoidStormDtoSchema,
+  type AcrithisDto,
+  type AcrithisOfferDto,
+  type ArbTableDto,
+  type ArbTableRowDto,
+  type Calendar1999Dto,
+  type CalendarDayDto,
+  type CalendarDayEventDto,
+  type ClanRewardDto,
+  type ClanRewardTierDto,
+  type ConclaveChallengeDto,
+  type ConstructionAssaultDto,
+  type ConstructionDto,
+  type ConstructionProjectDto,
+  type DailyDealDto,
+  type DescendiaDto,
+  type DescendiaFloorDto,
+  type EssenceShopDto,
+  type EventDto,
+  type FlashSaleDto,
+  type IncarnonRotationDto,
+  type IncarnonWeaponDto,
+  type IncursionsDto,
+  type KuvaDto,
+  type NewsItemDto,
+  type ShopOfferDto,
+  type SynthTargetDto,
+  type TimerRowDto,
+  type TimersDto,
+  type VoidStormDto,
+} from './dto/worldstate-daily.js';
+
+export {
   HelpDtoSchema,
   HelpLineSchema,
   HelpParamSchema,
@@ -114,7 +176,7 @@ export {
   type CommandParamDef,
 } from './commands/catalog.js';
 
-export { GATED_MODULE_IDS, ModuleIdSchema, type ModuleId } from './modules.js';
+export { GATED_MODULE_IDS, ModuleIdSchema, RESERVED_MODULE_IDS, type ModuleId } from './modules.js';
 
 export {
   MARKET_ORDERS_PAGE_SIZE,
@@ -143,6 +205,80 @@ export {
   type RivenOrdersQuery,
   type RivenSearchDto,
 } from './dto/market.js';
+
+export {
+  DUCAT_TIER_VALUES,
+  DucatJunkDtoSchema,
+  DucatJunkQuerySchema,
+  DucatJunkRowSchema,
+  DucatTierSchema,
+  MarketRankCategorySchema,
+  MarketRankDtoSchema,
+  MarketRankQuerySchema,
+  MarketRankRowSchema,
+  MarketTrendDtoSchema,
+  MarketTrendPointSchema,
+  MarketTrendQuerySchema,
+  MarketTrendSummarySchema,
+  type DucatJunkDto,
+  type DucatJunkRow,
+  type DucatTier,
+  type MarketRankCategory,
+  type MarketRankDto,
+  type MarketTrendDto,
+} from './dto/market-wave2.js';
+
+export {
+  DispositionDtoSchema,
+  DispositionRowSchema,
+  LichAuctionsDtoSchema,
+  LichAuctionsQuerySchema,
+  LichListingDtoSchema,
+  RivenAnalysisDtoSchema,
+  RivenAnalysisQuerySchema,
+  RivenRangesDtoSchema,
+  RivenSpliceDtoSchema,
+  RivenSpliceRecipeDtoSchema,
+  RivenStatAnalysisDtoSchema,
+  type DispositionDto,
+  type LichAuctionsDto,
+  type RivenAnalysisDto,
+  type RivenRangesDto,
+  type RivenSpliceDto,
+} from './dto/riven-tools.js';
+
+export {
+  OpenRelicDtoSchema,
+  OpenRelicRowSchema,
+  PartSourceRowSchema,
+  PartsDtoSchema,
+  RelicDtoSchema,
+  RelicQueryDtoSchema,
+  RelicRaritySchema,
+  RelicRewardSlotSchema,
+  type OpenRelicDto,
+  type PartsDto,
+  type RelicQueryDto,
+  type RelicRarity,
+} from './dto/relic.js';
+
+export {
+  RIVEN_STAT_ZH,
+  UNIFIED_DISPOSITION,
+  analyzeRivenStats,
+  deviationPct,
+  factorFor,
+  listSpliceRecipes,
+  listStatRangesForClass,
+  parseRivenAnalysisText,
+  rangePosition,
+  resolveRivenStatId,
+  resolveRivenWeaponClass,
+  statRange,
+  type RivenStatAnalysis,
+  type RivenStatInput,
+  type RivenWeaponClass,
+} from './riven/analysis.js';
 
 export {
   expandQueryCandidates,
@@ -185,12 +321,17 @@ export {
 export {
   PushDispatchDtoSchema,
   PushFrequencySchema,
+  RESERVED_SUBSCRIBABLE_MODULE_IDS,
+  SDJK_PUSH_EVENT_MAP,
   SubscribableModuleIdSchema,
   SubscriptionDtoSchema,
+  WorldstateCycleFilterSchema,
   type PushDispatchDto,
   type PushFrequency,
+  type SdjkPushEventName,
   type SubscribableModuleId,
   type SubscriptionDto,
+  type WorldstateCycleFilter,
 } from './dto/subscription.js';
 
 export {
@@ -201,6 +342,41 @@ export {
   type SiteFooter,
   type SiteFooterLine,
 } from './dto/site.js';
+
+export {
+  WikiDtoSchema,
+  TranslateDtoSchema,
+  TranslatePairSchema,
+  ValenceFusionDtoSchema,
+  ValenceMaterialDtoSchema,
+  type WikiDto,
+  type TranslateDto,
+  type ValenceFusionDto,
+} from './dto/wiki-tools.js';
+
+export {
+  VALENCE_CAP_PCT,
+  VALENCE_ELEMENT_LABEL_EN,
+  VALENCE_ELEMENT_LABEL_ZH,
+  fusionStepsToCap,
+  parseValenceElement,
+  parseValenceMaterialTokens,
+  valenceBonusPct,
+  valenceFusion,
+  type ValenceFusionResult,
+  type ValenceMaterialToken,
+} from './valence/fusion.js';
+
+export {
+  bilingualLookup,
+  buildBilingualIndex,
+  type BilingualLookupResult,
+  type BilingualNameIndex,
+  type BilingualNamePair,
+  type TranslateDirection,
+} from './names/bilingual-lookup.js';
+
+export { hasCjk, normalizeName } from './names/normalize-name.js';
 
 export {
   LabelOverrideSchema,

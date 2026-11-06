@@ -251,4 +251,159 @@ export type UpstreamWorldstate = {
   /** 瓦奇娅（部分版本字段名） */
   VaultTrader?: unknown;
   PrimeVaultTraders?: unknown[];
+  /** 达沃每日特惠 */
+  DailyDeals?: UpstreamDailyDeal[];
+  /** 官方新闻 / 公告 */
+  Events?: UpstreamNewsEvent[];
+  /** 舰队建造进度（巴罗尔 / 利刃豺狼） */
+  ProjectPct?: number[];
+  /** 限时活动 Goals */
+  Goals?: UpstreamGoal[];
+  /** 武形秘仪挑战实例 */
+  PVPChallengeInstances?: UpstreamPvpChallenge[];
+  /** 氏族周奖励加成 */
+  WeeklyVaultBonusRewards?: UpstreamClanVaultBonus[];
+  /** 商城闪购 */
+  FlashSales?: UpstreamFlashSale[];
+  /** 1999 日历季 */
+  KnownCalendarSeasons?: UpstreamCalendarSeason[];
+  /** 沉沦之地（炼狱塔） */
+  Descents?: UpstreamDescent[];
+};
+
+/**
+ * 上游达沃特惠（`DailyDeals`）。
+ */
+export type UpstreamDailyDeal = {
+  StoreItem?: string;
+  OriginalPrice?: number;
+  SalePrice?: number;
+  Discount?: number;
+  AmountTotal?: number;
+  AmountSold?: number;
+  Expiry?: { $date?: { $numberLong?: string } };
+};
+
+/**
+ * 上游新闻 Messages 行。
+ */
+export type UpstreamNewsMessage = {
+  LanguageCode?: string;
+  Message?: string;
+};
+
+/**
+ * 上游新闻 / 公告（`Events`）。
+ */
+export type UpstreamNewsEvent = {
+  _id?: { $oid?: string };
+  Messages?: UpstreamNewsMessage[];
+  Prop?: string;
+  Date?: { $date?: { $numberLong?: string } };
+  Priority?: boolean;
+  Community?: boolean;
+};
+
+/**
+ * 上游限时活动 Goal。
+ */
+export type UpstreamGoal = {
+  _id?: { $oid?: string };
+  Desc?: string;
+  ToolTip?: string;
+  Tag?: string;
+  Faction?: string;
+  Node?: string;
+  VictimNode?: string;
+  HealthPct?: number;
+  Count?: number;
+  Goal?: number;
+  Expiry?: { $date?: { $numberLong?: string } };
+  GracePeriod?: { $date?: { $numberLong?: string } };
+  Reward?: {
+    items?: string[];
+    countedItems?: Array<{ ItemType?: string; ItemCount?: number }>;
+  };
+};
+
+/**
+ * 上游武形秘仪挑战。
+ */
+export type UpstreamPvpChallenge = {
+  _id?: { $oid?: string };
+  challengeTypeRefID?: string;
+  PVPMode?: string;
+  Category?: string;
+  params?: Array<{ n?: string; v?: string | number }>;
+  endDate?: { $date?: { $numberLong?: string } };
+};
+
+/**
+ * 上游氏族周奖励。
+ */
+export type UpstreamClanVaultBonus = {
+  WeekCount?: number;
+  BonusRegion?: string;
+  Rewards?: Array<{
+    PointThreshold?: number;
+    Reward?: string;
+    ItemCount?: number;
+  }>;
+};
+
+/**
+ * 上游商城闪购。
+ */
+export type UpstreamFlashSale = {
+  TypeName?: string;
+  ShowInMarket?: boolean;
+  StartDate?: { $date?: { $numberLong?: string } };
+  EndDate?: { $date?: { $numberLong?: string } };
+};
+
+/**
+ * 上游 1999 日历日事件。
+ */
+export type UpstreamCalendarEvent = {
+  type?: string;
+  typeName?: string;
+  reward?: string;
+  UpgradeType?: string;
+};
+
+/**
+ * 上游 1999 日历日。
+ */
+export type UpstreamCalendarDay = {
+  day?: number;
+  date?: string;
+  events?: UpstreamCalendarEvent[];
+};
+
+/**
+ * 上游 1999 日历季。
+ */
+export type UpstreamCalendarSeason = {
+  Season?: string;
+  Activation?: { $date?: { $numberLong?: string } };
+  Expiry?: { $date?: { $numberLong?: string } };
+  Days?: UpstreamCalendarDay[];
+};
+
+/**
+ * 上游沉沦之地单层。
+ */
+export type UpstreamDescentChallenge = {
+  Index?: number;
+  Type?: string;
+  Challenge?: string;
+};
+
+/**
+ * 上游沉沦之地周轮换。
+ */
+export type UpstreamDescent = {
+  Activation?: { $date?: { $numberLong?: string } };
+  Expiry?: { $date?: { $numberLong?: string } };
+  Challenges?: UpstreamDescentChallenge[];
 };
