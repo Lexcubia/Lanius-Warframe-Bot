@@ -1,16 +1,27 @@
 import {
   AcrithisDtoSchema,
   ArbTableDtoSchema,
+  DispositionDtoSchema,
+  DucatJunkDtoSchema,
   EssenceShopDtoSchema,
   FailureEnvelopeSchema,
   HealthDtoSchema,
   HelpDtoSchema,
   IncarnonRotationDtoSchema,
   IncursionsDtoSchema,
+  LichAuctionsDtoSchema,
   MarketOrdersDtoSchema,
+  MarketRankDtoSchema,
+  MarketTrendDtoSchema,
   MetaDtoSchema,
+  OpenRelicDtoSchema,
+  PartsDtoSchema,
   PushDispatchDtoSchema,
+  RelicQueryDtoSchema,
+  RivenAnalysisDtoSchema,
   RivenOrdersDtoSchema,
+  RivenRangesDtoSchema,
+  RivenSpliceDtoSchema,
   SiteDtoSchema,
   SubscriptionDtoSchema,
   TimersDtoSchema,
@@ -24,18 +35,31 @@ import {
   type AcrithisDto,
   type ApiEnvelope,
   type ArbTableDto,
+  type DispositionDto,
+  type DucatJunkDto,
+  type DucatTier,
   type EssenceShopDto,
   type HealthDto,
   type HelpDto,
   type IncarnonRotationDto,
   type IncursionsDto,
+  type LichAuctionsDto,
   type Locale,
   type MarketOrdersDto,
+  type MarketRankCategory,
+  type MarketRankDto,
+  type MarketTrendDto,
   type MetaDto,
+  type OpenRelicDto,
+  type PartsDto,
   type PushDispatchDto,
   type PushFrequency,
   type Realm,
+  type RelicQueryDto,
+  type RivenAnalysisDto,
   type RivenOrdersDto,
+  type RivenRangesDto,
+  type RivenSpliceDto,
   type SiteDto,
   type SubscribableModuleId,
   type SubscriptionDto,
@@ -399,6 +423,200 @@ export class LaniusApiClient {
     const q = tokens.join(' ').trim();
     const params = mergeQuery(q ? { q } : {}, query, context);
     return this.getJson(`/v1/valence?${params}`, ValenceFusionDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/market/trend`。
+   *
+   * @param q - 物品关键词
+   * @param context - 门禁
+   * @returns 趋势包络
+   */
+  async getMarketTrend(q: string, context: GateContext = {}): Promise<ApiEnvelope<MarketTrendDto>> {
+    const params = mergeQuery({ q }, {}, context);
+    return this.getJson(`/v1/market/trend?${params}`, MarketTrendDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/market/rank`。
+   *
+   * @param input - 分类与分页
+   * @param context - 门禁
+   * @returns 排行包络
+   */
+  async getMarketRank(
+    input: { category?: MarketRankCategory; page?: number; pageSize?: number } = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<MarketRankDto>> {
+    const fields: Record<string, string> = {};
+    if (input.category) fields.category = input.category;
+    if (input.page != null) fields.page = String(input.page);
+    if (input.pageSize != null) fields.pageSize = String(input.pageSize);
+    const params = mergeQuery(fields, {}, context);
+    return this.getJson(`/v1/market/rank?${params}`, MarketRankDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/market/ducats`。
+   *
+   * @param input - 档位与分页
+   * @param context - 门禁
+   * @returns 杜卡德垃圾包络
+   */
+  async getDucats(
+    input: { tier?: DucatTier; page?: number; pageSize?: number } = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<DucatJunkDto>> {
+    const fields: Record<string, string> = {};
+    if (input.tier) fields.tier = input.tier;
+    if (input.page != null) fields.page = String(input.page);
+    if (input.pageSize != null) fields.pageSize = String(input.pageSize);
+    const params = mergeQuery(fields, {}, context);
+    return this.getJson(`/v1/market/ducats?${params}`, DucatJunkDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/riven/analysis`（文字分析；识图行可走 POST）。
+   *
+   * @param text - 武器 + 词条数值
+   * @param context - 门禁
+   * @returns 分析包络
+   */
+  async getRivenAnalysis(
+    text: string,
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<RivenAnalysisDto>> {
+    const params = mergeQuery({ text }, {}, context);
+    return this.getJson(`/v1/riven/analysis?${params}`, RivenAnalysisDtoSchema);
+  }
+
+  /**
+   * 调用 `POST /v1/riven/analysis`（支持 OCR lines）。
+   *
+   * @param body - text / lines / disposition / cls
+   * @param context - 门禁（拼进 query）
+   * @returns 分析包络
+   */
+  async postRivenAnalysis(
+    body: { text?: string; lines?: string[]; disposition?: number; cls?: string },
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<RivenAnalysisDto>> {
+    const params = mergeQuery({}, {}, context);
+    const suffix = params.size > 0 ? `?${params}` : '';
+    return this.postJson(`/v1/riven/analysis${suffix}`, body, RivenAnalysisDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/riven/ranges`。
+   *
+   * @param q - 武器或类名
+   * @param context - 门禁
+   * @returns 范围包络
+   */
+  async getRivenRanges(q: string, context: GateContext = {}): Promise<ApiEnvelope<RivenRangesDto>> {
+    const params = mergeQuery({ q }, {}, context);
+    return this.getJson(`/v1/riven/ranges?${params}`, RivenRangesDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/riven/splice`。
+   *
+   * @param q - 可选过滤
+   * @param context - 门禁
+   * @returns 融合包络
+   */
+  async getRivenSplice(q = '', context: GateContext = {}): Promise<ApiEnvelope<RivenSpliceDto>> {
+    const params = mergeQuery(q ? { q } : {}, {}, context);
+    return this.getJson(`/v1/riven/splice?${params}`, RivenSpliceDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/riven/disposition`。
+   *
+   * @param q - 武器名
+   * @param context - 门禁
+   * @returns 倾向包络
+   */
+  async getDisposition(q: string, context: GateContext = {}): Promise<ApiEnvelope<DispositionDto>> {
+    const params = mergeQuery({ q }, {}, context);
+    return this.getJson(`/v1/riven/disposition?${params}`, DispositionDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/lich`。
+   *
+   * @param input - 武器与筛选
+   * @param context - 门禁
+   * @returns 玄骸包络
+   */
+  async getLichAuctions(
+    input: {
+      q: string;
+      element?: string;
+      damageMax?: number;
+      page?: number;
+      pageSize?: number;
+    },
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<LichAuctionsDto>> {
+    const fields: Record<string, string> = { q: input.q };
+    if (input.element) fields.element = input.element;
+    if (input.damageMax != null) fields.damageMax = String(input.damageMax);
+    if (input.page != null) fields.page = String(input.page);
+    if (input.pageSize != null) fields.pageSize = String(input.pageSize);
+    const params = mergeQuery(fields, {}, context);
+    return this.getJson(`/v1/lich?${params}`, LichAuctionsDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/relic`。
+   *
+   * @param q - 遗物 / 纪元
+   * @param page - 页码
+   * @param context - 门禁
+   * @returns 遗物包络
+   */
+  async getRelic(
+    q = '',
+    page?: number,
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<RelicQueryDto>> {
+    const fields: Record<string, string> = {};
+    if (q) fields.q = q;
+    if (page != null) fields.page = String(page);
+    const params = mergeQuery(fields, {}, context);
+    return this.getJson(`/v1/relic?${params}`, RelicQueryDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/parts`。
+   *
+   * @param q - 部件名
+   * @param page - 页码
+   * @param context - 门禁
+   * @returns 部件包络
+   */
+  async getParts(
+    q: string,
+    page?: number,
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<PartsDto>> {
+    const fields: Record<string, string> = { q };
+    if (page != null) fields.page = String(page);
+    const params = mergeQuery(fields, {}, context);
+    return this.getJson(`/v1/parts?${params}`, PartsDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/open-relic`。
+   *
+   * @param context - 门禁
+   * @returns 开核桃包络
+   */
+  async getOpenRelic(context: GateContext = {}): Promise<ApiEnvelope<OpenRelicDto>> {
+    const params = mergeQuery({}, {}, context);
+    const suffix = params.size > 0 ? `?${params}` : '';
+    return this.getJson(`/v1/open-relic${suffix}`, OpenRelicDtoSchema);
   }
 
   /**

@@ -33,10 +33,7 @@ export type DispositionEntry = {
 /**
  * 遗物奖励表。
  */
-export type RelicIndex = Record<
-  string,
-  { 常见?: string[]; 罕见?: string[]; 稀有?: string[] }
->;
+export type RelicIndex = Record<string, { 常见?: string[]; 罕见?: string[]; 稀有?: string[] }>;
 
 /**
  * 部件反查表。
@@ -66,9 +63,9 @@ function readJson<T>(name: string): T {
  */
 export function loadLichWeapons(): Record<string, LichWeaponRow> {
   if (!lichWeaponsCache) {
-    lichWeaponsCache = readJson('lich_weapons.json');
+    lichWeaponsCache = readJson<Record<string, LichWeaponRow>>('lich_weapons.json');
   }
-  return lichWeaponsCache;
+  return lichWeaponsCache!;
 }
 
 /**
@@ -83,7 +80,7 @@ export function loadDispositionEntries(): Record<string, DispositionEntry> {
     );
     dispositionCache = raw.entries ?? {};
   }
-  return dispositionCache;
+  return dispositionCache!;
 }
 
 /**
@@ -93,9 +90,9 @@ export function loadDispositionEntries(): Record<string, DispositionEntry> {
  */
 export function loadRelicIndex(): RelicIndex {
   if (!relicIndexCache) {
-    relicIndexCache = readJson('relic_index.json');
+    relicIndexCache = readJson<RelicIndex>('relic_index.json');
   }
-  return relicIndexCache;
+  return relicIndexCache!;
 }
 
 /**
@@ -105,7 +102,7 @@ export function loadRelicIndex(): RelicIndex {
  */
 export function loadRelicInverse(): RelicInverse {
   if (!relicInverseCache) {
-    relicInverseCache = readJson('relic_inverse.json');
+    relicInverseCache = readJson<RelicInverse>('relic_inverse.json');
   }
-  return relicInverseCache;
+  return relicInverseCache!;
 }

@@ -18,6 +18,7 @@ import {
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
+  renderWave2LinesCard,
   renderWikiCard,
   renderWorldstateCard,
   type CardSkinId,
@@ -51,6 +52,19 @@ import {
   marketWhisperLines,
   rivenWhisperLines,
 } from '../formatters/market-text.js';
+import {
+  formatDispositionText,
+  formatDucatsText,
+  formatLichAuctionsText,
+  formatMarketRankText,
+  formatMarketTrendText,
+  formatOpenRelicText,
+  formatPartsText,
+  formatRelicText,
+  formatRivenAnalysisText,
+  formatRivenRangesText,
+  formatRivenSpliceText,
+} from '../formatters/wave2-text.js';
 import {
   formatRotationText,
   formatVarziaText,
@@ -118,6 +132,7 @@ import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
 import { buildHelpShortcutKeyboard } from '../qq/build-help-keyboard.js';
 import { buildMarketPageKeyboard, marketPageMarkdownHint } from '../qq/build-market-keyboard.js';
 import { buildRivenPageKeyboard, rivenPageMarkdownHint } from '../qq/build-riven-keyboard.js';
+import { buildWave2PageKeyboard } from '../qq/build-wave2-keyboard.js';
 
 /**
  * QQ 图片模式卡片皮肤（与 `@lanius/render` `CardSkinId` 一致）。
@@ -577,6 +592,383 @@ export async function handleCommand(
           ? rivenPageMarkdownHint(locale, data.page, totalPages, hasWhisper)
           : undefined,
       footerMarkdown: whisperFooter,
+    });
+  }
+
+  if (intent.type === 'marketTrend') {
+    const envelope = await api.getMarketTrend(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatMarketTrendText(envelope.data, locale);
+    const title = locale === 'en' ? 'Price trend' : '价格趋势';
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin({ title, kicker: 'TREND', lines, locale }, deps.prefs.cardSkin),
+        ),
+      label: 'marketTrend',
+    });
+  }
+
+  if (intent.type === 'marketRank') {
+    const envelope = await api.getMarketRank(
+      {
+        category: intent.category as
+          | 'all'
+          | 'warframe'
+          | 'primary'
+          | 'secondary'
+          | 'melee'
+          | 'mod'
+          | 'arcane'
+          | 'part'
+          | 'relic'
+          | undefined,
+        page: intent.page,
+      },
+      gateCtx,
+    );
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatMarketRankText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const cat = data.category === 'all' ? '' : data.category;
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: `排行 ${cat}`.trim(),
+      page: data.page,
+      totalPages,
+      idPrefix: 'rank',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Market rank' : '市场排行',
+              kicker: 'RANK',
+              subtitle: `p${data.page}/${totalPages}`,
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'marketRank',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'ducats') {
+    const envelope = await api.getDucats({ tier: intent.tier, page: intent.page }, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatDucatsText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const root = data.tier === 'gold' ? '金垃圾' : data.tier === 'silver' ? '银垃圾' : '铜垃圾';
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: root,
+      page: data.page,
+      totalPages,
+      idPrefix: 'ducats',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Ducat junk' : '杜卡德垃圾',
+              kicker: 'DUCATS',
+              subtitle: `p${data.page}/${totalPages}`,
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'ducats',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'rivenAnalysis') {
+    const envelope = await api.getRivenAnalysis(intent.text, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatRivenAnalysisText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Riven analysis' : '紫卡分析',
+              kicker: 'RIVEN',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'rivenAnalysis',
+    });
+  }
+
+  if (intent.type === 'rivenRanges') {
+    const envelope = await api.getRivenRanges(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatRivenRangesText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Stat ranges' : '词条范围',
+              kicker: 'RANGES',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'rivenRanges',
+    });
+  }
+
+  if (intent.type === 'rivenSplice') {
+    const envelope = await api.getRivenSplice(intent.query ?? '', gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatRivenSpliceText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Riven splicer' : '紫卡融合',
+              kicker: 'SPLICE',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'rivenSplice',
+    });
+  }
+
+  if (intent.type === 'disposition') {
+    const envelope = await api.getDisposition(intent.query, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatDispositionText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Disposition' : '紫卡倾向',
+              kicker: 'DISP',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'disposition',
+    });
+  }
+
+  if (intent.type === 'lichAuctions') {
+    const envelope = await api.getLichAuctions(
+      {
+        q: intent.query,
+        element: intent.element,
+        damageMax: intent.damageMax,
+        page: intent.page,
+      },
+      gateCtx,
+    );
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatLichAuctionsText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: `玄骸 ${intent.query}${intent.element ? ` ${intent.element}` : ''}`,
+      page: data.page,
+      totalPages,
+      idPrefix: 'lich',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Lich auctions' : '玄骸拍卖',
+              kicker: 'LICH',
+              subtitle: `p${data.page}/${totalPages}`,
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'lichAuctions',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'relic') {
+    const envelope = await api.getRelic(intent.query ?? '', intent.page, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatRelicText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard =
+      data.mode === 'tierList'
+        ? buildWave2PageKeyboard({
+            locale,
+            enter: target.scene === 'c2c',
+            commandBase: `遗物 ${intent.query ?? ''}`.trim(),
+            page: data.page,
+            totalPages,
+            idPrefix: 'relic',
+          })
+        : null;
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Relic' : '遗物',
+              kicker: 'RELIC',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'relic',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'parts') {
+    const envelope = await api.getParts(intent.query, intent.page, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const data = envelope.data;
+    const lines = formatPartsText(data, locale);
+    const totalPages = Math.max(1, Math.ceil(data.total / data.pageSize) || 1);
+    const keyboard = buildWave2PageKeyboard({
+      locale,
+      enter: target.scene === 'c2c',
+      commandBase: `部件 ${intent.query}`,
+      page: data.page,
+      totalPages,
+      idPrefix: 'parts',
+    });
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Parts' : '部件来源',
+              kicker: 'PARTS',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'parts',
+      keyboard: keyboard ?? undefined,
+    });
+  }
+
+  if (intent.type === 'openRelic') {
+    const envelope = await api.getOpenRelic(gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const lines = formatOpenRelicText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text: lines.join('\n'),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWave2LinesCard(
+          withCardSkin(
+            {
+              title: locale === 'en' ? 'Open relic' : '开核桃',
+              kicker: 'FARM',
+              lines,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'openRelic',
     });
   }
 

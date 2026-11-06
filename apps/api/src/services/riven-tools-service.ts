@@ -58,10 +58,7 @@ export class RivenToolsService {
     cls?: RivenWeaponClass;
   }): Promise<RivenAnalysisDto> {
     const source: 'text' | 'lines' = input.lines?.length ? 'lines' : 'text';
-    const raw =
-      source === 'lines'
-        ? (input.lines ?? []).join(' ')
-        : (input.text ?? '').trim();
+    const raw = source === 'lines' ? (input.lines ?? []).join(' ') : (input.text ?? '').trim();
     if (!raw) {
       throw validationError('text or lines required');
     }
@@ -286,10 +283,11 @@ export class RivenToolsService {
       });
       listings = raw
         .map((a) => {
-          const status = a.owner?.status;
-          if (status !== 'online' && status !== 'ingame') {
+          const statusRaw = a.owner?.status;
+          if (statusRaw !== 'online' && statusRaw !== 'ingame') {
             return null;
           }
+          const status = statusRaw as 'online' | 'ingame';
           const platinum = a.buyout_price ?? a.starting_price ?? 0;
           return {
             platinum,
@@ -483,19 +481,16 @@ function findDispositionEntry(
  * @param query - 用户输入
  * @returns slug 与行
  */
-function resolveLichWeapon(
-  query: string,
-): { slug: string; row: LichWeaponRow } | null {
+function resolveLichWeapon(query: string): { slug: string; row: LichWeaponRow } | null {
   const table = loadLichWeapons();
-  const q = query.trim().toLowerCase().replace(/[·・\s]/g, '');
+  const q = query
+    .trim()
+    .toLowerCase()
+    .replace(/[·・\s]/g, '');
   for (const [slug, row] of Object.entries(table)) {
-    const keys = [
-      slug,
-      row.en,
-      row.zh,
-      row.zh_nodot ?? '',
-      ...(row.alias ?? []),
-    ].map((s) => s.toLowerCase().replace(/[·・\s]/g, ''));
+    const keys = [slug, row.en, row.zh, row.zh_nodot ?? '', ...(row.alias ?? [])].map((s) =>
+      s.toLowerCase().replace(/[·・\s]/g, ''),
+    );
     if (keys.some((k) => k === q || (q.length >= 2 && k.includes(q)))) {
       return { slug, row };
     }
