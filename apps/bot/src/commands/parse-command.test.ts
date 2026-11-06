@@ -139,10 +139,36 @@ describe('parseCommand', () => {
       moduleId: 'fissures',
       frequency: 'daily',
     });
+    expect(parseCommand('/订阅 裂隙 钢铁 变更时').intent).toEqual({
+      type: 'subscribe',
+      action: 'on',
+      moduleId: 'fissures',
+      filterArgs: '钢铁',
+      frequency: 'on_change',
+    });
+    expect(parseCommand('/订阅 夜灵').intent).toEqual({
+      type: 'subscribe',
+      action: 'on',
+      moduleId: 'worldstate',
+      filterArgs: 'cetus',
+      frequency: 'on_change',
+    });
+    expect(parseCommand('/订阅 钢路侵袭').intent).toEqual({
+      type: 'subscribe',
+      action: 'on',
+      moduleId: 'incursions',
+      frequency: 'on_change',
+    });
     expect(parseCommand('/订阅 退订 信条').intent).toEqual({
       type: 'subscribe',
       action: 'off',
       moduleId: 'tenetRotation',
+    });
+    expect(parseCommand('/订阅 退订 夜灵').intent).toEqual({
+      type: 'subscribe',
+      action: 'off',
+      moduleId: 'worldstate',
+      filterArgs: 'cetus',
     });
   });
 
