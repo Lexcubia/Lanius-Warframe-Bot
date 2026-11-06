@@ -70,7 +70,7 @@ describe('preview alerts write', () => {
     const withData = sample([alertRow]);
     const emptyWs = sample([]);
 
-    for (const skin of ['light', 'dark'] as const) {
+    for (const skin of ['orokin', 'dark'] as const) {
       const png = await renderAlertsCard({
         locale: 'zh',
         worldstate: withData,
@@ -85,7 +85,7 @@ describe('preview alerts write', () => {
     const emptyLight = await renderAlertsCard({
       locale: 'zh',
       worldstate: emptyWs,
-      skin: 'light',
+      skin: 'orokin',
     });
     writeFileSync(resolve(pkgTmp, 'alerts-empty.png'), emptyLight);
     writeFileSync(resolve(storeMedia, 'alerts-empty.png'), emptyLight);

@@ -114,6 +114,7 @@ function missionModifier(mission: SortieMissionDto): string {
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'SORTIE' : '突击'"
+    kicker="SORTIE"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

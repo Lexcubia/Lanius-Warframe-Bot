@@ -27,18 +27,9 @@ function toggle(): void {
 </script>
 
 <template>
-  <section
-    :id="moduleId"
-    class="mod"
-    :class="{ 'mod--open': open }"
-  >
+  <section :id="moduleId" class="mod" :class="{ 'mod--open': open }">
     <header class="mod__head">
-      <button
-        type="button"
-        class="mod__toggle"
-        :aria-expanded="open"
-        @click="toggle"
-      >
+      <button type="button" class="mod__toggle" :aria-expanded="open" @click="toggle">
         <span class="mod__chev" aria-hidden="true">{{ open ? '▾' : '▸' }}</span>
         <span class="mod__titles">
           <span class="mod__title">{{ title }}</span>
@@ -81,12 +72,12 @@ function toggle(): void {
 
 .mod__head {
   margin: 0;
-  background: #fff4eb;
+  background: #131823;
 }
 
 .mod--open .mod__head {
-  background: linear-gradient(180deg, #fff8f2 0%, #ffffff 100%);
-  border-bottom: 1px solid var(--anime-line, #e4d5c8);
+  background: linear-gradient(180deg, #181e2b 0%, #131823 100%);
+  border-bottom: 1px solid var(--anime-line, #342f26);
 }
 
 .mod__toggle {
@@ -100,23 +91,23 @@ function toggle(): void {
   background: transparent;
   cursor: pointer;
   text-align: left;
-  color: var(--anime-ink, #2a3142);
+  color: var(--anime-ink, #ece8de);
   font: inherit;
 }
 
 @media (hover: hover) {
   .mod__toggle:hover {
-    background: rgba(78, 183, 232, 0.06);
+    background: rgba(212, 176, 106, 0.08);
   }
 
   .mod__toggle:hover .mod__chev {
-    color: var(--anime-coral, #ff7a6e);
+    color: var(--anime-peach, #f0d79a);
   }
 }
 
 .mod__chev {
   width: 1rem;
-  color: var(--anime-sky-deep, #2f8fc4);
+  color: var(--anime-gold, #d4b06a);
   font-size: 0.75rem;
   line-height: 1;
   flex-shrink: 0;
@@ -152,11 +143,7 @@ function toggle(): void {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #fff;
-  background: linear-gradient(
-    135deg,
-    var(--anime-coral, #ff7a6e),
-    var(--anime-peach, #ffb38a)
-  );
+  background: linear-gradient(135deg, var(--anime-coral, #ff7a6e), var(--anime-peach, #ffb38a));
   padding: 0.2rem 0.48rem;
   border-radius: 8px;
 }

@@ -124,7 +124,7 @@ describe('bounties card preview write', () => {
 
   it('writes zh/en light/dark preview PNGs', async () => {
     mkdirSync(outDir, { recursive: true });
-    const skins: CardSkinId[] = ['light', 'dark'];
+    const skins: CardSkinId[] = ['orokin', 'dark'];
     const locales = ['zh', 'en'] as const;
 
     for (const locale of locales) {

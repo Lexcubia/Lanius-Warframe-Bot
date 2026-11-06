@@ -61,7 +61,7 @@ describe('circuit preview write', () => {
 
   it('writes circuit light/dark/empty PNGs', async () => {
     mkdirSync(outDir, { recursive: true });
-    for (const skin of ['light', 'dark'] as CardSkinId[]) {
+    for (const skin of ['orokin', 'dark'] as CardSkinId[]) {
       const png = await renderCircuitCard({
         locale: 'zh',
         worldstate: sampleWorldstate,
@@ -73,7 +73,7 @@ describe('circuit preview write', () => {
     const empty = await renderCircuitCard({
       locale: 'zh',
       worldstate: { ...sampleWorldstate, circuit: null },
-      skin: 'light',
+      skin: 'orokin',
     });
     writeFileSync(resolve(outDir, 'circuit-empty-light.png'), empty);
     expect(empty.length).toBeGreaterThan(1000);

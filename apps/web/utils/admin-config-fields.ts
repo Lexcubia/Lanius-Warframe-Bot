@@ -103,10 +103,11 @@ export const ADMIN_CONFIG_FIELDS: Record<string, AdminConfigFieldDef[]> = {
       path: 'defaultCardSkin',
       label: '默认卡片皮肤',
       control: 'select',
-      description: '新会话初始皮肤；仅后台可改（默认 light）',
+      description: '新会话初始皮肤；仅后台可改（默认 orokin）',
       options: [
-        { label: 'light', value: 'light' },
+        { label: 'orokin（奥罗金暗金）', value: 'orokin' },
         { label: 'dark', value: 'dark' },
+        { label: 'light', value: 'light' },
       ],
     },
     {
@@ -133,9 +134,10 @@ export const ADMIN_CONFIG_FIELDS: Record<string, AdminConfigFieldDef[]> = {
       path: 'commandPrefixPolicy',
       label: '前导策略',
       control: 'select',
+      description: '默认 required：无前导符拒识；可选 optional / bare',
       options: [
+        { label: 'required（默认）', value: 'required' },
         { label: 'optional', value: 'optional' },
-        { label: 'required', value: 'required' },
         { label: 'bare', value: 'bare' },
       ],
     },

@@ -114,7 +114,7 @@ export {
   type CommandParamDef,
 } from './commands/catalog.js';
 
-export { GATED_MODULE_IDS, ModuleIdSchema, type ModuleId } from './modules.js';
+export { GATED_MODULE_IDS, ModuleIdSchema, RESERVED_MODULE_IDS, type ModuleId } from './modules.js';
 
 export {
   MARKET_ORDERS_PAGE_SIZE,
@@ -185,6 +185,7 @@ export {
 export {
   PushDispatchDtoSchema,
   PushFrequencySchema,
+  RESERVED_SUBSCRIBABLE_MODULE_IDS,
   SubscribableModuleIdSchema,
   SubscriptionDtoSchema,
   type PushDispatchDto,

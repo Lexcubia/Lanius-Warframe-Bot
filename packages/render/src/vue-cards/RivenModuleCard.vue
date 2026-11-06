@@ -31,6 +31,7 @@ const visibleOrders = computed(() => props.riven.orders.slice(0, 6));
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'Riven' : '紫卡'"
+    kicker="RIVEN AUCTIONS"
     :subtitle="
       locale === 'en'
         ? `page ${riven.page}/${Math.max(1, Math.ceil(riven.total / riven.pageSize) || 1)}`

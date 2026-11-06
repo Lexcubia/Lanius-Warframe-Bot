@@ -24,11 +24,11 @@ function sampleConfig(): BotConfig {
       port: 8788,
       apiBaseUrl: 'http://127.0.0.1:9',
       defaultReplyMode: 'text',
-      defaultCardSkin: 'light',
+      defaultCardSkin: 'orokin',
       dryRun: true,
       pushIntervalMs: 0,
       commandPrefix: '/',
-      commandPrefixPolicy: 'optional',
+      commandPrefixPolicy: 'required',
       markdownImage: true,
       image: {
         maxPerUserPerMinute: 5,
@@ -70,7 +70,7 @@ describe('createBotApp webhook', () => {
 
     const response = await app.request('/qq/callback', {
       method: 'POST',
-      body: groupAtBody('帮助', 'msg-ack-1'),
+      body: groupAtBody('/帮助', 'msg-ack-1'),
       headers: { 'content-type': 'application/json' },
     });
 
@@ -90,7 +90,7 @@ describe('createBotApp webhook', () => {
     const logger = createLaniusLogger({ service: 'lanius-bot-test', level: 'silent' });
     const { app, qq, drainBackgroundWork } = createBotApp(sampleConfig(), logger);
     const sendMarkdown = vi.spyOn(qq, 'sendMarkdown');
-    const body = groupAtBody('帮助', 'msg-dup-1');
+    const body = groupAtBody('/帮助', 'msg-dup-1');
 
     const first = await app.request('/qq/callback', {
       method: 'POST',

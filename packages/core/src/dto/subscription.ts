@@ -1,16 +1,11 @@
 import { z } from 'zod';
 
-import { ModuleIdSchema } from '../modules.js';
+import { ModuleIdSchema, type ModuleId } from '../modules.js';
 
 /**
  * 推送频率：变更时 / 每小时 / 每天 / 每周。
  */
-export const PushFrequencySchema = z.enum([
-  'on_change',
-  'hourly',
-  'daily',
-  'weekly',
-]);
+export const PushFrequencySchema = z.enum(['on_change', 'hourly', 'daily', 'weekly']);
 
 /**
  * 推送频率。
@@ -18,7 +13,8 @@ export const PushFrequencySchema = z.enum([
 export type PushFrequency = z.infer<typeof PushFrequencySchema>;
 
 /**
- * 可订阅推送的模块（查询模块的子集）。
+ * 当前已开放订阅推送的模块（查询模块的子集）。
+ * Wave 4 将按 SDJK「蹲」事件对齐扩展；预留见 `RESERVED_SUBSCRIBABLE_MODULE_IDS`。
  */
 export const SubscribableModuleIdSchema = z.enum([
   'fissures',
@@ -32,6 +28,30 @@ export const SubscribableModuleIdSchema = z.enum([
  * 可订阅模块 id。
  */
 export type SubscribableModuleId = z.infer<typeof SubscribableModuleIdSchema>;
+
+/**
+ * Wave 4 推送对齐预留的可订阅 ModuleId（尚未写入 SubscribableModuleIdSchema，避免空订阅）。
+ * 命名与 `RESERVED_MODULE_IDS` / 已上线 ModuleId 对齐，供后续波次一次性迁入 Zod 枚举。
+ */
+export const RESERVED_SUBSCRIBABLE_MODULE_IDS = [
+  'worldstate',
+  'sortie',
+  'archon',
+  'arbitration',
+  'alerts',
+  'invasions',
+  'nightwave',
+  'bounties',
+  'news',
+  'dailyDeals',
+  'events',
+  'calendar1999',
+  'incarnon',
+  'steelPath',
+  'sliverShop',
+  'incursions',
+  'varzia',
+] as const satisfies readonly ModuleId[];
 
 /**
  * 单条订阅。

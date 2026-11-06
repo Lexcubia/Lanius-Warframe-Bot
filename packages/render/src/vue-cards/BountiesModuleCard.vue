@@ -134,6 +134,7 @@ function expiryLabel(expiryIso: string | undefined): string {
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'BOUNTIES' : '赏金'"
+    kicker="BOUNTIES"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

@@ -55,7 +55,7 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 配置：`@lanius/config` 驱动，`config/default` ⊕ `config/local`；Admin 可改并热加载。  
 推送：可查询模块 → SQLite 订阅 → Bot `push/tick`；频率 `on_change|hourly|daily|weekly`。  
 发版硬顺序：`develop` → `main` → tag → **`main` tip → `release`**（禁止 develop 直推 release）。tag 后可选推 GHCR；`release` / Admin 选版 → 默认 **`update-node.sh`（git + build + systemd）**；Docker pull 为可选。  
-指令前导：`commandPrefix` + `commandPrefixPolicy`；接 Agent 时建议 `required`。  
+指令前导：`commandPrefix` + `commandPrefixPolicy`（**默认 `required`**，无前导拒识；Admin 可改 `optional` / `bare`）。  
 管理入口仅手输 `/admin`（公开导航不展示）。  
 **禁止**在未立项时脚手架 Tauri。  
 **Web 栈已锁定 Nuxt/Vue**；勿再引入 Next.js / React / shadcn / next-intl 作为 Web 默认。
@@ -80,13 +80,13 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 
 主站（公开站 / Admin / 后期 Tauri）与 QQ **截图出图** UI **完全剥离、互不干涉**。两端只共用底层 **Lanius 自定义 API** + `@lanius/core`（DTO / Zod / 别名 / 指令目录等）。色板等品牌 token 可对齐，但**不得**用同一套 ModuleCard / Shell 绑两端布局。
 
-| 侧              | 包 / 应用                                            | 职责                                                                 | 禁止                                                         |
-| --------------- | ---------------------------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------ |
-| **Web / Tauri** | `packages/ui` + `apps/web`（后期 `apps/desktop` 等） | 响应式看板、面板、站点主题；可插拔 Vue 展示                          | `import` QQ ModuleCard / `QqCardShell`；把截图密度当站点布局 |
-| **QQ 出图**     | `packages/render` + `apps/bot`                       | Playwright 截图壳、dense 卡、固定宽（如 640/560）、进程级 `cardSkin` | 向 Web 导出出图卡；公开站直接渲染 QQ 卡片                    |
-| **共享契约**    | `@lanius/api` / `@lanius/core`                       | HTTP 业务入口与 DTO                                                  | 客户端直连 WF / 社区上游                                     |
+| 侧              | 包 / 应用                                            | 职责                                                                     | 禁止                                                         |
+| --------------- | ---------------------------------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| **Web / Tauri** | `packages/ui` + `apps/web`（后期 `apps/desktop` 等） | 响应式看板、面板、站点主题；可插拔 Vue 展示                              | `import` QQ ModuleCard / `QqCardShell`；把截图密度当站点布局 |
+| **QQ 出图**     | `packages/render` + `apps/bot`                       | Playwright 截图壳、Orokin dense 卡、固定宽（约 1000）、进程级 `cardSkin` | 向 Web 导出出图卡；公开站直接渲染 QQ 卡片                    |
+| **共享契约**    | `@lanius/api` / `@lanius/core`                       | HTTP 业务入口与 DTO                                                      | 客户端直连 WF / 社区上游                                     |
 
-**QQ 回复模式 / 皮肤（仅后台，非站点主题、非 QQ 用户指令）：** `bot.defaultReplyMode`（默认 `image`）与 `bot.defaultCardSkin`（默认 `light`）经 Admin Config / yaml 配置，启动时写入进程级 `SessionPrefs` 并传入 `render*Card` / capture。**禁止**再提供用户侧 `/模式` `/皮肤`。站点主题与此无关，禁止把 `cardSkin` 挂到 `apps/web`。
+**QQ 回复模式 / 皮肤（仅后台，非站点主题、非 QQ 用户指令）：** `bot.defaultReplyMode`（默认 `image`）与 `bot.defaultCardSkin`（默认 **`orokin`**；另有 `dark` / `light`）经 Admin Config / yaml 配置，启动时写入进程级 `SessionPrefs` 并传入 `render*Card` / capture。**禁止**再提供用户侧 `/模式` `/皮肤`。站点主题与 QQ 皮肤进程无关，但 Wave 0 起公开站 token 与 Orokin 暗金对齐；禁止把 `cardSkin` 挂到 `apps/web`。
 
 运行时仍遵守：QQ ↔ Web **无进程耦合**；QQ 消息中的公开站 URL 仅展示导流。
 
@@ -100,7 +100,7 @@ API：`/v1/health` · `/v1/meta` · `/v1/help` · `/v1/worldstate` · `/v1/marke
 | `/worldstate` 等 | 旧模块深链页（仍可用，不进主导航）；世界状态页仅周期 | 同前                                                                                                       |
 | `/admin`         | 运营控制台（不进公开 nav）                           | `/v1/admin/*` · 订阅 PATCH                                                                                 |
 
-主导航：**首页 / 工具 / 关于 / 帮助 / 订阅**（左侧悬浮轨，可收起）。查询类模块集中在首页看板。视觉参考 wf.wiki 轻工具站气质的动漫风（暖底、软阴影、速跳条）。
+主导航：**首页 / 工具 / 关于 / 帮助 / 订阅**（左侧悬浮轨，可收起）。查询类模块集中在首页看板。视觉默认 Orokin 暗金（对齐 SDJK 出图；Noto Sans SC）。
 
 客户端统一经 `useLaniusApi` / Nitro `/api/lanius` 代理；**禁止**直连 Warframe / 社区上游。
 
