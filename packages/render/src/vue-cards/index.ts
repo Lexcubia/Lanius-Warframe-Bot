@@ -3,6 +3,8 @@
  */
 
 export { default as QqCardShell } from './QqCardShell.vue';
+export { default as DenseListModuleCard } from './DenseListModuleCard.vue';
+export type { DenseListCardPayload, DenseListRow } from './dense-list-types.js';
 export { default as AlertsModuleCard } from './AlertsModuleCard.vue';
 export { default as ArbitrationModuleCard } from './ArbitrationModuleCard.vue';
 export { default as ArchimedeaModuleCard } from './ArchimedeaModuleCard.vue';

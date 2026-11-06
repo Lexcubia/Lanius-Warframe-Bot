@@ -14,6 +14,7 @@ import type {
 import { laniusTokens } from '@lanius/ui/tokens';
 import type { Page } from 'playwright';
 
+import type { DenseListCardPayload } from '../vue-cards/dense-list-types.js';
 import { resolveCardSkin, type CardSkinId } from '../vue-cards/skins.js';
 import type { CardKind } from './card-kind.js';
 import { ensureBrowser, shutdownBrowser } from './ensure-browser.js';
@@ -45,6 +46,8 @@ export type CaptureVueCardInput = {
   weaponRotation?: WeaponRotationDto;
   wiki?: WikiDto;
   valence?: ValenceFusionDto;
+  /** Wave1 密列表载荷（`kind=denseList`） */
+  denseList?: DenseListCardPayload;
 };
 
 /**

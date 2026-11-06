@@ -3,8 +3,21 @@ import type { CatalogItemDto, InvasionDto, NightwaveDto, Realm, WorldstateDto } 
 import { mapAlerts } from './map-alerts.js';
 import { mapArchimedea } from './map-archimedea.js';
 import { mapBounties } from './map-bounties.js';
+import { mapCalendar1999, mapDescendia } from './map-calendar-descendia.js';
 import { mapCircuit } from './map-circuit.js';
 import { mapOpenWorldCycles } from './map-cycles.js';
+import {
+  mapClanRewards,
+  mapConclave,
+  mapConstruction,
+  mapDailyDeals,
+  mapEvents,
+  mapFlashSales,
+  mapKuvaStalled,
+  mapNews,
+  mapSynthTargets,
+  mapVoidStorms,
+} from './map-daily.js';
 import { mapFissures } from './map-fissures.js';
 import { mapArchonHunt, mapSortie } from './map-sorties.js';
 import { NIGHTWAVE_KIND_LABELS, resolveNightwaveChallengeKind } from './nightwave-kind.js';
@@ -33,7 +46,7 @@ export const WORLDSTATE_SOURCE = 'warframe-worldstate';
 /**
  * Maps official worldState JSON into a Lanius `WorldstateDto`.
  * 仅输出活跃入侵；节点/阵营/挑战/奖励在此解析为双语可读名。
- * Wave 1：`bounties` / `alerts` / `archimedea` / `circuit` 已接入；仲裁由服务层社区源挂载；其余任务模块仍空默认。
+ * SDJK Wave1：日常切片（达沃/新闻/风暴/活动等）已接入；仲裁由服务层社区源挂载。
  *
  * @param realm - Realm this snapshot belongs to (must be available).
  * @param raw - Parsed upstream JSON object.
@@ -56,7 +69,6 @@ export function mapWorldstate(
   const nowMs = Date.parse(fetchedAt);
   const snapshotNow = Number.isFinite(nowMs) ? nowMs : Date.now();
 
-  // Wave 1：sortie / archon / bounties / alerts / archimedea / circuit 已映射；仲裁由服务层社区源挂载。
   return {
     realm,
     fetchedAt,
@@ -72,6 +84,18 @@ export function mapWorldstate(
     arbitration: null,
     alerts: mapAlerts(raw, snapshotNow),
     archimedea: mapArchimedea(raw.Conquests),
+    dailyDeals: mapDailyDeals(raw),
+    news: mapNews(raw),
+    kuva: mapKuvaStalled(),
+    synthTargets: mapSynthTargets(),
+    construction: mapConstruction(raw),
+    voidStorms: mapVoidStorms(raw, snapshotNow),
+    events: mapEvents(raw, snapshotNow),
+    conclave: mapConclave(raw),
+    clanRewards: mapClanRewards(raw),
+    flashSales: mapFlashSales(raw, snapshotNow),
+    calendar1999: mapCalendar1999(raw, snapshotNow),
+    descendia: mapDescendia(raw, snapshotNow),
   };
 }
 

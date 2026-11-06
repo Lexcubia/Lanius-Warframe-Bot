@@ -25,6 +25,7 @@ import {
   CircuitModuleCard,
   ArchonModuleCard,
   CyclesModuleCard,
+  DenseListModuleCard,
   FissuresModuleCard,
   HelpModuleCard,
   InvasionsModuleCard,
@@ -39,6 +40,7 @@ import {
   WikiModuleCard,
   ValenceModuleCard,
   type CardSkinId,
+  type DenseListCardPayload,
 } from '../src/vue-cards/index.js';
 import '../src/vue-cards/dense-tokens.css';
 
@@ -66,7 +68,8 @@ export type CardHostKind =
   | 'varzia'
   | 'weaponRotation'
   | 'wiki'
-  | 'valence';
+  | 'valence'
+  | 'denseList';
 
 /**
  * Playwright `page.evaluate` 注入的挂载载荷。
@@ -88,6 +91,7 @@ export type CardHostPayload = {
   weaponRotation?: WeaponRotationDto;
   wiki?: WikiDto;
   valence?: ValenceFusionDto;
+  denseList?: DenseListCardPayload;
 };
 
 /**
@@ -151,6 +155,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return WikiModuleCard;
     case 'valence':
       return ValenceModuleCard;
+    case 'denseList':
+      return DenseListModuleCard;
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown card kind: ${_exhaustive}`);
@@ -197,6 +203,8 @@ function mountCard(payload: CardHostPayload): void {
     props.wiki = payload.wiki;
   } else if (payload.kind === 'valence') {
     props.valence = payload.valence;
+  } else if (payload.kind === 'denseList') {
+    props.payload = payload.denseList;
   } else if (payload.kind === 'archimedea') {
     props.worldstate = payload.worldstate;
     if (payload.archimedeaKind) {

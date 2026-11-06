@@ -56,6 +56,26 @@ export type BotIntent =
   | { type: 'varzia' }
   | { type: 'tenetRotation' }
   | { type: 'codaRotation' }
+  // SDJK Wave1
+  | { type: 'timers' }
+  | { type: 'dailyDeals' }
+  | { type: 'news' }
+  | { type: 'kuva' }
+  | { type: 'synthTargets' }
+  | { type: 'construction' }
+  | { type: 'voidStorms' }
+  | { type: 'events' }
+  | { type: 'conclave' }
+  | { type: 'clanRewards' }
+  | { type: 'flashSales' }
+  | { type: 'arbTable' }
+  | { type: 'calendar1999' }
+  | { type: 'steelPath' }
+  | { type: 'sliverShop' }
+  | { type: 'descendia' }
+  | { type: 'incursions' }
+  | { type: 'incarnon' }
+  | { type: 'acrithis' }
   | {
       type: 'subscribe';
       action: 'list' | 'on' | 'off';
@@ -250,9 +270,29 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     command.id === 'voidTrader' ||
     command.id === 'varzia' ||
     command.id === 'tenetRotation' ||
-    command.id === 'codaRotation'
+    command.id === 'codaRotation' ||
+    command.id === 'timers' ||
+    command.id === 'dailyDeals' ||
+    command.id === 'news' ||
+    command.id === 'kuva' ||
+    command.id === 'synthTargets' ||
+    command.id === 'construction' ||
+    command.id === 'voidStorms' ||
+    command.id === 'events' ||
+    command.id === 'conclave' ||
+    command.id === 'clanRewards' ||
+    command.id === 'flashSales' ||
+    command.id === 'arbTable' ||
+    command.id === 'calendar1999' ||
+    command.id === 'steelPath' ||
+    command.id === 'sliverShop' ||
+    command.id === 'descendia' ||
+    command.id === 'incursions' ||
+    command.id === 'incarnon' ||
+    command.id === 'acrithis'
   ) {
-    return { matched: true, intent: { type: command.id } };
+    // 窄化后的 id 联合无法直接赋给判别联合 BotIntent；按无参意图断言。
+    return { matched: true, intent: { type: command.id } as BotIntent };
   }
 
   return { matched: true, intent: { type: 'unknown', raw: body } };

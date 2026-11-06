@@ -261,8 +261,9 @@ export const ArchimedeaDtoSchema = z.object({
 export type ArchimedeaDto = z.infer<typeof ArchimedeaDtoSchema>;
 
 /**
- * Wave 0 任务模块在 worldstate 上的空安全默认值。
- * mapper / 测试夹具可展开，避免漏字段导致 Zod 失败。
+ * Wave 0/1 任务与日常模块在 worldstate 上的空安全默认值。
+ * mapper / 测试夹具可展开，避免漏字段导致 Zod / tsc 失败。
+ * （含 SDJK Wave1 日常切片空值，与 `EMPTY_WORLDSTATE_DAILY_SLICES` 对齐。）
  */
 export const EMPTY_WORLDSTATE_MISSION_SLICES: {
   sortie: null;
@@ -272,6 +273,18 @@ export const EMPTY_WORLDSTATE_MISSION_SLICES: {
   arbitration: null;
   alerts: [];
   archimedea: null;
+  dailyDeals: [];
+  news: [];
+  kuva: null;
+  synthTargets: [];
+  construction: null;
+  voidStorms: [];
+  events: [];
+  conclave: [];
+  clanRewards: [];
+  flashSales: [];
+  calendar1999: null;
+  descendia: null;
 } = {
   sortie: null,
   archon: null,
@@ -280,4 +293,16 @@ export const EMPTY_WORLDSTATE_MISSION_SLICES: {
   arbitration: null,
   alerts: [],
   archimedea: null,
+  dailyDeals: [],
+  news: [],
+  kuva: null,
+  synthTargets: [],
+  construction: null,
+  voidStorms: [],
+  events: [],
+  conclave: [],
+  clanRewards: [],
+  flashSales: [],
+  calendar1999: null,
+  descendia: null,
 };

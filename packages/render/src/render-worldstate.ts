@@ -1,6 +1,7 @@
 import type { Locale, WorldstateDto } from '@lanius/core';
 
 import { captureVueCard } from './chromium/capture-vue-card.js';
+import type { DenseListCardPayload } from './vue-cards/dense-list-types.js';
 import type { CardSkinId } from './vue-cards/skins.js';
 
 /**
@@ -303,6 +304,28 @@ export async function renderValenceCard(
     kind: 'valence',
     locale: input.locale,
     valence: input.valence,
+    skin: input.skin,
+  });
+}
+
+/**
+ * 渲染 Wave1 密列表模块 PNG（达沃 / 新闻 / 仲裁表 / 商店等共用壳）。
+ *
+ * @param input - denseList 载荷与 locale / skin
+ * @returns PNG 字节
+ */
+export async function renderDenseListCard(
+  input: {
+    denseList: DenseListCardPayload;
+    locale: Locale;
+    stale?: boolean;
+  } & SkinOpt,
+): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'denseList',
+    locale: input.locale,
+    stale: input.stale,
+    denseList: input.denseList,
     skin: input.skin,
   });
 }

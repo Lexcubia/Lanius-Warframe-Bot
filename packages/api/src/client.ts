@@ -1,13 +1,19 @@
 import {
+  AcrithisDtoSchema,
+  ArbTableDtoSchema,
+  EssenceShopDtoSchema,
   FailureEnvelopeSchema,
   HealthDtoSchema,
   HelpDtoSchema,
+  IncarnonRotationDtoSchema,
+  IncursionsDtoSchema,
   MarketOrdersDtoSchema,
   MetaDtoSchema,
   PushDispatchDtoSchema,
   RivenOrdersDtoSchema,
   SiteDtoSchema,
   SubscriptionDtoSchema,
+  TimersDtoSchema,
   TranslateDtoSchema,
   ValenceFusionDtoSchema,
   VarziaDtoSchema,
@@ -15,9 +21,14 @@ import {
   WeaponRotationDtoSchema,
   WikiDtoSchema,
   WorldstateDtoSchema,
+  type AcrithisDto,
   type ApiEnvelope,
+  type ArbTableDto,
+  type EssenceShopDto,
   type HealthDto,
   type HelpDto,
+  type IncarnonRotationDto,
+  type IncursionsDto,
   type Locale,
   type MarketOrdersDto,
   type MetaDto,
@@ -28,6 +39,7 @@ import {
   type SiteDto,
   type SubscribableModuleId,
   type SubscriptionDto,
+  type TimersDto,
   type TranslateDto,
   type ValenceFusionDto,
   type VarziaDto,
@@ -218,6 +230,76 @@ export class LaniusApiClient {
     }
     const suffix = params.size > 0 ? `?${params.toString()}` : '';
     return this.getJson(`/v1/worldstate${suffix}`, WorldstateDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/timers`。
+   *
+   * @param query - realm/locale
+   * @returns 时效总览包络
+   */
+  async getTimers(query: PublicQueryInput = {}): Promise<ApiEnvelope<TimersDto>> {
+    return this.getJson(`/v1/timers${buildQuery(query, {})}`, TimersDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/arb-table`。
+   *
+   * @param query - realm/locale
+   * @returns 仲裁表包络
+   */
+  async getArbTable(query: PublicQueryInput = {}): Promise<ApiEnvelope<ArbTableDto>> {
+    return this.getJson(`/v1/arb-table${buildQuery(query, {})}`, ArbTableDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/steel-path`。
+   *
+   * @param query - realm/locale
+   * @returns 钢精商店包络
+   */
+  async getSteelPath(query: PublicQueryInput = {}): Promise<ApiEnvelope<EssenceShopDto>> {
+    return this.getJson(`/v1/steel-path${buildQuery(query, {})}`, EssenceShopDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/sliver-shop`。
+   *
+   * @param query - realm/locale
+   * @returns 碎银商店包络
+   */
+  async getSliverShop(query: PublicQueryInput = {}): Promise<ApiEnvelope<EssenceShopDto>> {
+    return this.getJson(`/v1/sliver-shop${buildQuery(query, {})}`, EssenceShopDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/incursions`。
+   *
+   * @param query - realm/locale
+   * @returns 钢路侵袭包络
+   */
+  async getIncursions(query: PublicQueryInput = {}): Promise<ApiEnvelope<IncursionsDto>> {
+    return this.getJson(`/v1/incursions${buildQuery(query, {})}`, IncursionsDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/incarnon`。
+   *
+   * @param query - realm/locale
+   * @returns 灵化轮换包络
+   */
+  async getIncarnon(query: PublicQueryInput = {}): Promise<ApiEnvelope<IncarnonRotationDto>> {
+    return this.getJson(`/v1/incarnon${buildQuery(query, {})}`, IncarnonRotationDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/acrithis`。
+   *
+   * @param query - realm/locale
+   * @returns 言录使包络
+   */
+  async getAcrithis(query: PublicQueryInput = {}): Promise<ApiEnvelope<AcrithisDto>> {
+    return this.getJson(`/v1/acrithis${buildQuery(query, {})}`, AcrithisDtoSchema);
   }
 
   /**

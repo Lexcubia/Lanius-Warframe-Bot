@@ -20,4 +20,6 @@ export type CardKind =
   | 'varzia'
   | 'weaponRotation'
   | 'wiki'
-  | 'valence';
+  | 'valence'
+  /** SDJK Wave1 密列表卡（达沃/新闻/仲裁表/商店等） */
+  | 'denseList';
