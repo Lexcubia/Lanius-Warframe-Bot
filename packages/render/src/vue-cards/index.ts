@@ -22,6 +22,7 @@ export { default as RivenModuleCard } from './RivenModuleCard.vue';
 export { default as VarziaModuleCard } from './VarziaModuleCard.vue';
 export { default as VoidTraderModuleCard } from './VoidTraderModuleCard.vue';
 export { default as WeaponRotationModuleCard } from './WeaponRotationModuleCard.vue';
+export { default as Wave2LinesCard } from './Wave2LinesCard.vue';
 export { default as WikiModuleCard } from './WikiModuleCard.vue';
 export { default as ValenceModuleCard } from './ValenceModuleCard.vue';
 export {

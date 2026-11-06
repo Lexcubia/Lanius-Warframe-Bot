@@ -12,8 +12,11 @@ import { openLaniusDb } from './db/client.js';
 import { seedDatabaseIfEmpty } from './db/seed.js';
 import { createLogger } from './lib/logger.js';
 import { MarketService } from './services/market-service.js';
+import { MarketWave2Service } from './services/market-wave2-service.js';
 import { PushService } from './services/push-service.js';
+import { RelicService } from './services/relic-service.js';
 import { RivenService } from './services/riven-service.js';
+import { RivenToolsService } from './services/riven-tools-service.js';
 import { RotationService } from './services/rotation-service.js';
 import { TraderService } from './services/trader-service.js';
 import { WikiToolsService } from './services/wiki-tools-service.js';
@@ -133,7 +136,10 @@ function createTestApp(upstreamBody: unknown) {
     db,
     worldstateService,
     marketService: new MarketService({ cache }),
+    marketWave2Service: new MarketWave2Service({ cache }),
     rivenService: new RivenService({ cache }),
+    rivenToolsService: new RivenToolsService({ cache }),
+    relicService: new RelicService({ worldstateService }),
     traderService,
     rotationService,
     wikiToolsService: new WikiToolsService(),

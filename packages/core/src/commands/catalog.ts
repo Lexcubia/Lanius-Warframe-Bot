@@ -393,10 +393,10 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
   {
     id: 'riven',
     command: '/zk',
-    roots: ['zk', '紫卡', 'riven'],
+    roots: ['zk', '紫卡', 'riven', 'rm', 'wmr', 'wr'],
     summary: {
-      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序，每页 10；点私聊N 插入 /w）',
-      en: 'Lock one weapon; online/ingame riven auctions (price↑, 10/page; W# inserts /w)',
+      zh: '锁定一件武器的在线/游戏中紫卡拍卖（价升序；点私聊N 插入 /w）。rm/rivens.market 已停服，改走 WFM',
+      en: 'Lock one weapon; online/ingame riven auctions. rm/rivens.market is offline → WFM',
     },
     usage: {
       zh: '/zk <武器名> [等级=N] [段位=N] [循环=N] [p=页码] [私聊=N]',
@@ -457,6 +457,7 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
       '/zk latron 等级=0 段位=8',
       '/zk 拉特昂 循环=2 p=2',
       '/zk 拉特昂 私聊=1',
+      '/rm 绝路',
     ],
   },
   {
@@ -635,6 +636,214 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     usage: { zh: '/言录使', en: '/acrithis' },
     params: [],
     examples: ['/言录使', '/acrithis'],
+  },
+  {
+    id: 'marketTrend',
+    command: '/趋势',
+    roots: ['趋势', 'wm趋势', '价格趋势', '紫卡趋势', 'trend'],
+    summary: {
+      zh: '查看物品近 48 小时 / 90 天价格趋势（WFM 成交统计）',
+      en: 'Item price trend (48h / 90d WFM closed stats)',
+    },
+    usage: { zh: '/趋势 <物品名>', en: '/trend <item>' },
+    params: [
+      {
+        name: 'query',
+        required: true,
+        description: { zh: '物品中英文名或 slug', en: 'Item name or slug' },
+      },
+    ],
+    examples: ['/趋势 膛线', '/trend primed_continuity'],
+  },
+  {
+    id: 'marketRank',
+    command: '/排行',
+    roots: ['排行', '市场排行', 'rank'],
+    summary: {
+      zh: '市场成交中位价排行（抽样缓存；可按分类）',
+      en: 'Market median-price ranks (sampled cache; by category)',
+    },
+    usage: { zh: '/排行 [分类] [p=页]', en: '/rank [category] [p=page]' },
+    params: [
+      {
+        name: 'category',
+        required: false,
+        description: {
+          zh: '甲/卡/部件/赋能/主武/副武/近战/遗物',
+          en: 'warframe/mod/part/arcane/primary/secondary/melee/relic',
+        },
+        choices: ['甲', '卡', '部件', '赋能', '主武', '副武', '近战', '遗物'],
+      },
+      {
+        name: 'p / 页',
+        required: false,
+        description: { zh: '页码', en: 'Page number' },
+      },
+    ],
+    examples: ['/排行', '/排行 部件', '/rank mod p=2'],
+  },
+  {
+    id: 'ducats',
+    command: '/金垃圾',
+    roots: ['金垃圾', '银垃圾', '铜垃圾', 'ducats', '杜卡德垃圾'],
+    summary: {
+      zh: '杜卡德/白金垃圾榜（金/银/铜面值）',
+      en: 'Ducats-per-platinum junk board (gold/silver/bronze)',
+    },
+    usage: { zh: '/金垃圾|银垃圾|铜垃圾 [p=页]', en: '/ducats [gold|silver|bronze] [p=page]' },
+    params: [
+      {
+        name: 'tier',
+        required: false,
+        description: { zh: '档位（根命令已带时可省略）', en: 'Tier' },
+        choices: ['金', '银', '铜', 'gold', 'silver', 'bronze'],
+      },
+    ],
+    examples: ['/金垃圾', '/银垃圾 p=2', '/ducats bronze'],
+  },
+  {
+    id: 'rivenAnalysis',
+    command: '/紫卡分析',
+    roots: ['紫卡分析', 'analysis', '分析紫卡'],
+    summary: {
+      zh: '紫卡词条卷度分析（文字输入；识图行可选）',
+      en: 'Riven roll analysis (text; optional OCR lines)',
+    },
+    usage: {
+      zh: '/紫卡分析 <武器> <+词条 数值…> [-词条 数值…]',
+      en: '/analysis <weapon> <+stat value…> [-stat value…]',
+    },
+    params: [
+      {
+        name: 'text',
+        required: true,
+        description: {
+          zh: '武器名与词条数值，如「绝路 暴击几率 180 -装填速度 40」',
+          en: 'Weapon + stats, e.g. "rubico crit_chance 180 -reload_speed 40"',
+        },
+      },
+    ],
+    examples: ['/紫卡分析 绝路 暴击几率 180 暴击伤害 100 -射速 40'],
+  },
+  {
+    id: 'rivenRanges',
+    command: '/词条范围',
+    roots: ['词条范围', '紫卡范围', '紫卡词条范围', 'ranges'],
+    summary: {
+      zh: '查看某武器类可 roll 词条数值区间（统一倾向 1.2）',
+      en: 'Possible riven stat ranges for a weapon class (D=1.2)',
+    },
+    usage: { zh: '/词条范围 <武器名|rifle|melee…>', en: '/ranges <weapon|class>' },
+    params: [
+      {
+        name: 'query',
+        required: true,
+        description: { zh: '武器名或类名', en: 'Weapon name or class' },
+      },
+    ],
+    examples: ['/词条范围 绝路', '/ranges melee'],
+  },
+  {
+    id: 'rivenSplice',
+    command: '/紫卡融合',
+    roots: ['紫卡融合', '紫卡拼接', '融合词条', '拼接词条', 'splice'],
+    summary: {
+      zh: 'Riven Splicer 融合配方查询',
+      en: 'Riven Splicer recipe lookup',
+    },
+    usage: { zh: '/紫卡融合 [词条|武器类]', en: '/splice [stat|class]' },
+    params: [
+      {
+        name: 'query',
+        required: false,
+        description: { zh: '过滤词条或武器类', en: 'Filter by stat or class' },
+      },
+    ],
+    examples: ['/紫卡融合', '/紫卡融合 毒气伤害', '/splice melee'],
+  },
+  {
+    id: 'disposition',
+    command: '/倾向',
+    roots: ['倾向', '紫卡倾向', 'disposition'],
+    summary: {
+      zh: '查询武器旧倾向与统一 1.2 缩放',
+      en: 'Legacy disposition vs unified 1.2 scale',
+    },
+    usage: { zh: '/倾向 <武器名>', en: '/disposition <weapon>' },
+    params: [
+      {
+        name: 'query',
+        required: true,
+        description: { zh: '武器中英文名', en: 'Weapon name' },
+      },
+    ],
+    examples: ['/倾向 绝路', '/disposition rubico'],
+  },
+  {
+    id: 'lichAuctions',
+    command: '/玄骸',
+    roots: ['玄骸', 'xh', 'lich'],
+    summary: {
+      zh: '赤毒 / 信条 / 终幕玄骸武器拍卖',
+      en: 'Kuva / Tenet / Coda lich auctions',
+    },
+    usage: { zh: '/玄骸 <武器> [元素] [伤害上限] [p=页]', en: '/xh <weapon> [element] [dmg] [p=page]' },
+    params: [
+      {
+        name: 'query',
+        required: true,
+        description: { zh: '玄骸武器名', en: 'Lich weapon name' },
+      },
+    ],
+    examples: ['/玄骸 赤毒怒雷', '/xh 信条弧电离子枪 辐射', '/xh kuva_bramma 50'],
+  },
+  {
+    id: 'relic',
+    command: '/遗物',
+    roots: ['遗物', '核桃', 'relic'],
+    summary: {
+      zh: '查询遗物奖励表或按纪元列表',
+      en: 'Relic rewards or list by era',
+    },
+    usage: { zh: '/遗物 <遗物名|纪元>', en: '/relic <name|era>' },
+    params: [
+      {
+        name: 'query',
+        required: false,
+        description: { zh: '遗物名（如 古纪 A1）或纪元；空则帮助', en: 'Relic or era; empty for help' },
+      },
+    ],
+    examples: ['/遗物 古纪 A1', '/遗物 后纪', '/relic axi a2'],
+  },
+  {
+    id: 'parts',
+    command: '/部件',
+    roots: ['部件', '零件', '组件', 'parts'],
+    summary: {
+      zh: '按部件名反查所属遗物',
+      en: 'Prime part → relic sources',
+    },
+    usage: { zh: '/部件 <部件名>', en: '/parts <part>' },
+    params: [
+      {
+        name: 'query',
+        required: true,
+        description: { zh: '部件中文名', en: 'Part name' },
+      },
+    ],
+    examples: ['/部件 Ash Prime 头部神经光元蓝图', '/parts Forma'],
+  },
+  {
+    id: 'openRelic',
+    command: '/开核桃',
+    roots: ['开核桃', '开裂缝', 'openrelic', 'openRelic'],
+    summary: {
+      zh: '结合当前裂隙推荐可开遗物纪元',
+      en: 'Farm tips from active fissures by relic era',
+    },
+    usage: { zh: '/开核桃', en: '/openrelic' },
+    params: [],
+    examples: ['/开核桃', '/openrelic'],
   },
   {
     id: 'help',

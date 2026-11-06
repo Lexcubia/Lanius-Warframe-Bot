@@ -17,9 +17,12 @@ import { createLogger } from './lib/logger.js';
 import { ItemIconService } from './services/item-icon-service.js';
 import { WikiToolsService } from './services/wiki-tools-service.js';
 import { MarketService } from './services/market-service.js';
+import { MarketWave2Service } from './services/market-wave2-service.js';
 import { MissionDeckService } from './services/mission-deck-service.js';
 import { PushService } from './services/push-service.js';
+import { RelicService } from './services/relic-service.js';
 import { RivenService } from './services/riven-service.js';
+import { RivenToolsService } from './services/riven-tools-service.js';
 import { RotationService } from './services/rotation-service.js';
 import { TraderService } from './services/trader-service.js';
 import { WorldstateService } from './services/worldstate-service.js';
@@ -144,7 +147,10 @@ async function main(): Promise<void> {
     missionDeckService,
   });
   const marketService = new MarketService({ cache, client: wfm });
+  const marketWave2Service = new MarketWave2Service({ cache, client: wfm });
   const rivenService = new RivenService({ cache, client: wfm });
+  const rivenToolsService = new RivenToolsService({ cache, client: wfm });
+  const relicService = new RelicService({ worldstateService });
   const traderService = new TraderService({
     worldstateService,
     itemIconService,
@@ -172,7 +178,10 @@ async function main(): Promise<void> {
     db,
     worldstateService,
     marketService,
+    marketWave2Service,
     rivenService,
+    rivenToolsService,
+    relicService,
     traderService,
     rotationService,
     wikiToolsService,

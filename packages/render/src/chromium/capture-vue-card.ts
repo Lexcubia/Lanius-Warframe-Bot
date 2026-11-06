@@ -41,6 +41,7 @@ export type CaptureVueCardInput = {
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
+  wave2?: { title: string; kicker: string; subtitle?: string; lines: string[] };
   voidTrader?: VoidTraderDto;
   varzia?: VarziaDto;
   weaponRotation?: WeaponRotationDto;
