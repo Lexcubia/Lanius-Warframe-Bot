@@ -40,3 +40,4 @@ export {
   type CardSkinDef,
   type CardSkinId,
 } from './vue-cards/skins.js';
+export { renderWave2LinesCard, type RenderWave2LinesInput } from './render-wave2.js';

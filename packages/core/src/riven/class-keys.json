@@ -1,0 +1,10 @@
+{
+  "rifle": "rifle",
+  "shotgun": "shotgun",
+  "pistol": "pistol",
+  "archgun": "archgun",
+  "melee": "melee",
+  "zaw": "melee",
+  "kitgun": "pistol",
+  "secondary": "pistol"
+}

@@ -16,6 +16,7 @@ export type CardKind =
   | 'help'
   | 'market'
   | 'riven'
+  | 'wave2Lines'
   | 'voidTrader'
   | 'varzia'
   | 'weaponRotation'

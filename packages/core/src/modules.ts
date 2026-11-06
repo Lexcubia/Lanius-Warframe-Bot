@@ -5,7 +5,7 @@ import { z } from 'zod';
  *
  * Wave 0 起：除已上线指令外，预留 SDJK 复刻后续波次的 ModuleId（见 `RESERVED_MODULE_IDS`）。
  * 预留 id **不进** `LANIUS_COMMAND_CATALOG`，避免无 handler 的空路由；实现后再迁入门禁并挂目录。
- * Wave1 日常缺口与 Wave3 `wiki` / `translate` / `valence` 已上线（并从 RESERVED 移除）。
+ * Wave1 / Wave2 / Wave3 均已上线（并从 RESERVED 移除）。
  */
 export const ModuleIdSchema = z.enum([
   // —— 已上线 ——
@@ -48,7 +48,7 @@ export const ModuleIdSchema = z.enum([
   'incursions',
   'incarnon',
   'acrithis',
-  // —— Wave2 预留：市场 / 紫卡 / 遗物 ——
+  // —— Wave2：市场 / 紫卡 / 遗物（已上线）——
   'marketRank',
   'marketTrend',
   'ducats',
@@ -72,22 +72,10 @@ export const ModuleIdSchema = z.enum([
 export type ModuleId = z.infer<typeof ModuleIdSchema>;
 
 /**
- * 尚未挂 catalog / handler 的预留 ModuleId（Wave2；Wave1/Wave3 已迁入 GATED）。
- * 并行波次只应从本表迁出**自己的** id，勿改动他波次条目。
+ * SDJK→Lanius 复刻预留 ModuleId（尚无 Bot 目录 / handler）。
+ * Wave1 / Wave2 / Wave3 均已迁出并挂 catalog；当前无未用预留 stub。
  */
-export const RESERVED_MODULE_IDS = [
-  'marketRank',
-  'marketTrend',
-  'ducats',
-  'rivenAnalysis',
-  'rivenRanges',
-  'rivenSplice',
-  'disposition',
-  'lichAuctions',
-  'relic',
-  'parts',
-  'openRelic',
-] as const satisfies readonly ModuleId[];
+export const RESERVED_MODULE_IDS = [] as const satisfies readonly ModuleId[];
 
 /**
  * 默认可被 ACL / 开关管控的模块（仅已上线、有指令目录的模块）。
@@ -108,6 +96,17 @@ export const GATED_MODULE_IDS = [
   'archimedea',
   'market',
   'riven',
+  'marketRank',
+  'marketTrend',
+  'ducats',
+  'rivenAnalysis',
+  'rivenRanges',
+  'rivenSplice',
+  'disposition',
+  'lichAuctions',
+  'relic',
+  'parts',
+  'openRelic',
   'voidTrader',
   'varzia',
   'tenetRotation',

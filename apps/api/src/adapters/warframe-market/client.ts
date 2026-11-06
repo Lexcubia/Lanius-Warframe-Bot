@@ -141,6 +141,70 @@ export type WfmRivenAuctionSearchOptions = {
 };
 
 /**
+ * 物品成交统计点（v1 `/items/{slug}/statistics` closed）。
+ */
+export type WfmStatPoint = {
+  t: string;
+  volume: number;
+  median: number | null;
+  avg: number | null;
+  min: number | null;
+  max: number | null;
+  modRank: number | null;
+};
+
+/**
+ * 物品成交统计归一结果。
+ */
+export type WfmItemStatistics = {
+  h48: WfmStatPoint[];
+  d90: WfmStatPoint[];
+};
+
+/**
+ * 杜卡德计算器上一小时行（v1 `/tools/ducats`）。
+ */
+export type WfmDucatToolRow = {
+  itemId: string;
+  ducats: number;
+  ducatsPerPlatinum: number;
+  ducatsPerPlatinumWa: number;
+  waPrice: number;
+  median: number;
+  volume: number;
+};
+
+/**
+ * 玄骸拍卖搜索选项。
+ */
+export type WfmLichAuctionSearchOptions = {
+  /** lich / sister / coda */
+  lichType: 'lich' | 'sister' | 'coda';
+  element?: string;
+  damageMax?: number;
+};
+
+/**
+ * 玄骸拍卖行（v1 auctions；item 字段与紫卡不同）。
+ */
+export type WfmLichAuctionRow = {
+  starting_price?: number;
+  buyout_price?: number;
+  updated?: string;
+  owner?: {
+    ingame_name?: string;
+    status?: string;
+    reputation?: number;
+  };
+  item?: {
+    weapon_url_name?: string;
+    element?: string;
+    damage?: number;
+    having_ephemera?: boolean;
+  };
+};
+
+/**
  * v2 物品 `i18n` 片段。
  */
 type WfmV2I18nBlock = {
@@ -369,6 +433,107 @@ export class WarframeMarketClient {
   }
 
   /**
+   * 拉取物品成交统计（v1 `/items/{slug}/statistics`；closed 48h/90d）。
+   *
+   * @param urlName - 物品 slug
+   * @returns 归一化 h48 / d90 点列
+   */
+  async getItemStatistics(urlName: string): Promise<WfmItemStatistics> {
+    const slug = urlName.trim();
+    if (!slug) {
+      throw upstreamUnavailableError('Warframe Market item slug is empty');
+    }
+    const json = await this.getJson<{
+      payload?: {
+        statistics_closed?: {
+          '48hours'?: Array<Record<string, unknown>>;
+          '90days'?: Array<Record<string, unknown>>;
+        };
+      };
+    }>(`/items/${encodeURIComponent(slug)}/statistics`, { baseUrl: this.v1BaseUrl });
+    const closed = json.payload?.statistics_closed ?? {};
+    return {
+      h48: mapStatPoints(closed['48hours'] ?? []),
+      d90: mapStatPoints(closed['90days'] ?? []),
+    };
+  }
+
+  /**
+   * 拉取杜卡德计算器上一小时榜（v1 `/tools/ducats`）。
+   *
+   * @returns 行列表；上游结构异常时返回空数组（调用方降级）
+   */
+  async getDucatsBoard(): Promise<WfmDucatToolRow[]> {
+    try {
+      const json = await this.getJson<{
+        payload?: { previous_hour?: Array<Record<string, unknown>> };
+      }>('/tools/ducats', { baseUrl: this.v1BaseUrl });
+      const rows = json.payload?.previous_hour ?? [];
+      const out: WfmDucatToolRow[] = [];
+      for (const row of rows) {
+        const itemId = typeof row.item === 'string' ? row.item : '';
+        if (!itemId) {
+          continue;
+        }
+        out.push({
+          itemId,
+          ducats: numOr(row.ducats, 0),
+          ducatsPerPlatinum: numOr(row.ducats_per_platinum, 0),
+          ducatsPerPlatinumWa: numOr(row.ducats_per_platinum_wa, 0),
+          waPrice: numOr(row.wa_price, 0),
+          median: numOr(row.median, 0),
+          volume: Math.trunc(numOr(row.volume, 0)),
+        });
+      }
+      return out;
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * 搜索玄骸拍卖（v1 `/auctions/search`；type=lich|sister|coda）。
+   *
+   * @param weaponUrlName - 武器 slug
+   * @param options - 类型 / 元素 / 伤害上限
+   * @returns 拍卖行；上游 400（无类目）时返回空数组
+   */
+  async searchLichAuctions(
+    weaponUrlName: string,
+    options: WfmLichAuctionSearchOptions,
+  ): Promise<WfmLichAuctionRow[]> {
+    const slug = weaponUrlName.trim();
+    if (!slug) {
+      throw upstreamUnavailableError('Warframe Market lich weapon slug is empty');
+    }
+    const qs = new URLSearchParams({
+      type: options.lichType,
+      weapon_url_name: slug,
+      sort_by: 'price_asc',
+      platform: 'pc',
+    });
+    if (options.element) {
+      qs.set('element', options.element);
+    }
+    if (options.damageMax != null) {
+      qs.set('having_damage_max', String(options.damageMax));
+    }
+    try {
+      const json = await this.getJson<{ payload?: { auctions?: WfmLichAuctionRow[] } }>(
+        `/auctions/search?${qs.toString()}`,
+        { baseUrl: this.v1BaseUrl },
+      );
+      return json.payload?.auctions ?? [];
+    } catch (error) {
+      // WM 对部分信条/终幕武器返回 400「无类目」——降级为空列表由服务层提示。
+      if (error instanceof Error && /HTTP 400/.test(error.message)) {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  /**
    * GET JSON（Platform + Language + 可识别 User-Agent；可切 v1/v2 根）。
    *
    * @param path - 路径（含 query）
@@ -534,4 +699,49 @@ function mapV2OrderRow(row: WfmV2OrderRow): WfmOrderRow | null {
       ...(reputation !== undefined ? { reputation } : {}),
     },
   };
+}
+
+/**
+ * 将上游 closed 统计行映射为 {@link WfmStatPoint}。
+ *
+ * @param rows - 原始行
+ * @returns 点列
+ */
+function mapStatPoints(rows: Array<Record<string, unknown>>): WfmStatPoint[] {
+  const out: WfmStatPoint[] = [];
+  for (const row of rows) {
+    const datetime = typeof row.datetime === 'string' ? row.datetime : '';
+    out.push({
+      t: datetime.slice(0, 16).replace('T', ' '),
+      volume: Math.trunc(numOr(row.volume, 0)),
+      median: nullableNum(row.median),
+      avg: nullableNum(row.avg_price),
+      min: nullableNum(row.min_price),
+      max: nullableNum(row.max_price),
+      modRank:
+        typeof row.mod_rank === 'number' && row.mod_rank >= 0 ? Math.trunc(row.mod_rank) : null,
+    });
+  }
+  return out;
+}
+
+/**
+ * 读取非负有限数字，失败回落默认。
+ *
+ * @param value - 原始值
+ * @param fallback - 默认
+ * @returns 数字
+ */
+function numOr(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+/**
+ * 读取可空数字。
+ *
+ * @param value - 原始值
+ * @returns 数字或 null
+ */
+function nullableNum(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }

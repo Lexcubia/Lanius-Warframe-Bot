@@ -37,6 +37,7 @@ import {
   VarziaModuleCard,
   VoidTraderModuleCard,
   WeaponRotationModuleCard,
+  Wave2LinesCard,
   WikiModuleCard,
   ValenceModuleCard,
   type CardSkinId,
@@ -64,6 +65,7 @@ export type CardHostKind =
   | 'help'
   | 'market'
   | 'riven'
+  | 'wave2Lines'
   | 'voidTrader'
   | 'varzia'
   | 'weaponRotation'
@@ -86,6 +88,7 @@ export type CardHostPayload = {
   help?: HelpDto;
   market?: MarketSearchDto;
   riven?: RivenSearchDto;
+  wave2?: { title: string; kicker: string; subtitle?: string; lines: string[] };
   voidTrader?: VoidTraderDto;
   varzia?: VarziaDto;
   weaponRotation?: WeaponRotationDto;
@@ -145,6 +148,8 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return MarketModuleCard;
     case 'riven':
       return RivenModuleCard;
+    case 'wave2Lines':
+      return Wave2LinesCard;
     case 'voidTrader':
       return VoidTraderModuleCard;
     case 'varzia':
@@ -193,6 +198,11 @@ function mountCard(payload: CardHostPayload): void {
     props.market = payload.market;
   } else if (payload.kind === 'riven') {
     props.riven = payload.riven;
+  } else if (payload.kind === 'wave2Lines') {
+    props.title = payload.wave2?.title ?? '';
+    props.kicker = payload.wave2?.kicker ?? 'LANIUS';
+    props.subtitle = payload.wave2?.subtitle;
+    props.lines = payload.wave2?.lines ?? [];
   } else if (payload.kind === 'voidTrader') {
     props.voidTrader = payload.voidTrader;
   } else if (payload.kind === 'varzia') {

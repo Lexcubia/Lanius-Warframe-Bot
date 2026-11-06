@@ -52,6 +52,23 @@ export type BotIntent =
       /** 本页拍卖序号（1-based）；有值时只回私聊文案 */
       whisperIndex?: number;
     }
+  | { type: 'marketTrend'; query: string }
+  | { type: 'marketRank'; category?: string; page?: number }
+  | { type: 'ducats'; tier?: 'gold' | 'silver' | 'bronze'; page?: number }
+  | { type: 'rivenAnalysis'; text: string }
+  | { type: 'rivenRanges'; query: string }
+  | { type: 'rivenSplice'; query?: string }
+  | { type: 'disposition'; query: string }
+  | {
+      type: 'lichAuctions';
+      query: string;
+      element?: string;
+      damageMax?: number;
+      page?: number;
+    }
+  | { type: 'relic'; query?: string; page?: number }
+  | { type: 'parts'; query: string; page?: number }
+  | { type: 'openRelic' }
   | { type: 'voidTrader' }
   | { type: 'varzia' }
   | { type: 'tenetRotation' }
@@ -214,6 +231,79 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     return { matched: true, intent: parseSubscribeIntent(restTokens) };
   }
 
+  if (command.id === 'marketTrend') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    return { matched: true, intent: { type: 'marketTrend', query: rest } };
+  }
+
+  if (command.id === 'marketRank') {
+    return { matched: true, intent: parseMarketRankIntent(restTokens, rootToken) };
+  }
+
+  if (command.id === 'ducats') {
+    return { matched: true, intent: parseDucatsIntent(restTokens, rootToken) };
+  }
+
+  if (command.id === 'rivenAnalysis') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    return { matched: true, intent: { type: 'rivenAnalysis', text: rest } };
+  }
+
+  if (command.id === 'rivenRanges') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    return { matched: true, intent: { type: 'rivenRanges', query: rest } };
+  }
+
+  if (command.id === 'rivenSplice') {
+    return { matched: true, intent: { type: 'rivenSplice', ...(rest ? { query: rest } : {}) } };
+  }
+
+  if (command.id === 'disposition') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    return { matched: true, intent: { type: 'disposition', query: rest } };
+  }
+
+  if (command.id === 'lichAuctions') {
+    return { matched: true, intent: parseLichIntent(restTokens) };
+  }
+
+  if (command.id === 'relic') {
+    const page = parsePageToken(restTokens);
+    const q = restTokens.filter((t) => !/^p(?:age)?[=:]?\d+$/i.test(t) && !/^页[=:]?\d+$/.test(t));
+    return {
+      matched: true,
+      intent: {
+        type: 'relic',
+        ...(q.length ? { query: q.join(' ') } : {}),
+        ...(page !== undefined ? { page } : {}),
+      },
+    };
+  }
+
+  if (command.id === 'parts') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    const page = parsePageToken(restTokens);
+    const q = restTokens.filter((t) => !/^p(?:age)?[=:]?\d+$/i.test(t) && !/^页[=:]?\d+$/.test(t));
+    return {
+      matched: true,
+      intent: { type: 'parts', query: q.join(' ') || rest, ...(page !== undefined ? { page } : {}) },
+    };
+  }
+
+  if (command.id === 'openRelic') {
+    return { matched: true, intent: { type: 'openRelic' } };
+  }
+
   if (command.id === 'fissures') {
     const filter = parseFissureFilterTokens(restTokens);
     return {
@@ -296,6 +386,151 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
   }
 
   return { matched: true, intent: { type: 'unknown', raw: body } };
+}
+
+/**
+ * 解析页码 token（`p=2` / `页2`）。
+ *
+ * @param tokens - 词元
+ * @returns 页码或 undefined
+ */
+function parsePageToken(tokens: string[]): number | undefined {
+  for (const t of tokens) {
+    const m = t.match(/^(?:p(?:age)?|页)[=:]?(\d+)$/i);
+    if (m) {
+      return Math.max(1, Number.parseInt(m[1]!, 10));
+    }
+  }
+  return undefined;
+}
+
+/**
+ * 解析市场排行意图。
+ *
+ * @param tokens - 词元
+ * @param _root - 根词
+ * @returns 排行意图
+ */
+function parseMarketRankIntent(tokens: string[], _root: string): BotIntent {
+  const page = parsePageToken(tokens);
+  const catToken = tokens.find((t) => !/^(?:p(?:age)?|页)[=:]?\d+$/i.test(t));
+  const categoryMap: Record<string, string> = {
+    甲: 'warframe',
+    战甲: 'warframe',
+    warframe: 'warframe',
+    卡: 'mod',
+    模组: 'mod',
+    mod: 'mod',
+    部件: 'part',
+    part: 'part',
+    赋能: 'arcane',
+    arcane: 'arcane',
+    主武: 'primary',
+    primary: 'primary',
+    副武: 'secondary',
+    secondary: 'secondary',
+    近战: 'melee',
+    melee: 'melee',
+    遗物: 'relic',
+    relic: 'relic',
+  };
+  const category = catToken ? categoryMap[catToken.toLowerCase()] ?? categoryMap[catToken] : undefined;
+  return {
+    type: 'marketRank',
+    ...(category ? { category } : {}),
+    ...(page !== undefined ? { page } : {}),
+  };
+}
+
+/**
+ * 解析杜卡德垃圾档位意图。
+ *
+ * @param tokens - 词元
+ * @param root - 根命令（金垃圾等）
+ * @returns ducats 意图
+ */
+function parseDucatsIntent(
+  tokens: string[],
+  root: string,
+): Extract<BotIntent, { type: 'ducats' }> {
+  const page = parsePageToken(tokens);
+  const rootKey = root.toLowerCase();
+  let tier: 'gold' | 'silver' | 'bronze' | undefined =
+    rootKey === '金垃圾' || rootKey === 'gold'
+      ? 'gold'
+      : rootKey === '银垃圾' || rootKey === 'silver'
+        ? 'silver'
+        : rootKey === '铜垃圾' || rootKey === 'bronze'
+          ? 'bronze'
+          : undefined;
+  for (const t of tokens) {
+    const key = t.toLowerCase();
+    if (key === '金' || key === 'gold') tier = 'gold';
+    if (key === '银' || key === 'silver') tier = 'silver';
+    if (key === '铜' || key === 'bronze') tier = 'bronze';
+  }
+  return {
+    type: 'ducats',
+    tier: tier ?? 'gold',
+    ...(page !== undefined ? { page } : {}),
+  };
+}
+
+/**
+ * 解析玄骸意图。
+ *
+ * @param tokens - 词元
+ * @returns lich 意图或 unknown
+ */
+function parseLichIntent(tokens: string[]): BotIntent {
+  if (tokens.length === 0) {
+    return { type: 'unknown', raw: '玄骸' };
+  }
+  const page = parsePageToken(tokens);
+  const elementMap: Record<string, string> = {
+    冲击: 'impact',
+    火焰: 'heat',
+    冰冻: 'cold',
+    电击: 'electricity',
+    毒素: 'toxin',
+    磁力: 'magnetic',
+    辐射: 'radiation',
+    impact: 'impact',
+    heat: 'heat',
+    cold: 'cold',
+    electricity: 'electricity',
+    toxin: 'toxin',
+    magnetic: 'magnetic',
+    radiation: 'radiation',
+  };
+  let element: string | undefined;
+  let damageMax: number | undefined;
+  const nameParts: string[] = [];
+  for (const t of tokens) {
+    if (/^(?:p(?:age)?|页)[=:]?\d+$/i.test(t)) {
+      continue;
+    }
+    if (elementMap[t] || elementMap[t.toLowerCase()]) {
+      element = elementMap[t] ?? elementMap[t.toLowerCase()];
+      continue;
+    }
+    const asNum = Number.parseFloat(t);
+    if (Number.isFinite(asNum) && asNum > 0 && asNum <= 100) {
+      damageMax = asNum;
+      continue;
+    }
+    nameParts.push(t);
+  }
+  if (nameParts.length === 0) {
+    return { type: 'unknown', raw: `玄骸 ${tokens.join(' ')}` };
+  }
+  return {
+    type: 'lichAuctions',
+    query: nameParts.join(' '),
+    ...(element ? { element } : {}),
+    ...(damageMax !== undefined ? { damageMax } : {}),
+    ...(page !== undefined ? { page } : {}),
+  };
 }
 
 /**
