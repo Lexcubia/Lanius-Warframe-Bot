@@ -18,4 +18,6 @@ export type CardKind =
   | 'riven'
   | 'voidTrader'
   | 'varzia'
-  | 'weaponRotation';
+  | 'weaponRotation'
+  | 'wiki'
+  | 'valence';

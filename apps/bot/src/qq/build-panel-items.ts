@@ -29,6 +29,9 @@ const PANEL_DESC_ZH: Readonly<Partial<Record<ModuleId, string>>> = {
   market: 'WM 在线卖单排行',
   riven: 'WM 紫卡在线拍卖',
   help: '指令帮助与模块详解',
+  wiki: '灰机维基深链短简介',
+  translate: '中英官方名称对照',
+  valence: '效价融合计算器',
 };
 
 /**

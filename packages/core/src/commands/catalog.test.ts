@@ -43,4 +43,14 @@ describe('command catalog', () => {
     expect(findCommandByRoot('精英科研')?.id).toBe('archimedea');
     expect(findCommandByRoot('时光科研')?.id).toBe('archimedea');
   });
+
+  it('registers Wave 3 wiki / translate / valence roots', () => {
+    expect(findCommandByRoot('wiki')?.id).toBe('wiki');
+    expect(findCommandByRoot('维基')?.id).toBe('wiki');
+    expect(findCommandByRoot('翻译')?.id).toBe('translate');
+    expect(findCommandByRoot('translate')?.id).toBe('translate');
+    expect(findCommandByRoot('武器融合')?.id).toBe('valence');
+    expect(findCommandByRoot('融合')?.id).toBe('valence');
+    expect(findCommandByRoot('valence')?.id).toBe('valence');
+  });
 });

@@ -4,9 +4,11 @@ import type {
   Locale,
   MarketSearchDto,
   RivenSearchDto,
+  ValenceFusionDto,
   VarziaDto,
   VoidTraderDto,
   WeaponRotationDto,
+  WikiDto,
   WorldstateDto,
 } from '@lanius/core';
 import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
@@ -34,6 +36,8 @@ import {
   VarziaModuleCard,
   VoidTraderModuleCard,
   WeaponRotationModuleCard,
+  WikiModuleCard,
+  ValenceModuleCard,
   type CardSkinId,
 } from '../src/vue-cards/index.js';
 import '../src/vue-cards/dense-tokens.css';
@@ -60,7 +64,9 @@ export type CardHostKind =
   | 'riven'
   | 'voidTrader'
   | 'varzia'
-  | 'weaponRotation';
+  | 'weaponRotation'
+  | 'wiki'
+  | 'valence';
 
 /**
  * Playwright `page.evaluate` 注入的挂载载荷。
@@ -80,6 +86,8 @@ export type CardHostPayload = {
   voidTrader?: VoidTraderDto;
   varzia?: VarziaDto;
   weaponRotation?: WeaponRotationDto;
+  wiki?: WikiDto;
+  valence?: ValenceFusionDto;
 };
 
 /**
@@ -139,6 +147,10 @@ function resolveCardComponent(kind: CardHostKind): Component {
       return VarziaModuleCard;
     case 'weaponRotation':
       return WeaponRotationModuleCard;
+    case 'wiki':
+      return WikiModuleCard;
+    case 'valence':
+      return ValenceModuleCard;
     default: {
       const _exhaustive: never = kind;
       throw new Error(`Unknown card kind: ${_exhaustive}`);
@@ -181,6 +193,10 @@ function mountCard(payload: CardHostPayload): void {
     props.varzia = payload.varzia;
   } else if (payload.kind === 'weaponRotation') {
     props.rotation = payload.weaponRotation;
+  } else if (payload.kind === 'wiki') {
+    props.wiki = payload.wiki;
+  } else if (payload.kind === 'valence') {
+    props.valence = payload.valence;
   } else if (payload.kind === 'archimedea') {
     props.worldstate = payload.worldstate;
     if (payload.archimedeaKind) {

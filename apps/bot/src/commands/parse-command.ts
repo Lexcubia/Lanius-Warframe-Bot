@@ -63,6 +63,12 @@ export type BotIntent =
       frequency?: PushFrequency;
     }
   | { type: 'help'; module?: string }
+  /** Wave3：灰机维基深链 */
+  | { type: 'wiki'; query: string }
+  /** Wave3：中英名翻译 */
+  | { type: 'translate'; query: string }
+  /** Wave3：效价融合；tokens 为空时 API 回用法 */
+  | { type: 'valence'; tokens: string[] }
   | { type: 'unknown'; raw: string };
 
 /**
@@ -212,6 +218,24 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
       matched: true,
       intent: kind ? { type: 'archimedea', kind } : { type: 'archimedea' },
     };
+  }
+
+  if (command.id === 'wiki') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    return { matched: true, intent: { type: 'wiki', query: rest } };
+  }
+
+  if (command.id === 'translate') {
+    if (!rest) {
+      return { matched: true, intent: { type: 'unknown', raw: body } };
+    }
+    return { matched: true, intent: { type: 'translate', query: rest } };
+  }
+
+  if (command.id === 'valence') {
+    return { matched: true, intent: { type: 'valence', tokens: restTokens } };
   }
 
   if (

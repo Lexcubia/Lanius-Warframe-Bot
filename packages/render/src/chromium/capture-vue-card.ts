@@ -4,9 +4,11 @@ import type {
   Locale,
   MarketSearchDto,
   RivenSearchDto,
+  ValenceFusionDto,
   VarziaDto,
   VoidTraderDto,
   WeaponRotationDto,
+  WikiDto,
   WorldstateDto,
 } from '@lanius/core';
 import { laniusTokens } from '@lanius/ui/tokens';
@@ -41,6 +43,8 @@ export type CaptureVueCardInput = {
   voidTrader?: VoidTraderDto;
   varzia?: VarziaDto;
   weaponRotation?: WeaponRotationDto;
+  wiki?: WikiDto;
+  valence?: ValenceFusionDto;
 };
 
 /**

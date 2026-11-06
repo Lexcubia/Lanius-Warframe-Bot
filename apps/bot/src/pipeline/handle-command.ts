@@ -13,9 +13,11 @@ import {
   renderNightwaveCard,
   renderRivenCard,
   renderSortieCard,
+  renderValenceCard,
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
+  renderWikiCard,
   renderWorldstateCard,
   type CardSkinId,
 } from '@lanius/render';
@@ -52,6 +54,11 @@ import {
   formatVarziaText,
   formatVoidTraderText,
 } from '../formatters/traders-text.js';
+import {
+  formatTranslateText,
+  formatValenceText,
+  formatWikiText,
+} from '../formatters/wiki-tools-text.js';
 import { formatArchimedeaText } from '../formatters/archimedea-text.js';
 import {
   formatAlertsText,
@@ -401,6 +408,78 @@ export async function handleCommand(
           ),
         ),
       label: kind === 'tenet' ? 'tenetRotation' : 'codaRotation',
+    });
+  }
+
+  if (intent.type === 'wiki') {
+    const envelope = await api.getWiki(intent.query, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatWikiText(envelope.data, locale, { stale: envelope.meta.stale });
+    const linkFooter =
+      locale === 'en' ? `Link: ${envelope.data.pageUrl}` : `🔗 wiki 链接：${envelope.data.pageUrl}`;
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderWikiCard(
+          withCardSkin(
+            {
+              wiki: envelope.data,
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'wiki',
+      // 嵌图时把可点链接放在 footer，避免 URL 烧死在 PNG 里
+      footerMarkdown: linkFooter,
+    });
+  }
+
+  if (intent.type === 'translate') {
+    const envelope = await api.getTranslate(intent.query, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    // 对齐 SDJK：翻译默认纯文本，不渲图（避免把对照表锁进 PNG）
+    const text = formatTranslateText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: false,
+      render: async () => Buffer.alloc(0),
+      label: 'translate',
+    });
+  }
+
+  if (intent.type === 'valence') {
+    const envelope = await api.getValence(intent.tokens, publicQuery, gateCtx);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const text = formatValenceText(envelope.data, locale);
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderValenceCard(
+          withCardSkin(
+            {
+              valence: envelope.data,
+              locale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'valence',
     });
   }
 

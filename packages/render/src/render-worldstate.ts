@@ -264,3 +264,45 @@ export async function renderWeaponRotationCard(
     skin: input.skin,
   });
 }
+
+/**
+ * 渲染 wiki 深链短简介卡片 PNG。
+ *
+ * @param input - WikiDto、locale 与可选皮肤
+ * @returns PNG 字节
+ */
+export async function renderWikiCard(
+  input: {
+    wiki: import('@lanius/core').WikiDto;
+    locale: import('@lanius/core').Locale;
+    stale?: boolean;
+  } & SkinOpt,
+): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'wiki',
+    locale: input.locale,
+    stale: input.stale,
+    wiki: input.wiki,
+    skin: input.skin,
+  });
+}
+
+/**
+ * 渲染效价融合卡片 PNG。
+ *
+ * @param input - ValenceFusionDto、locale 与可选皮肤
+ * @returns PNG 字节
+ */
+export async function renderValenceCard(
+  input: {
+    valence: import('@lanius/core').ValenceFusionDto;
+    locale: import('@lanius/core').Locale;
+  } & SkinOpt,
+): Promise<Buffer> {
+  return captureVueCard({
+    kind: 'valence',
+    locale: input.locale,
+    valence: input.valence,
+    skin: input.skin,
+  });
+}
