@@ -6,6 +6,7 @@ import {
   renderBountiesCard,
   renderCircuitCard,
   renderArchonCard,
+  renderDenseListCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -20,6 +21,7 @@ import {
   renderWikiCard,
   renderWorldstateCard,
   type CardSkinId,
+  type DenseListCardPayload,
 } from '@lanius/render';
 import {
   applyBountyMapFilter,
@@ -72,6 +74,46 @@ import {
   formatSortieText,
   formatWorldstateText,
 } from '../formatters/worldstate-text.js';
+import {
+  acrithisCardPayload,
+  arbTableCardPayload,
+  calendarCardPayload,
+  clanRewardsCardPayload,
+  conclaveCardPayload,
+  constructionCardPayload,
+  dailyDealsCardPayload,
+  descendiaCardPayload,
+  eventsCardPayload,
+  flashSalesCardPayload,
+  incarnonCardPayload,
+  incursionsCardPayload,
+  kuvaCardPayload,
+  newsCardPayload,
+  shopCardPayload,
+  synthCardPayload,
+  timersCardPayload,
+  voidStormsCardPayload,
+} from '../formatters/wave1-cards.js';
+import {
+  formatAcrithisText,
+  formatArbTableText,
+  formatCalendar1999Text,
+  formatClanRewardsText,
+  formatConclaveText,
+  formatConstructionText,
+  formatDailyDealsText,
+  formatDescendiaText,
+  formatEssenceShopText,
+  formatEventsText,
+  formatFlashSalesText,
+  formatIncarnonText,
+  formatIncursionsText,
+  formatKuvaText,
+  formatNewsText,
+  formatSynthTargetsText,
+  formatTimersText,
+  formatVoidStormsText,
+} from '../formatters/wave1-text.js';
 import { buildFissureShortcutKeyboard } from '../qq/build-fissure-keyboard.js';
 import { buildHelpShortcutKeyboard } from '../qq/build-help-keyboard.js';
 import { buildMarketPageKeyboard, marketPageMarkdownHint } from '../qq/build-market-keyboard.js';
@@ -147,7 +189,220 @@ export async function handleCommand(
     locale,
   };
 
-  // Wave 1：sortie / archon / bounties / alerts / arbitration / archimedea / circuit 已接通。
+  // SDJK Wave1：挂在 `/v1/worldstate` 切片上的模块
+  if (
+    intent.type === 'dailyDeals' ||
+    intent.type === 'news' ||
+    intent.type === 'kuva' ||
+    intent.type === 'synthTargets' ||
+    intent.type === 'construction' ||
+    intent.type === 'voidStorms' ||
+    intent.type === 'events' ||
+    intent.type === 'conclave' ||
+    intent.type === 'clanRewards' ||
+    intent.type === 'flashSales' ||
+    intent.type === 'calendar1999' ||
+    intent.type === 'descendia'
+  ) {
+    const kind = intent.type;
+    const envelope = await api.getWorldstate(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    const ws = envelope.data;
+    const text =
+      kind === 'dailyDeals'
+        ? formatDailyDealsText(ws, locale, { stale: envelope.meta.stale })
+        : kind === 'news'
+          ? formatNewsText(ws, locale, { stale: envelope.meta.stale })
+          : kind === 'kuva'
+            ? formatKuvaText(ws, locale)
+            : kind === 'synthTargets'
+              ? formatSynthTargetsText(ws, locale)
+              : kind === 'construction'
+                ? formatConstructionText(ws, locale)
+                : kind === 'voidStorms'
+                  ? formatVoidStormsText(ws, locale)
+                  : kind === 'events'
+                    ? formatEventsText(ws, locale)
+                    : kind === 'conclave'
+                      ? formatConclaveText(ws, locale)
+                      : kind === 'clanRewards'
+                        ? formatClanRewardsText(ws, locale)
+                        : kind === 'flashSales'
+                          ? formatFlashSalesText(ws, locale)
+                          : kind === 'calendar1999'
+                            ? formatCalendar1999Text(ws, locale)
+                            : formatDescendiaText(ws, locale);
+    const denseList: DenseListCardPayload =
+      kind === 'dailyDeals'
+        ? dailyDealsCardPayload(ws, locale)
+        : kind === 'news'
+          ? newsCardPayload(ws, locale)
+          : kind === 'kuva'
+            ? kuvaCardPayload(ws, locale)
+            : kind === 'synthTargets'
+              ? synthCardPayload(ws, locale)
+              : kind === 'construction'
+                ? constructionCardPayload(ws, locale)
+                : kind === 'voidStorms'
+                  ? voidStormsCardPayload(ws, locale)
+                  : kind === 'events'
+                    ? eventsCardPayload(ws, locale)
+                    : kind === 'conclave'
+                      ? conclaveCardPayload(ws, locale)
+                      : kind === 'clanRewards'
+                        ? clanRewardsCardPayload(ws, locale)
+                        : kind === 'flashSales'
+                          ? flashSalesCardPayload(ws, locale)
+                          : kind === 'calendar1999'
+                            ? calendarCardPayload(ws, locale)
+                            : descendiaCardPayload(ws, locale);
+    return replyCard({
+      deps,
+      target,
+      text,
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin({ denseList, locale, stale: envelope.meta.stale }, deps.prefs.cardSkin),
+        ),
+      label: kind,
+    });
+  }
+
+  if (intent.type === 'timers') {
+    const envelope = await api.getTimers(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatTimersText(envelope.data, locale, { stale: envelope.meta.stale }),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            {
+              denseList: timersCardPayload(envelope.data, locale),
+              locale,
+              stale: envelope.meta.stale,
+            },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'timers',
+    });
+  }
+
+  if (intent.type === 'arbTable') {
+    const envelope = await api.getArbTable(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatArbTableText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: arbTableCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'arbTable',
+    });
+  }
+
+  if (intent.type === 'steelPath' || intent.type === 'sliverShop') {
+    const envelope =
+      intent.type === 'steelPath'
+        ? await api.getSteelPath(publicQuery)
+        : await api.getSliverShop(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatEssenceShopText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: shopCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: intent.type,
+    });
+  }
+
+  if (intent.type === 'incursions') {
+    const envelope = await api.getIncursions(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatIncursionsText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: incursionsCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'incursions',
+    });
+  }
+
+  if (intent.type === 'incarnon') {
+    const envelope = await api.getIncarnon(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatIncarnonText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: incarnonCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'incarnon',
+    });
+  }
+
+  if (intent.type === 'acrithis') {
+    const envelope = await api.getAcrithis(publicQuery);
+    if (!envelope.ok) {
+      return sendFail(deps, target, locale, envelope.error.message);
+    }
+    return replyCard({
+      deps,
+      target,
+      text: formatAcrithisText(envelope.data, locale),
+      preferImage: deps.prefs.replyMode === 'image',
+      render: () =>
+        renderDenseListCard(
+          withCardSkin(
+            { denseList: acrithisCardPayload(envelope.data, locale), locale },
+            deps.prefs.cardSkin,
+          ),
+        ),
+      label: 'acrithis',
+    });
+  }
 
   if (intent.type === 'archimedea') {
     const envelope = await api.getWorldstate(publicQuery);

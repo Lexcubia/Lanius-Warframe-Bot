@@ -5,7 +5,7 @@ import { z } from 'zod';
  *
  * Wave 0 起：除已上线指令外，预留 SDJK 复刻后续波次的 ModuleId（见 `RESERVED_MODULE_IDS`）。
  * 预留 id **不进** `LANIUS_COMMAND_CATALOG`，避免无 handler 的空路由；实现后再迁入门禁并挂目录。
- * Wave3 `wiki` / `translate` / `valence` 已上线（仍列于 Zod 枚举，并从 RESERVED 移除）。
+ * Wave1 日常缺口与 Wave3 `wiki` / `translate` / `valence` 已上线（并从 RESERVED 移除）。
  */
 export const ModuleIdSchema = z.enum([
   // —— 已上线 ——
@@ -28,7 +28,7 @@ export const ModuleIdSchema = z.enum([
   'codaRotation',
   'subscribe',
   'help',
-  // —— Wave1 预留：worldstate / 日常缺口 ——
+  // —— Wave1：worldstate / 日常缺口（已上线）——
   'timers',
   'dailyDeals',
   'news',
@@ -72,28 +72,10 @@ export const ModuleIdSchema = z.enum([
 export type ModuleId = z.infer<typeof ModuleIdSchema>;
 
 /**
- * SDJK→Lanius 复刻预留 ModuleId（尚无 Bot 目录 / handler；命名锁定供后续波次共用）。
+ * 尚未挂 catalog / handler 的预留 ModuleId（Wave2；Wave1/Wave3 已迁入 GATED）。
+ * 并行波次只应从本表迁出**自己的** id，勿改动他波次条目。
  */
 export const RESERVED_MODULE_IDS = [
-  'timers',
-  'dailyDeals',
-  'news',
-  'kuva',
-  'synthTargets',
-  'construction',
-  'voidStorms',
-  'events',
-  'conclave',
-  'clanRewards',
-  'flashSales',
-  'arbTable',
-  'calendar1999',
-  'steelPath',
-  'sliverShop',
-  'descendia',
-  'incursions',
-  'incarnon',
-  'acrithis',
   'marketRank',
   'marketTrend',
   'ducats',
@@ -132,6 +114,27 @@ export const GATED_MODULE_IDS = [
   'codaRotation',
   'subscribe',
   'help',
+  // SDJK Wave1
+  'timers',
+  'dailyDeals',
+  'news',
+  'kuva',
+  'synthTargets',
+  'construction',
+  'voidStorms',
+  'events',
+  'conclave',
+  'clanRewards',
+  'flashSales',
+  'arbTable',
+  'calendar1999',
+  'steelPath',
+  'sliverShop',
+  'descendia',
+  'incursions',
+  'incarnon',
+  'acrithis',
+  // SDJK Wave3
   'wiki',
   'translate',
   'valence',

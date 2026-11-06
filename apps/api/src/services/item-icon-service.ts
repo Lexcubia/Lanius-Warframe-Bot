@@ -106,6 +106,25 @@ export class ItemIconService {
           rewards: job.rewards.map((item) => this.enrichOne(item, catalog)),
         })),
       })),
+      dailyDeals: worldstate.dailyDeals.map((deal) => ({
+        ...deal,
+        item: this.enrichOne(deal.item, catalog),
+      })),
+      events: worldstate.events.map((ev) => ({
+        ...ev,
+        rewards: ev.rewards.map((reward) => this.enrichOne(reward, catalog)),
+      })),
+      clanRewards: worldstate.clanRewards.map((clan) => ({
+        ...clan,
+        rewards: clan.rewards.map((tier) => ({
+          ...tier,
+          item: this.enrichOne(tier.item, catalog),
+        })),
+      })),
+      flashSales: worldstate.flashSales.map((sale) => ({
+        ...sale,
+        item: this.enrichOne(sale.item, catalog),
+      })),
     };
   }
 

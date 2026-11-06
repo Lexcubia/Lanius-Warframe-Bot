@@ -15,6 +15,7 @@ export {
   renderBountiesCard,
   renderCircuitCard,
   renderArchonCard,
+  renderDenseListCard,
   renderFissuresCard,
   renderHelpCard,
   renderInvasionsCard,
@@ -30,6 +31,7 @@ export {
   renderWorldstateCard,
   type RenderWorldstateCardInput,
 } from './render-worldstate.js';
+export type { DenseListCardPayload, DenseListRow } from './vue-cards/dense-list-types.js';
 export {
   CARD_SKINS,
   DEFAULT_CARD_SKIN,
