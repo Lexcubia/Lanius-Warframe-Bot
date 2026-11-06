@@ -59,6 +59,46 @@ export type LaniusDb = {
 };
 
 /**
+ * Wave 4：为既有 `subscriptions` 表补 `filter_args` 并重建唯一约束。
+ * 新库由 CREATE TABLE 直接带列；旧库无该列时整表迁移（SQLite 不能改 UNIQUE）。
+ *
+ * @param raw - DatabaseSync 实例
+ * @returns 无返回值
+ */
+function migrateSubscriptionsFilterArgs(raw: InstanceType<DatabaseSyncType>): void {
+  const cols = raw.prepare(`PRAGMA table_info(subscriptions)`).all() as Array<{ name: string }>;
+  if (cols.length === 0) {
+    return;
+  }
+  if (cols.some((col) => col.name === 'filter_args')) {
+    return;
+  }
+  raw.exec(`
+    CREATE TABLE subscriptions_wave4 (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      scene TEXT NOT NULL,
+      target_id TEXT NOT NULL,
+      module_id TEXT NOT NULL,
+      filter_args TEXT NOT NULL DEFAULT '',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      frequency TEXT NOT NULL DEFAULT 'on_change',
+      last_fingerprint TEXT,
+      last_pushed_at TEXT,
+      created_at TEXT NOT NULL,
+      UNIQUE(scene, target_id, module_id, filter_args)
+    );
+    INSERT INTO subscriptions_wave4
+      (id, scene, target_id, module_id, filter_args, enabled, frequency,
+       last_fingerprint, last_pushed_at, created_at)
+    SELECT id, scene, target_id, module_id, '', enabled, frequency,
+           last_fingerprint, last_pushed_at, created_at
+    FROM subscriptions;
+    DROP TABLE subscriptions;
+    ALTER TABLE subscriptions_wave4 RENAME TO subscriptions;
+  `);
+}
+
+/**
  * 打开（或创建）Lanius SQLite 库并确保 schema。
  *
  * @param filePath - 数据库文件绝对路径，或 `:memory:`
@@ -114,12 +154,13 @@ export function openLaniusDb(filePath: string): LaniusDb {
       scene TEXT NOT NULL,
       target_id TEXT NOT NULL,
       module_id TEXT NOT NULL,
+      filter_args TEXT NOT NULL DEFAULT '',
       enabled INTEGER NOT NULL DEFAULT 1,
       frequency TEXT NOT NULL DEFAULT 'on_change',
       last_fingerprint TEXT,
       last_pushed_at TEXT,
       created_at TEXT NOT NULL,
-      UNIQUE(scene, target_id, module_id)
+      UNIQUE(scene, target_id, module_id, filter_args)
     );
     CREATE TABLE IF NOT EXISTS rotation_schedules (
       module_id TEXT PRIMARY KEY,
@@ -128,6 +169,7 @@ export function openLaniusDb(filePath: string): LaniusDb {
       items_json TEXT NOT NULL
     );
   `);
+  migrateSubscriptionsFilterArgs(raw);
 
   return {
     raw,

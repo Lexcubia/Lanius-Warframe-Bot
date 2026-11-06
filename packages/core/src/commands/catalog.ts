@@ -299,12 +299,12 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
     command: '/订阅',
     roots: ['订阅', 'subscribe', 'sub'],
     summary: {
-      zh: '订阅/退订模块推送（裂隙、商人、轮换等）',
-      en: 'Subscribe/unsubscribe module push alerts',
+      zh: '订阅/退订模块推送（对齐 SDJK 蹲事件；指令仍为 /订阅）',
+      en: 'Subscribe/unsubscribe push alerts (SDJK event set; Lanius /subscribe syntax)',
     },
     usage: {
-      zh: '/订阅 [列表|退订] <模块> [变更时|每小时|每天|每周]',
-      en: '/subscribe [list|off] <module> [on_change|hourly|daily|weekly]',
+      zh: '/订阅 [列表|退订] <模块> [筛选] [变更时|每小时|每天|每周]',
+      en: '/subscribe [list|off] <module> [filter] [on_change|hourly|daily|weekly]',
     },
     params: [
       {
@@ -320,8 +320,16 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
         name: 'module',
         required: false,
         description: {
-          zh: '模块：裂隙/虚空商人/瓦奇娅/信条/终幕',
-          en: 'fissures / voidTrader / varzia / tenet / coda',
+          zh: '模块：裂隙/夜灵/山谷/奸商/突击/执刑官/仲裁/侵袭/警报/入侵/新闻/特惠/活动/日历/灵化/信条/终幕/钢精/碎银/赏金/阿耶/电波等',
+          en: 'fissures / cetus / vallis / voidTrader / sortie / archon / arbitration / …',
+        },
+      },
+      {
+        name: 'filter',
+        required: false,
+        description: {
+          zh: '可选筛选：裂隙纪元/路径；赏金地图；仲裁关键词',
+          en: 'Optional filter for fissures / bounties / arbitration',
         },
       },
       {
@@ -334,7 +342,14 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
         choices: ['变更时', '每小时', '每天', '每周', 'on_change', 'hourly', 'daily', 'weekly'],
       },
     ],
-    examples: ['/订阅 列表', '/订阅 裂隙', '/订阅 信条 每天', '/订阅 退订 终幕'],
+    examples: [
+      '/订阅 列表',
+      '/订阅 裂隙',
+      '/订阅 裂隙 钢铁',
+      '/订阅 夜灵',
+      '/订阅 信条 每天',
+      '/订阅 退订 终幕',
+    ],
   },
   {
     id: 'market',
@@ -787,7 +802,10 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
       zh: '赤毒 / 信条 / 终幕玄骸武器拍卖',
       en: 'Kuva / Tenet / Coda lich auctions',
     },
-    usage: { zh: '/玄骸 <武器> [元素] [伤害上限] [p=页]', en: '/xh <weapon> [element] [dmg] [p=page]' },
+    usage: {
+      zh: '/玄骸 <武器> [元素] [伤害上限] [p=页]',
+      en: '/xh <weapon> [element] [dmg] [p=page]',
+    },
     params: [
       {
         name: 'query',
@@ -810,7 +828,10 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
       {
         name: 'query',
         required: false,
-        description: { zh: '遗物名（如 古纪 A1）或纪元；空则帮助', en: 'Relic or era; empty for help' },
+        description: {
+          zh: '遗物名（如 古纪 A1）或纪元；空则帮助',
+          en: 'Relic or era; empty for help',
+        },
       },
     ],
     examples: ['/遗物 古纪 A1', '/遗物 后纪', '/relic axi a2'],

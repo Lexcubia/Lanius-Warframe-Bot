@@ -1,5 +1,6 @@
 import {
   PushFrequencySchema,
+  SDJK_PUSH_EVENT_MAP,
   SubscribableModuleIdSchema,
   findCommandByRoot,
   isBountyMapFilterActive,
@@ -97,6 +98,8 @@ export type BotIntent =
       type: 'subscribe';
       action: 'list' | 'on' | 'off';
       moduleId?: SubscribableModuleId;
+      /** 裂隙/仲裁/赏金筛选，或 worldstate 周期键 */
+      filterArgs?: string;
       frequency?: PushFrequency;
     }
   | { type: 'help'; module?: string }
@@ -296,7 +299,11 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     const q = restTokens.filter((t) => !/^p(?:age)?[=:]?\d+$/i.test(t) && !/^页[=:]?\d+$/.test(t));
     return {
       matched: true,
-      intent: { type: 'parts', query: q.join(' ') || rest, ...(page !== undefined ? { page } : {}) },
+      intent: {
+        type: 'parts',
+        query: q.join(' ') || rest,
+        ...(page !== undefined ? { page } : {}),
+      },
     };
   }
 
@@ -434,7 +441,9 @@ function parseMarketRankIntent(tokens: string[], _root: string): BotIntent {
     遗物: 'relic',
     relic: 'relic',
   };
-  const category = catToken ? categoryMap[catToken.toLowerCase()] ?? categoryMap[catToken] : undefined;
+  const category = catToken
+    ? (categoryMap[catToken.toLowerCase()] ?? categoryMap[catToken])
+    : undefined;
   return {
     type: 'marketRank',
     ...(category ? { category } : {}),
@@ -449,10 +458,7 @@ function parseMarketRankIntent(tokens: string[], _root: string): BotIntent {
  * @param root - 根命令（金垃圾等）
  * @returns ducats 意图
  */
-function parseDucatsIntent(
-  tokens: string[],
-  root: string,
-): Extract<BotIntent, { type: 'ducats' }> {
+function parseDucatsIntent(tokens: string[], root: string): Extract<BotIntent, { type: 'ducats' }> {
   const page = parsePageToken(tokens);
   const rootKey = root.toLowerCase();
   let tier: 'gold' | 'silver' | 'bronze' | undefined =
@@ -563,6 +569,8 @@ function resolveArchimedeaKind(rootToken: string): ArchimedeaKind | undefined {
 
 /**
  * 解析 `/订阅` 参数。
+ * 格式：`/订阅 [列表|退订] <模块> [筛选…] [变更时|每小时|每天|每周]`
+ * 周期别名（夜灵/山谷等）自带 `filterArgs`，不再吞后续词为筛选。
  *
  * @param tokens - 根命令后的词元
  * @returns subscribe 意图
@@ -578,65 +586,190 @@ function parseSubscribeIntent(tokens: string[]): BotIntent {
   }
 
   if (first === '退订' || first === 'off' || first === 'unsub' || first === '取消') {
-    const moduleId = resolveSubscribable(tokens.slice(1).join(' '));
-    if (!moduleId) {
+    const resolved = resolveSubscribableTokens(tokens.slice(1));
+    if (!resolved) {
       return { type: 'unknown', raw: `订阅 ${tokens.join(' ')}` };
     }
-    return { type: 'subscribe', action: 'off', moduleId };
+    return {
+      type: 'subscribe',
+      action: 'off',
+      moduleId: resolved.moduleId,
+      ...(resolved.filterArgs ? { filterArgs: resolved.filterArgs } : {}),
+    };
   }
 
-  let moduleToken = tokens[0] ?? '';
-  let freqToken = tokens[1];
-  if (tokens.length >= 2 && !parseFrequency(tokens[1] ?? '')) {
-    const joined = `${tokens[0]} ${tokens[1]}`;
-    if (resolveSubscribable(joined)) {
-      moduleToken = joined;
-      freqToken = tokens[2];
+  const resolved = resolveSubscribableTokens(tokens);
+  if (!resolved) {
+    return { type: 'unknown', raw: `订阅 ${tokens.join(' ')}` };
+  }
+
+  const rest = tokens.slice(resolved.consumed);
+  let frequency: PushFrequency = 'on_change';
+  let filterParts = rest;
+  if (rest.length > 0) {
+    const maybeFreq = parseFrequency(rest[rest.length - 1] ?? '');
+    if (maybeFreq) {
+      frequency = maybeFreq;
+      filterParts = rest.slice(0, -1);
     }
   }
 
-  const moduleId = resolveSubscribable(moduleToken);
-  if (!moduleId) {
-    return { type: 'unknown', raw: `订阅 ${tokens.join(' ')}` };
-  }
-  const frequency = parseFrequency(freqToken ?? '') ?? 'on_change';
-  return { type: 'subscribe', action: 'on', moduleId, frequency };
+  // 周期别名已写入 filterArgs，忽略多余筛选词以免覆盖
+  const filterArgs =
+    resolved.filterArgs ?? (filterParts.length > 0 ? filterParts.join(' ') : undefined);
+
+  return {
+    type: 'subscribe',
+    action: 'on',
+    moduleId: resolved.moduleId,
+    frequency,
+    ...(filterArgs ? { filterArgs } : {}),
+  };
 }
 
 /**
- * 将用户输入解析为可订阅模块。
+ * 可订阅解析结果（含消耗的词元数与可选筛选）。
+ */
+type SubscribableResolved = {
+  moduleId: SubscribableModuleId;
+  filterArgs?: string;
+  /** 从 tokens 开头匹配到的词元数 */
+  consumed: number;
+};
+
+/**
+ * 从词元序列贪婪匹配可订阅模块（支持双词 SDJK 事件名如「钢路侵袭」）。
+ *
+ * @param tokens - 词元
+ * @returns 解析结果或 undefined
+ */
+function resolveSubscribableTokens(tokens: string[]): SubscribableResolved | undefined {
+  if (tokens.length === 0) {
+    return undefined;
+  }
+  // 先试双词（含无空格粘连，如「钢路」「侵袭」→「钢路侵袭」），再单词
+  if (tokens.length >= 2) {
+    const spaced = resolveSubscribable(`${tokens[0]} ${tokens[1]}`);
+    if (spaced) {
+      return { ...spaced, consumed: 2 };
+    }
+    const compact = resolveSubscribable(`${tokens[0]}${tokens[1]}`);
+    if (compact) {
+      return { ...compact, consumed: 2 };
+    }
+  }
+  const one = resolveSubscribable(tokens[0] ?? '');
+  if (one) {
+    return { ...one, consumed: 1 };
+  }
+  return undefined;
+}
+
+/**
+ * 将用户输入解析为可订阅模块（可带周期 filterArgs）。
  *
  * @param token - 模块别名或 id
- * @returns 可订阅模块 id 或 undefined
+ * @returns 模块与可选筛选；无法识别则 undefined
  */
-function resolveSubscribable(token: string): SubscribableModuleId | undefined {
+function resolveSubscribable(
+  token: string,
+): { moduleId: SubscribableModuleId; filterArgs?: string } | undefined {
   const trimmed = token.trim();
   if (!trimmed) {
     return undefined;
   }
-  const aliases: Record<string, SubscribableModuleId> = {
-    裂隙: 'fissures',
-    fissures: 'fissures',
-    虚空商人: 'voidTrader',
-    奸商: 'voidTrader',
-    baro: 'voidTrader',
-    voidtrader: 'voidTrader',
-    瓦奇娅: 'varzia',
-    varzia: 'varzia',
-    信条: 'tenetRotation',
-    信条轮换: 'tenetRotation',
-    tenet: 'tenetRotation',
-    终幕: 'codaRotation',
-    终幕轮换: 'codaRotation',
-    coda: 'codaRotation',
+
+  const fromSdjk = SDJK_PUSH_EVENT_MAP[trimmed as keyof typeof SDJK_PUSH_EVENT_MAP];
+  if (fromSdjk) {
+    return {
+      moduleId: fromSdjk.moduleId,
+      ...(fromSdjk.filterArgs ? { filterArgs: fromSdjk.filterArgs } : {}),
+    };
+  }
+
+  const aliases: Record<string, { moduleId: SubscribableModuleId; filterArgs?: string }> = {
+    裂隙: { moduleId: 'fissures' },
+    裂缝: { moduleId: 'fissures' },
+    fissures: { moduleId: 'fissures' },
+    夜灵平野: { moduleId: 'worldstate', filterArgs: 'cetus' },
+    平原时间: { moduleId: 'worldstate', filterArgs: 'cetus' },
+    cetus: { moduleId: 'worldstate', filterArgs: 'cetus' },
+    奥布山谷: { moduleId: 'worldstate', filterArgs: 'vallis' },
+    金星: { moduleId: 'worldstate', filterArgs: 'vallis' },
+    vallis: { moduleId: 'worldstate', filterArgs: 'vallis' },
+    魔胎之境: { moduleId: 'worldstate', filterArgs: 'cambion' },
+    火卫二: { moduleId: 'worldstate', filterArgs: 'cambion' },
+    cambion: { moduleId: 'worldstate', filterArgs: 'cambion' },
+    地球昼夜: { moduleId: 'worldstate', filterArgs: 'earth' },
+    earth: { moduleId: 'worldstate', filterArgs: 'earth' },
+    双衍王境: { moduleId: 'worldstate', filterArgs: 'duviri' },
+    螺旋: { moduleId: 'worldstate', filterArgs: 'duviri' },
+    duviri: { moduleId: 'worldstate', filterArgs: 'duviri' },
+    世界状态: { moduleId: 'worldstate' },
+    worldstate: { moduleId: 'worldstate' },
+    虚空商人: { moduleId: 'voidTrader' },
+    奸商: { moduleId: 'voidTrader' },
+    baro: { moduleId: 'voidTrader' },
+    voidtrader: { moduleId: 'voidTrader' },
+    瓦奇娅: { moduleId: 'varzia' },
+    varzia: { moduleId: 'varzia' },
+    信条: { moduleId: 'tenetRotation' },
+    信条轮换: { moduleId: 'tenetRotation' },
+    tenet: { moduleId: 'tenetRotation' },
+    终幕: { moduleId: 'codaRotation' },
+    终幕轮换: { moduleId: 'codaRotation' },
+    coda: { moduleId: 'codaRotation' },
+    突击: { moduleId: 'sortie' },
+    sortie: { moduleId: 'sortie' },
+    执刑官猎杀: { moduleId: 'archon' },
+    执刑官: { moduleId: 'archon' },
+    archon: { moduleId: 'archon' },
+    仲裁: { moduleId: 'arbitration' },
+    arbitration: { moduleId: 'arbitration' },
+    侵袭: { moduleId: 'incursions' },
+    钢路侵袭: { moduleId: 'incursions' },
+    incursions: { moduleId: 'incursions' },
+    警报: { moduleId: 'alerts' },
+    alerts: { moduleId: 'alerts' },
+    入侵: { moduleId: 'invasions' },
+    invasions: { moduleId: 'invasions' },
+    新闻: { moduleId: 'news' },
+    news: { moduleId: 'news' },
+    每日特惠: { moduleId: 'dailyDeals' },
+    达沃: { moduleId: 'dailyDeals' },
+    dailydeals: { moduleId: 'dailyDeals' },
+    活动: { moduleId: 'events' },
+    events: { moduleId: 'events' },
+    日历: { moduleId: 'calendar1999' },
+    '1999日历': { moduleId: 'calendar1999' },
+    calendar1999: { moduleId: 'calendar1999' },
+    灵化: { moduleId: 'incarnon' },
+    灵化武器: { moduleId: 'incarnon' },
+    incarnon: { moduleId: 'incarnon' },
+    钢精: { moduleId: 'steelPath' },
+    钢精兑换: { moduleId: 'steelPath' },
+    steelpath: { moduleId: 'steelPath' },
+    碎银: { moduleId: 'sliverShop' },
+    碎银兑换: { moduleId: 'sliverShop' },
+    slivershop: { moduleId: 'sliverShop' },
+    赏金: { moduleId: 'bounties' },
+    bounties: { moduleId: 'bounties' },
+    阿耶兑换: { moduleId: 'varzia' },
+    电波: { moduleId: 'nightwave' },
+    午夜电波: { moduleId: 'nightwave' },
+    nightwave: { moduleId: 'nightwave' },
   };
-  const direct = aliases[trimmed.toLowerCase()] ?? aliases[trimmed];
+  const lower = trimmed.toLowerCase();
+  const direct = aliases[lower] ?? aliases[trimmed];
   if (direct) {
     return direct;
   }
   const resolved = resolveModuleToken(trimmed);
-  const parsed = SubscribableModuleIdSchema.safeParse(resolved);
-  return parsed.success ? parsed.data : undefined;
+  const parsed = SubscribableModuleIdSchema.safeParse(resolved ?? trimmed);
+  if (parsed.success) {
+    return { moduleId: parsed.data };
+  }
+  return undefined;
 }
 
 /**

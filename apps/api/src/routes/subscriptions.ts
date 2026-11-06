@@ -1,7 +1,4 @@
-import {
-  PushFrequencySchema,
-  SubscribableModuleIdSchema,
-} from '@lanius/core';
+import { PushFrequencySchema, SubscribableModuleIdSchema } from '@lanius/core';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -48,6 +45,7 @@ export function subscriptionRoutes() {
         targetId: z.string().min(1),
         moduleId: SubscribableModuleIdSchema,
         frequency: PushFrequencySchema.default('on_change'),
+        filterArgs: z.string().nullable().optional(),
         enabled: z.boolean().optional(),
         userId: z.string().optional(),
       })
@@ -78,6 +76,8 @@ export function subscriptionRoutes() {
         scene: z.enum(['group', 'c2c']),
         targetId: z.string().min(1),
         moduleId: SubscribableModuleIdSchema,
+        /** 指定筛选时只关该条；省略则关闭该模块下全部订阅 */
+        filterArgs: z.string().nullable().optional(),
       })
       .parse(await c.req.json());
     const ok = disableSubscription(
@@ -85,6 +85,7 @@ export function subscriptionRoutes() {
       body.scene,
       body.targetId,
       body.moduleId,
+      body.filterArgs === undefined ? undefined : body.filterArgs,
     );
     if (!ok) {
       throw notFoundError('Subscription not found');

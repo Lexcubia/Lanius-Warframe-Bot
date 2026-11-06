@@ -649,6 +649,7 @@ export class LaniusApiClient {
     targetId: string;
     moduleId: SubscribableModuleId;
     frequency: PushFrequency;
+    filterArgs?: string | null;
     userId?: string;
   }): Promise<ApiEnvelope<{ subscription: SubscriptionDto }>> {
     return this.postJson(
@@ -661,13 +662,14 @@ export class LaniusApiClient {
   /**
    * 关闭订阅（需 adminToken）。
    *
-   * @param input - 场景与模块
+   * @param input - 场景与模块；可选 filterArgs 精确匹配
    * @returns ok 包络
    */
   async disableSubscription(input: {
     scene: 'group' | 'c2c';
     targetId: string;
     moduleId: SubscribableModuleId;
+    filterArgs?: string | null;
   }): Promise<ApiEnvelope<{ ok: boolean }>> {
     return this.postJson('/v1/subscriptions/disable', input, z.object({ ok: z.boolean() }));
   }
