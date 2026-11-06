@@ -1,3 +1,4 @@
+import { SubscribableModuleIdSchema } from '@lanius/core';
 import { describe, expect, it } from 'vitest';
 
 import { buildHelpShortcutKeyboard } from './build-help-keyboard.js';
@@ -34,6 +35,19 @@ describe('buildHelpShortcutKeyboard', () => {
     );
   });
 
+  it('appends Wave4 SubscribableModuleId extras not covered by static rows', () => {
+    expect(SubscribableModuleIdSchema.options).toEqual(
+      expect.arrayContaining(['incursions', 'events', 'calendar1999', 'steelPath', 'sliverShop']),
+    );
+    const kb = buildHelpShortcutKeyboard({
+      locale: 'zh',
+      enter: true,
+      botAppId: 'test-app',
+    });
+    const labels = kb.rows.flatMap((row) => row.buttons.map((btn) => btn.label));
+    expect(labels).toEqual(expect.arrayContaining(['侵袭', '活动', '日历', '钢铁', '碎银']));
+  });
+
   it('builds English labels for en locale', () => {
     const kb = buildHelpShortcutKeyboard({
       locale: 'en',
@@ -42,7 +56,19 @@ describe('buildHelpShortcutKeyboard', () => {
     });
     const labels = kb.rows.flatMap((row) => row.buttons.map((btn) => btn.label));
     expect(labels).toEqual(
-      expect.arrayContaining(['Sortie', 'Timers', 'Ducats', 'Wiki', 'Valence', 'Subscribe']),
+      expect.arrayContaining([
+        'Sortie',
+        'Timers',
+        'Ducats',
+        'Wiki',
+        'Valence',
+        'Subscribe',
+        'Incursions',
+        'Events',
+        'Calendar',
+        'Steel',
+        'Sliver',
+      ]),
     );
   });
 });
