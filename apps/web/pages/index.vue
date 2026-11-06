@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import {
   DamageTypeIcon,
+  DailyBoard,
   FissuresPanel,
   InvasionsBoard,
+  MissionsBoard,
   NightwaveBoard,
   OfficialItemIcon,
+  TimersBoard,
   ValenceBonusBar,
   WorldstateBoard,
   formatRemain,
@@ -12,6 +15,7 @@ import {
 import {
   pickLocalized,
   type RotationWeaponDto,
+  type TimersDto,
   type VarziaDto,
   type VoidTraderDto,
   type WeaponRotationDto,
@@ -26,6 +30,9 @@ const api = useLaniusApi();
 type ModuleKey =
   | 'worldstate'
   | 'fissures'
+  | 'missions'
+  | 'daily'
+  | 'timers'
   | 'invasions'
   | 'nightwave'
   | 'traders'
@@ -36,18 +43,64 @@ type ModuleKey =
  * 首页模块目录（速跳 + 折叠面板；不含市场/紫卡/帮助/订阅）。
  */
 const catalog = computed(() => [
-  { id: 'mod-worldstate' as const, key: 'worldstate' as ModuleKey, title: t('nav.worldstate'), sub: 'World State' },
-  { id: 'mod-fissures' as const, key: 'fissures' as ModuleKey, title: t('nav.fissures'), sub: 'Fissures' },
-  { id: 'mod-invasions' as const, key: 'invasions' as ModuleKey, title: t('home.mod.invasions'), sub: 'Invasions' },
-  { id: 'mod-nightwave' as const, key: 'nightwave' as ModuleKey, title: t('home.mod.nightwave'), sub: 'Nightwave' },
-  { id: 'mod-traders' as const, key: 'traders' as ModuleKey, title: t('nav.traders'), sub: 'Traders' },
-  { id: 'mod-tenet' as const, key: 'tenet' as ModuleKey, title: t('rotations.tenet'), sub: 'Tenet' },
+  {
+    id: 'mod-worldstate' as const,
+    key: 'worldstate' as ModuleKey,
+    title: t('nav.worldstate'),
+    sub: 'World State',
+  },
+  {
+    id: 'mod-fissures' as const,
+    key: 'fissures' as ModuleKey,
+    title: t('nav.fissures'),
+    sub: 'Fissures',
+  },
+  {
+    id: 'mod-missions' as const,
+    key: 'missions' as ModuleKey,
+    title: t('home.mod.missions'),
+    sub: 'Missions',
+  },
+  { id: 'mod-daily' as const, key: 'daily' as ModuleKey, title: t('home.mod.daily'), sub: 'Daily' },
+  {
+    id: 'mod-timers' as const,
+    key: 'timers' as ModuleKey,
+    title: t('home.mod.timers'),
+    sub: 'Timers',
+  },
+  {
+    id: 'mod-invasions' as const,
+    key: 'invasions' as ModuleKey,
+    title: t('home.mod.invasions'),
+    sub: 'Invasions',
+  },
+  {
+    id: 'mod-nightwave' as const,
+    key: 'nightwave' as ModuleKey,
+    title: t('home.mod.nightwave'),
+    sub: 'Nightwave',
+  },
+  {
+    id: 'mod-traders' as const,
+    key: 'traders' as ModuleKey,
+    title: t('nav.traders'),
+    sub: 'Traders',
+  },
+  {
+    id: 'mod-tenet' as const,
+    key: 'tenet' as ModuleKey,
+    title: t('rotations.tenet'),
+    sub: 'Tenet',
+  },
   { id: 'mod-coda' as const, key: 'coda' as ModuleKey, title: t('rotations.coda'), sub: 'Coda' },
 ]);
 
 const openMap = reactive<Record<ModuleKey, boolean>>({
   worldstate: true,
   fissures: true,
+  missions: true,
+  daily: false,
+  timers: false,
   invasions: false,
   nightwave: false,
   traders: true,
@@ -101,20 +154,23 @@ const { data, error, pending, refresh } = await useAsyncData(
   'home-dashboard',
   async () => {
     const query = { realm: 'international' as const, locale: loc.value };
-    const [ws, baro, varzia, tenet, coda] = await Promise.all([
+    const [ws, timers, baro, varzia, tenet, coda] = await Promise.all([
       api.getWorldstate(query),
+      api.getTimers(query),
       api.getVoidTrader(query),
       api.getVarzia(query),
       api.getWeaponRotation('tenet', query),
       api.getWeaponRotation('coda', query),
     ]);
     if (!ws.ok) throw new Error(ws.error.message);
+    if (!timers.ok) throw new Error(timers.error.message);
     if (!baro.ok) throw new Error(baro.error.message);
     if (!varzia.ok) throw new Error(varzia.error.message);
     if (!tenet.ok) throw new Error(tenet.error.message);
     if (!coda.ok) throw new Error(coda.error.message);
     return {
       worldstate: ws.data as WorldstateDto,
+      timers: timers.data as TimersDto,
       stale: Boolean(ws.meta.stale),
       voidTrader: baro.data as VoidTraderDto,
       varzia: varzia.data as VarziaDto,
@@ -202,11 +258,7 @@ watch(
         subtitle="World State"
         badge="LIVE"
       >
-        <WorldstateBoard
-          :worldstate="data.worldstate"
-          :locale="loc"
-          :stale="data.stale"
-        />
+        <WorldstateBoard :worldstate="data.worldstate" :locale="loc" :stale="data.stale" />
       </HomeModulePanel>
 
       <HomeModulePanel
@@ -215,11 +267,35 @@ watch(
         :title="t('nav.fissures')"
         subtitle="Fissures"
       >
-        <FissuresPanel
-          :worldstate="data.worldstate"
-          :locale="loc"
-          :stale="data.stale"
-        />
+        <FissuresPanel :worldstate="data.worldstate" :locale="loc" :stale="data.stale" />
+      </HomeModulePanel>
+
+      <HomeModulePanel
+        v-model:open="openMap.missions"
+        module-id="mod-missions"
+        :title="t('home.mod.missions')"
+        subtitle="Missions"
+        badge="LIVE"
+      >
+        <MissionsBoard :worldstate="data.worldstate" :locale="loc" :stale="data.stale" />
+      </HomeModulePanel>
+
+      <HomeModulePanel
+        v-model:open="openMap.daily"
+        module-id="mod-daily"
+        :title="t('home.mod.daily')"
+        subtitle="Daily"
+      >
+        <DailyBoard :worldstate="data.worldstate" :locale="loc" :stale="data.stale" />
+      </HomeModulePanel>
+
+      <HomeModulePanel
+        v-model:open="openMap.timers"
+        module-id="mod-timers"
+        :title="t('home.mod.timers')"
+        subtitle="Timers"
+      >
+        <TimersBoard :timers="data.timers" :locale="loc" :stale="data.stale" :max-items="12" />
       </HomeModulePanel>
 
       <HomeModulePanel
@@ -301,10 +377,7 @@ watch(
               />
               <span class="item-name">
                 <strong>{{ itemNames(item.name).primary }}</strong>
-                <span
-                  v-if="itemNames(item.name).secondary"
-                  class="weapon-en"
-                >
+                <span v-if="itemNames(item.name).secondary" class="weapon-en">
                   {{ itemNames(item.name).secondary }}
                 </span>
               </span>
@@ -331,10 +404,7 @@ watch(
               />
               <span class="item-name">
                 <strong>{{ itemNames(item.name).primary }}</strong>
-                <span
-                  v-if="itemNames(item.name).secondary"
-                  class="weapon-en"
-                >
+                <span v-if="itemNames(item.name).secondary" class="weapon-en">
                   {{ itemNames(item.name).secondary }}
                 </span>
               </span>
@@ -359,11 +429,7 @@ watch(
             }}
           </p>
           <ul class="offerings">
-            <li
-              v-for="(item, idx) in data.tenet.offerings"
-              :key="`t-${idx}`"
-              class="offer"
-            >
+            <li v-for="(item, idx) in data.tenet.offerings" :key="`t-${idx}`" class="offer">
               <OfficialItemIcon
                 :icon-url="item.iconUrl"
                 :alt="itemNames(item.name).primary"
@@ -372,10 +438,7 @@ watch(
               <div class="offer__body">
                 <p class="offer__title">
                   <strong>{{ itemNames(item.name).primary }}</strong>
-                  <span
-                    v-if="itemNames(item.name).secondary"
-                    class="weapon-en"
-                  >
+                  <span v-if="itemNames(item.name).secondary" class="weapon-en">
                     {{ itemNames(item.name).secondary }}
                   </span>
                 </p>
@@ -386,10 +449,7 @@ watch(
                     :size="14"
                   />
                   <span class="offer__el">{{ elementName(item) || '—' }}</span>
-                  <ValenceBonusBar
-                    v-if="item.bonusPct != null"
-                    :bonus-pct="item.bonusPct"
-                  />
+                  <ValenceBonusBar v-if="item.bonusPct != null" :bonus-pct="item.bonusPct" />
                   <span v-else class="offer__pct-slot">—</span>
                 </div>
               </div>
@@ -413,11 +473,7 @@ watch(
             }}
           </p>
           <ul class="offerings">
-            <li
-              v-for="(item, idx) in data.coda.offerings"
-              :key="`c-${idx}`"
-              class="offer"
-            >
+            <li v-for="(item, idx) in data.coda.offerings" :key="`c-${idx}`" class="offer">
               <OfficialItemIcon
                 :icon-url="item.iconUrl"
                 :alt="itemNames(item.name).primary"
@@ -426,10 +482,7 @@ watch(
               <div class="offer__body">
                 <p class="offer__title">
                   <strong>{{ itemNames(item.name).primary }}</strong>
-                  <span
-                    v-if="itemNames(item.name).secondary"
-                    class="weapon-en"
-                  >
+                  <span v-if="itemNames(item.name).secondary" class="weapon-en">
                     {{ itemNames(item.name).secondary }}
                   </span>
                 </p>
@@ -440,10 +493,7 @@ watch(
                     :size="14"
                   />
                   <span class="offer__el">{{ elementName(item) || '—' }}</span>
-                  <ValenceBonusBar
-                    v-if="item.bonusPct != null"
-                    :bonus-pct="item.bonusPct"
-                  />
+                  <ValenceBonusBar v-if="item.bonusPct != null" :bonus-pct="item.bonusPct" />
                   <span v-else class="offer__pct-slot">—</span>
                 </div>
               </div>
@@ -477,7 +527,7 @@ watch(
   align-items: center;
   gap: 0.45rem;
   margin: 0;
-  color: var(--anime-sky-deep, #2f8fc4);
+  color: var(--anime-gold, #d4b06a);
   font-family: var(--anime-font-display, inherit);
   letter-spacing: 0.08em;
   font-size: 0.82rem;
@@ -488,8 +538,8 @@ watch(
   width: 0.55rem;
   height: 0.55rem;
   border-radius: 50%;
-  background: var(--anime-coral, #ff7a6e);
-  box-shadow: 0 0 0 4px rgba(255, 122, 110, 0.22);
+  background: var(--anime-gold, #d4b06a);
+  box-shadow: 0 0 0 4px rgba(212, 176, 106, 0.22);
   animation: pulse 1.6s ease infinite;
 }
 
@@ -507,8 +557,8 @@ watch(
   line-height: 0.95;
   letter-spacing: -0.03em;
   font-weight: 900;
-  color: var(--anime-ink, #2a3142);
-  background: linear-gradient(120deg, #2a3142 10%, #2f8fc4 55%, #ff7a6e 100%);
+  color: var(--anime-peach, #f0d79a);
+  background: linear-gradient(120deg, #ece8de 10%, #d4b06a 55%, #f0d79a 100%);
   -webkit-background-clip: text;
   background-clip: text;
 }
@@ -597,15 +647,15 @@ watch(
   .nw li:hover,
   .help-list li:hover,
   .items li:hover {
-    border-color: rgba(78, 183, 232, 0.4);
-    background: rgba(255, 255, 255, 0.95);
-    box-shadow: 0 6px 14px rgba(62, 78, 110, 0.1);
+    border-color: rgba(212, 176, 106, 0.55);
+    background: rgba(24, 30, 43, 0.95);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.25);
     transform: translateY(-1px);
   }
 
   .panel:hover {
-    border-color: rgba(78, 183, 232, 0.35);
-    box-shadow: 0 10px 24px rgba(62, 78, 110, 0.1);
+    border-color: rgba(212, 176, 106, 0.5);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
   }
 }
 
@@ -701,8 +751,8 @@ watch(
   align-items: center;
   gap: 0.35rem 0.75rem;
   padding: 0.55rem 0.7rem;
-  border-radius: 12px;
-  background: rgba(78, 183, 232, 0.06);
+  border-radius: 8px;
+  background: rgba(212, 176, 106, 0.06);
   border: 1px solid var(--anime-line);
   font-size: 0.92rem;
   transition:
@@ -749,9 +799,9 @@ watch(
   align-items: flex-start;
   gap: 0.55rem;
   padding: 0.5rem 0.6rem;
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--anime-line);
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(19, 24, 35, 0.85);
 }
 
 .offer__body {
@@ -790,9 +840,9 @@ watch(
 .panel {
   margin-top: 0.65rem;
   padding: 0.9rem 1rem;
-  border-radius: 16px;
+  border-radius: 10px;
   border: 1px solid var(--anime-line);
-  background: rgba(255, 255, 255, 0.7);
+  background: rgba(19, 24, 35, 0.9);
   transition:
     border-color 0.18s ease,
     box-shadow 0.18s ease;
@@ -818,7 +868,6 @@ watch(
   padding: 0.1rem 0.4rem;
   border-radius: 8px;
 }
-
 
 :deep(.lanius-qq-shell),
 :deep(.lanius-ws),

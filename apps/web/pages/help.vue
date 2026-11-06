@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { HelpBoard } from '@lanius/ui';
+import { HelpBoard, ModuleStatusBoard } from '@lanius/ui';
 import { pickLocalized } from '@lanius/core';
 
 const { t, locale } = useI18n();
@@ -83,6 +83,13 @@ const { data, pending, error, refresh } = await useAsyncData(
     </div>
 
     <template v-else-if="data">
+      <ModuleStatusBoard
+        v-if="!moduleToken"
+        class="help__status"
+        :help="data"
+        :locale="locale === 'en' ? 'en' : 'zh'"
+      />
+
       <HelpBoard
         v-if="moduleToken"
         class="help__card-view"
@@ -119,9 +126,7 @@ const { data, pending, error, refresh } = await useAsyncData(
 
           <p v-if="line.examples.length" class="help__examples">
             {{ t('help.examples') }}：
-            <code v-for="example in line.examples" :key="example">{{
-              example
-            }}</code>
+            <code v-for="example in line.examples" :key="example">{{ example }}</code>
           </p>
 
           <button type="button" class="detail" @click="openModule(line.id)">
@@ -134,6 +139,10 @@ const { data, pending, error, refresh } = await useAsyncData(
 </template>
 
 <style scoped>
+.help__status {
+  margin: 0 0 1.25rem;
+}
+
 .help__header {
   margin-bottom: 1.5rem;
 }
