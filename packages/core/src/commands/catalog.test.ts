@@ -53,4 +53,21 @@ describe('command catalog', () => {
     expect(findCommandByRoot('融合')?.id).toBe('valence');
     expect(findCommandByRoot('valence')?.id).toBe('valence');
   });
+
+  it('registers Wave1 daily and Wave2 market/relic roots', () => {
+    expect(findCommandByRoot('时效')?.id).toBe('timers');
+    expect(findCommandByRoot('达沃')?.id).toBe('dailyDeals');
+    expect(findCommandByRoot('新闻')?.id).toBe('news');
+    expect(findCommandByRoot('灵化')?.id).toBe('incarnon');
+    expect(findCommandByRoot('金垃圾')?.id).toBe('ducats');
+    expect(findCommandByRoot('遗物')?.id).toBe('relic');
+    expect(findCommandByRoot('趋势')?.id).toBe('marketTrend');
+    expect(findCommandByRoot('紫卡分析')?.id).toBe('rivenAnalysis');
+  });
+
+  it('builds overview intro with command coverage count', () => {
+    const help = buildHelpDto();
+    expect(help.intro.zh).toMatch(/共 \d+ 条指令/);
+    expect(help.lines.length).toBeGreaterThanOrEqual(40);
+  });
 });

@@ -24,7 +24,7 @@
     "stale": "数据可能略旧（stale）"
   },
   "home": {
-    "tagline": "世界状态、裂隙、商人与轮换——顺手好用的 Warframe 看板",
+    "tagline": "世界状态、任务链、日常与轮换——顺手好用的 Warframe 看板",
     "searchPlaceholder": "搜索市场物品…",
     "searchHint": "市场 / 紫卡 / 帮助 / 订阅见独立页面；下方为实时看板模块。",
     "searchButton": "搜索",
@@ -40,15 +40,28 @@
     "modulesNav": "看板模块",
     "mod": {
       "invasions": "入侵",
-      "nightwave": "午夜电波"
+      "nightwave": "午夜电波",
+      "missions": "任务链",
+      "daily": "日常",
+      "timers": "时效"
     }
   },
   "tools": {
     "eyebrow": "Tools",
     "title": "工具",
-    "lead": "更多独立小工具将陆续上线。",
-    "body": "当前版本「工具」页仍在规划中（掉落表、待办等）。世界状态与市场查询请回到首页模块区使用。",
-    "backHome": "← 回到首页"
+    "lead": "灰机深链、中英对照与效价融合——经 Lanius API。",
+    "body": "在下方查询；完整指令说明见帮助页。市场与紫卡仍在独立页面。",
+    "backHome": "← 回到首页",
+    "wikiTitle": "Wiki 深链",
+    "wikiPlaceholder": "关键词…",
+    "translateTitle": "中英对照",
+    "translatePlaceholder": "官方名称…",
+    "valenceTitle": "效价融合",
+    "valencePlaceholder": "如 电60 火58 或 44",
+    "query": "查询",
+    "loading": "查询中…",
+    "error": "查询失败",
+    "empty": "输入关键词后查询。"
   },
   "about": {
     "eyebrow": "About",
@@ -140,7 +153,7 @@
     "eyebrow": "Commands",
     "loading": "加载帮助…",
     "error": "无法加载帮助",
-    "qqHint": "QQ 中每条指令为独立根命令（如 /世界状态、/帮助），可带前导 /。回复模式与卡片皮肤由管理后台配置。",
+    "qqHint": "QQ 中每条指令为独立根命令（如 /世界状态、/帮助），可带前导 /。回复模式与卡片皮肤由管理后台配置。帮助卡底部含 Wave1–3 常用快捷键盘。",
     "aliases": "别名",
     "params": "参数",
     "required": "必填",
@@ -148,7 +161,8 @@
     "examples": "示例",
     "viewDetail": "模块详解",
     "backToList": "← 全部指令",
-    "moduleDetail": "模块：{module}"
+    "moduleDetail": "模块：{module}",
+    "statusTitle": "指令覆盖"
   },
   "admin": {
     "title": "管理后台",

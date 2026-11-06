@@ -39,8 +39,8 @@ export type CommandDef = {
 /**
  * Lanius Bot 指令目录：每条指令独立根命令，统一供 API 帮助 / Bot 解析 / Web 帮助页使用。
  *
- * Wave2 预留 ModuleId（relic / 紫卡分析等）刻意**不**出现在本目录，
- * 避免无 handler 的空指令；见 `RESERVED_MODULE_IDS`（`packages/core/src/modules.ts`）。
+ * Wave1–3 ModuleId 均已挂目录与 handler；`RESERVED_MODULE_IDS` 当前为空。
+ * 新增 ModuleId 须同步：Zod 枚举 → GATED → catalog → parse/handle → 面板短说明。
  */
 export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
   {
@@ -1008,14 +1008,15 @@ export function buildHelpDto(options?: {
     };
   }
 
+  const count = lines.length;
   return {
     title: {
       zh: 'Lanius 指令帮助',
       en: 'Lanius command help',
     },
     intro: {
-      zh: '每条指令为独立根命令（可带前导 `/`）。发送 `/帮助 zk` 可查看指定模块详解。',
-      en: 'Each command is its own root. Send `/help zk` for a module detail card.',
+      zh: `共 ${count} 条指令（世界状态 / 日常 / 市场紫卡遗物 / wiki 工具）。每条为独立根命令（可带前导 \`/\`）。发送 \`/帮助 zk\` 查看模块详解；底部键盘含常用快捷。`,
+      en: `${count} commands (worldstate / daily / market-riven-relic / wiki tools). Each is its own root. Send \`/help zk\` for detail; shortcut keyboard below.`,
     },
     lines,
   };
