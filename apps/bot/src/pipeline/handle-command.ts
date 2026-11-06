@@ -1376,10 +1376,13 @@ async function handleSubscribe(
         ? [zh ? '当前无启用中的订阅。' : 'No active subscriptions.']
         : [
             zh ? '当前订阅：' : 'Subscriptions:',
-            ...rows.map((row) => `· ${row.moduleId} (${row.frequency})`),
+            ...rows.map((row) => {
+              const filter = row.filterArgs ? ` [${row.filterArgs}]` : '';
+              return `· ${row.moduleId}${filter} (${row.frequency})`;
+            }),
             zh
-              ? '示例：/订阅 裂隙 变更时 · /订阅 信条 每周 · /订阅 退订 裂隙'
-              : 'e.g. /subscribe fissures on_change · /subscribe tenet weekly',
+              ? '示例：/订阅 裂隙 变更时 · /订阅 夜灵 · /订阅 裂隙 钢铁 · /订阅 退订 裂隙'
+              : 'e.g. /subscribe fissures on_change · /subscribe cetus · /subscribe off fissures',
           ];
     const sent = await deps.qq.sendText(target, lines.join('\n'));
     return sent.ok ? 'subscribe-list' : `send-failed:${sent.detail ?? 'unknown'}`;
@@ -1393,11 +1396,16 @@ async function handleSubscribe(
       scene,
       targetId: gateCtx.targetId,
       moduleId: intent.moduleId,
+      // 未指定筛选时关闭该模块全部订阅；周期别名等自带 filterArgs 则精确关闭
+      ...(intent.filterArgs !== undefined ? { filterArgs: intent.filterArgs } : {}),
     });
     if (!envelope.ok) {
       return sendFail(deps, target, locale, envelope.error.message);
     }
-    const msg = zh ? `已退订：${intent.moduleId}` : `Unsubscribed: ${intent.moduleId}`;
+    const filter = intent.filterArgs ? ` [${intent.filterArgs}]` : '';
+    const msg = zh
+      ? `已退订：${intent.moduleId}${filter}`
+      : `Unsubscribed: ${intent.moduleId}${filter}`;
     const sent = await deps.qq.sendText(target, msg);
     return sent.ok ? 'subscribe-off' : `send-failed:${sent.detail ?? 'unknown'}`;
   }
@@ -1411,14 +1419,16 @@ async function handleSubscribe(
     targetId: gateCtx.targetId,
     moduleId: intent.moduleId,
     frequency,
+    filterArgs: intent.filterArgs ?? null,
     userId: gateCtx.userId,
   });
   if (!envelope.ok) {
     return sendFail(deps, target, locale, envelope.error.message);
   }
+  const filter = intent.filterArgs ? ` [${intent.filterArgs}]` : '';
   const msg = zh
-    ? `已订阅 ${intent.moduleId}（频率：${frequency}）`
-    : `Subscribed ${intent.moduleId} (${frequency})`;
+    ? `已订阅 ${intent.moduleId}${filter}（频率：${frequency}）`
+    : `Subscribed ${intent.moduleId}${filter} (${frequency})`;
   const sent = await deps.qq.sendText(target, msg);
   return sent.ok ? 'subscribe-on' : `send-failed:${sent.detail ?? 'unknown'}`;
 }

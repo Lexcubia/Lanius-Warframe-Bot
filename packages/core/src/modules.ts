@@ -6,6 +6,7 @@ import { z } from 'zod';
  * Wave 0 起：除已上线指令外，预留 SDJK 复刻后续波次的 ModuleId（见 `RESERVED_MODULE_IDS`）。
  * 预留 id **不进** `LANIUS_COMMAND_CATALOG`，避免无 handler 的空路由；实现后再迁入门禁并挂目录。
  * Wave1 / Wave2 / Wave3 均已上线（并从 RESERVED 移除）。
+ * Wave4：推送可订阅集见 `SubscribableModuleIdSchema` / `SDJK_PUSH_EVENT_MAP`（指令仍为 `/订阅`）。
  */
 export const ModuleIdSchema = z.enum([
   // —— 已上线 ——

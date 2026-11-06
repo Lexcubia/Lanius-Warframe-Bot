@@ -322,12 +322,16 @@ export {
   PushDispatchDtoSchema,
   PushFrequencySchema,
   RESERVED_SUBSCRIBABLE_MODULE_IDS,
+  SDJK_PUSH_EVENT_MAP,
   SubscribableModuleIdSchema,
   SubscriptionDtoSchema,
+  WorldstateCycleFilterSchema,
   type PushDispatchDto,
   type PushFrequency,
+  type SdjkPushEventName,
   type SubscribableModuleId,
   type SubscriptionDto,
+  type WorldstateCycleFilter,
 } from './dto/subscription.js';
 
 export {
