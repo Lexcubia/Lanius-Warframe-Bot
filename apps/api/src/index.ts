@@ -15,6 +15,7 @@ import { openLaniusDb } from './db/client.js';
 import { seedDatabaseIfEmpty } from './db/seed.js';
 import { createLogger } from './lib/logger.js';
 import { ItemIconService } from './services/item-icon-service.js';
+import { WikiToolsService } from './services/wiki-tools-service.js';
 import { MarketService } from './services/market-service.js';
 import { MissionDeckService } from './services/mission-deck-service.js';
 import { PushService } from './services/push-service.js';
@@ -149,6 +150,7 @@ async function main(): Promise<void> {
     itemIconService,
   });
   const rotationService = new RotationService({ db, itemIconService });
+  const wikiToolsService = new WikiToolsService();
   const pushService = new PushService({
     db,
     worldstateService,
@@ -173,6 +175,7 @@ async function main(): Promise<void> {
     rivenService,
     traderService,
     rotationService,
+    wikiToolsService,
     pushService,
     get site() {
       return site;

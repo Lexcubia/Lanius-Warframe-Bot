@@ -25,6 +25,8 @@ export {
   renderVarziaCard,
   renderVoidTraderCard,
   renderWeaponRotationCard,
+  renderWikiCard,
+  renderValenceCard,
   renderWorldstateCard,
   type RenderWorldstateCardInput,
 } from './render-worldstate.js';

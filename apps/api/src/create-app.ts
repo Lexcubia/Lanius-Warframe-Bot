@@ -17,6 +17,7 @@ import { rivenRoutes } from './routes/riven.js';
 import { siteRoutes } from './routes/site.js';
 import { subscriptionRoutes } from './routes/subscriptions.js';
 import { traderRoutes } from './routes/traders.js';
+import { wikiToolsRoutes } from './routes/wiki-tools.js';
 import { worldstateRoutes } from './routes/worldstate.js';
 
 /**
@@ -44,6 +45,7 @@ export function createApp(appContext: AppContext) {
   v1.route('/', rivenRoutes());
   v1.route('/', traderRoutes());
   v1.route('/', rotationRoutes());
+  v1.route('/', wikiToolsRoutes());
   v1.route('/', subscriptionRoutes());
   v1.route('/', pushRoutes());
   v1.route('/', adminRoutes());

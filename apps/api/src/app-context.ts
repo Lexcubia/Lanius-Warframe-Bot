@@ -10,6 +10,7 @@ import type { PushService } from './services/push-service.js';
 import type { RivenService } from './services/riven-service.js';
 import type { RotationService } from './services/rotation-service.js';
 import type { TraderService } from './services/trader-service.js';
+import type { WikiToolsService } from './services/wiki-tools-service.js';
 import type { WorldstateService } from './services/worldstate-service.js';
 
 /**
@@ -29,6 +30,8 @@ export type AppContext = {
   traderService: TraderService;
   rotationService: RotationService;
   pushService: PushService;
+  /** Wave3：wiki / 翻译 / 效价 */
+  wikiToolsService: WikiToolsService;
   /** 运行时站点配置（页脚等） */
   site: SiteDto;
   version: string;

@@ -39,8 +39,8 @@ export type CommandDef = {
 /**
  * Lanius Bot 指令目录：每条指令独立根命令，统一供 API 帮助 / Bot 解析 / Web 帮助页使用。
  *
- * Wave 0 预留 ModuleId（timers / dailyDeals / relic / wiki 等）刻意**不**出现在本目录，
- * 避免无 handler 的空指令；实现见 `RESERVED_MODULE_IDS`（`packages/core/src/modules.ts`）。
+ * 尚未实现的预留 ModuleId（timers / dailyDeals / relic 等）刻意**不**出现在本目录，
+ * 避免无 handler 的空指令；见 `RESERVED_MODULE_IDS`（`packages/core/src/modules.ts`）。
  */
 export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
   {
@@ -482,6 +482,78 @@ export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
       },
     ],
     examples: ['/帮助', '/help', '/help zk', '/帮助 wm'],
+  },
+  {
+    id: 'wiki',
+    command: '/wiki',
+    roots: ['wiki', 'wk', '维基'],
+    summary: {
+      zh: '灰机维基深链与短简介（非全文镜像）',
+      en: 'Huiji wiki deep-link + short intro (not a full mirror)',
+    },
+    usage: {
+      zh: '/wiki <关键词>',
+      en: '/wiki <keyword>',
+    },
+    params: [
+      {
+        name: 'q',
+        required: true,
+        description: {
+          zh: '物品 / 玩法关键词（官方中英名优先）',
+          en: 'Item or activity keyword (official EN/ZH names)',
+        },
+      },
+    ],
+    examples: ['/wiki 夜灵平野', '/wiki Ash', '/维基 仲裁'],
+  },
+  {
+    id: 'translate',
+    command: '/翻译',
+    roots: ['翻译', 'translate', 'tr'],
+    summary: {
+      zh: '中英名称对照（DE PublicExport 官方 language 同键对）',
+      en: 'EN↔ZH name lookup (DE PublicExport language pairs)',
+    },
+    usage: {
+      zh: '/翻译 <名称>',
+      en: '/translate <name>',
+    },
+    params: [
+      {
+        name: 'q',
+        required: true,
+        description: {
+          zh: '官方中文或英文名称',
+          en: 'Official Chinese or English name',
+        },
+      },
+    ],
+    examples: ['/翻译 腐蚀投射', '/translate Corrosive Projection'],
+  },
+  {
+    id: 'valence',
+    command: '/武器融合',
+    roots: ['武器融合', '融合', 'valence', '效价融合'],
+    summary: {
+      zh: '玄骸 / 信条 / 终幕效价融合计算',
+      en: 'Kuva / Tenet / Coda valence fusion calculator',
+    },
+    usage: {
+      zh: '/武器融合 <元素%> <元素%> ｜ /武器融合 <%>',
+      en: '/valence <elem%> <elem%> | /valence <%>',
+    },
+    params: [
+      {
+        name: 'materials',
+        required: false,
+        description: {
+          zh: '两把：`电60 火58`；一把：`44` 规划到满值次数',
+          en: 'Two: `elec60 heat58`; one: `44` steps-to-cap plan',
+        },
+      },
+    ],
+    examples: ['/武器融合 电60 火58', '/融合 44', '/valence 60 58'],
   },
 ] as const;
 

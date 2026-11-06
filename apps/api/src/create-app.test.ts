@@ -16,6 +16,7 @@ import { PushService } from './services/push-service.js';
 import { RivenService } from './services/riven-service.js';
 import { RotationService } from './services/rotation-service.js';
 import { TraderService } from './services/trader-service.js';
+import { WikiToolsService } from './services/wiki-tools-service.js';
 import { WorldstateService } from './services/worldstate-service.js';
 
 /**
@@ -135,6 +136,7 @@ function createTestApp(upstreamBody: unknown) {
     rivenService: new RivenService({ cache }),
     traderService,
     rotationService,
+    wikiToolsService: new WikiToolsService(),
     pushService,
     site: configDriver.get('site'),
     version: '0.0.0-test',

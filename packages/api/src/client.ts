@@ -8,9 +8,12 @@ import {
   RivenOrdersDtoSchema,
   SiteDtoSchema,
   SubscriptionDtoSchema,
+  TranslateDtoSchema,
+  ValenceFusionDtoSchema,
   VarziaDtoSchema,
   VoidTraderDtoSchema,
   WeaponRotationDtoSchema,
+  WikiDtoSchema,
   WorldstateDtoSchema,
   type ApiEnvelope,
   type HealthDto,
@@ -25,9 +28,12 @@ import {
   type SiteDto,
   type SubscribableModuleId,
   type SubscriptionDto,
+  type TranslateDto,
+  type ValenceFusionDto,
   type VarziaDto,
   type VoidTraderDto,
   type WeaponRotationDto,
+  type WikiDto,
   type WorldstateDto,
 } from '@lanius/core';
 import { z } from 'zod';
@@ -259,6 +265,58 @@ export class LaniusApiClient {
       `/v1/rotations/${kind}${buildQuery(query, context)}`,
       WeaponRotationDtoSchema,
     );
+  }
+
+  /**
+   * 调用 `GET /v1/wiki`（灰机深链 + 短简介）。
+   *
+   * @param q - 关键词
+   * @param query - realm/locale
+   * @param context - 可选 ACL 上下文
+   * @returns Wiki 包络
+   */
+  async getWiki(
+    q: string,
+    query: PublicQueryInput = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<WikiDto>> {
+    const params = mergeQuery({ q }, query, context);
+    return this.getJson(`/v1/wiki?${params}`, WikiDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/translate`（中英官方名对照）。
+   *
+   * @param q - 名称
+   * @param query - realm/locale
+   * @param context - 可选 ACL 上下文
+   * @returns 翻译包络
+   */
+  async getTranslate(
+    q: string,
+    query: PublicQueryInput = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<TranslateDto>> {
+    const params = mergeQuery({ q }, query, context);
+    return this.getJson(`/v1/translate?${params}`, TranslateDtoSchema);
+  }
+
+  /**
+   * 调用 `GET /v1/valence`（效价融合 / 规划）。
+   *
+   * @param tokens - 材料词元（空则返回用法）
+   * @param query - realm/locale
+   * @param context - 可选 ACL 上下文
+   * @returns 效价包络
+   */
+  async getValence(
+    tokens: readonly string[] = [],
+    query: PublicQueryInput = {},
+    context: GateContext = {},
+  ): Promise<ApiEnvelope<ValenceFusionDto>> {
+    const q = tokens.join(' ').trim();
+    const params = mergeQuery(q ? { q } : {}, query, context);
+    return this.getJson(`/v1/valence?${params}`, ValenceFusionDtoSchema);
   }
 
   /**
@@ -500,14 +558,34 @@ type GateContext = { scene?: string; targetId?: string; userId?: string };
  * @returns 含前导 `?` 的查询串，或空串
  */
 function buildQuery(query: PublicQueryInput, context: GateContext): string {
+  const params = mergeQuery({}, query, context);
+  const suffix = params.size > 0 ? `?${params.toString()}` : '';
+  return suffix;
+}
+
+/**
+ * 合并业务查询、公开 meta 与门禁上下文为 URLSearchParams。
+ *
+ * @param fields - 业务字段（如 q）
+ * @param query - realm/locale
+ * @param context - scene 等
+ * @returns URLSearchParams
+ */
+function mergeQuery(
+  fields: Record<string, string>,
+  query: PublicQueryInput,
+  context: GateContext,
+): URLSearchParams {
   const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(fields)) {
+    if (value) params.set(key, value);
+  }
   if (query.realm) params.set('realm', query.realm);
   if (query.locale) params.set('locale', query.locale);
   if (context.scene) params.set('scene', context.scene);
   if (context.targetId) params.set('targetId', context.targetId);
   if (context.userId) params.set('userId', context.userId);
-  const suffix = params.size > 0 ? `?${params.toString()}` : '';
-  return suffix;
+  return params;
 }
 
 /**

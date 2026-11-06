@@ -20,7 +20,9 @@ interface Window {
       | 'riven'
       | 'voidTrader'
       | 'varzia'
-      | 'weaponRotation';
+      | 'weaponRotation'
+      | 'wiki'
+      | 'valence';
     locale: 'zh' | 'en';
     stale?: boolean;
     worldstate?: unknown;
@@ -31,6 +33,8 @@ interface Window {
     voidTrader?: unknown;
     varzia?: unknown;
     weaponRotation?: unknown;
+    wiki?: unknown;
+    valence?: unknown;
   }) => void;
   __LANIUS_CARD_READY__?: boolean;
 }

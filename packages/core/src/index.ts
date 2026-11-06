@@ -204,6 +204,41 @@ export {
 } from './dto/site.js';
 
 export {
+  WikiDtoSchema,
+  TranslateDtoSchema,
+  TranslatePairSchema,
+  ValenceFusionDtoSchema,
+  ValenceMaterialDtoSchema,
+  type WikiDto,
+  type TranslateDto,
+  type ValenceFusionDto,
+} from './dto/wiki-tools.js';
+
+export {
+  VALENCE_CAP_PCT,
+  VALENCE_ELEMENT_LABEL_EN,
+  VALENCE_ELEMENT_LABEL_ZH,
+  fusionStepsToCap,
+  parseValenceElement,
+  parseValenceMaterialTokens,
+  valenceBonusPct,
+  valenceFusion,
+  type ValenceFusionResult,
+  type ValenceMaterialToken,
+} from './valence/fusion.js';
+
+export {
+  bilingualLookup,
+  buildBilingualIndex,
+  type BilingualLookupResult,
+  type BilingualNameIndex,
+  type BilingualNamePair,
+  type TranslateDirection,
+} from './names/bilingual-lookup.js';
+
+export { hasCjk, normalizeName } from './names/normalize-name.js';
+
+export {
   LabelOverrideSchema,
   LabelsConfigSchema,
   type LabelOverride,
