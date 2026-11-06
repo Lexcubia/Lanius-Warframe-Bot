@@ -15,6 +15,8 @@ const BROWSER_TEST_GLOBS = [
   'src/preview-circuit.write.test.ts',
   'src/preview-archimedea.write.test.ts',
   'src/preview-bounties.write.test.ts',
+  'src/preview-wiki-tools.write.test.ts',
+  'src/preview-wave1.write.test.ts',
 ] as const;
 
 /**

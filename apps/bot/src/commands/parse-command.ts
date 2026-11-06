@@ -291,7 +291,8 @@ export function parseCommand(text: string, options: ParseCommandOptions = {}): P
     command.id === 'incarnon' ||
     command.id === 'acrithis'
   ) {
-    return { matched: true, intent: { type: command.id } };
+    // 窄化后的 id 联合无法直接赋给判别联合 BotIntent；按无参意图断言。
+    return { matched: true, intent: { type: command.id } as BotIntent };
   }
 
   return { matched: true, intent: { type: 'unknown', raw: body } };
