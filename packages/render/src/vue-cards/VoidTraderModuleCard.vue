@@ -67,6 +67,7 @@ const stamp = computed(() => formatTimestamp(props.voidTrader.fetchedAt));
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'VOID TRADER' : '虚空商人'"
+    kicker="VOID TRADER"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

@@ -10,7 +10,7 @@ export type RenderWorldstateCardInput = {
   worldstate: WorldstateDto;
   locale: Locale;
   stale?: boolean;
-  /** QQ 皮肤；缺省 light */
+  /** QQ 皮肤；缺省 orokin */
   skin?: CardSkinId | string;
 };
 
@@ -18,7 +18,7 @@ export type RenderWorldstateCardInput = {
  * 带可选皮肤的公共渲染字段。
  */
 type SkinOpt = {
-  /** QQ 皮肤；缺省 light */
+  /** QQ 皮肤；缺省 orokin */
   skin?: CardSkinId | string;
 };
 

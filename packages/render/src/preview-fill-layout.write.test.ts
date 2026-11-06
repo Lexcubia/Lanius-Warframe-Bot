@@ -137,17 +137,17 @@ describe('fill-layout QQ card previews (light)', () => {
     const jobs: Array<{ name: string; png: Buffer }> = [
       {
         name: 'sortie-light.png',
-        png: await renderSortieCard({ locale: 'zh', worldstate: sortieWs, skin: 'light' }),
+        png: await renderSortieCard({ locale: 'zh', worldstate: sortieWs, skin: 'orokin' }),
       },
       {
         name: 'archon-light.png',
-        png: await renderArchonCard({ locale: 'zh', worldstate: sortieWs, skin: 'light' }),
+        png: await renderArchonCard({ locale: 'zh', worldstate: sortieWs, skin: 'orokin' }),
       },
       {
         name: 'arbitration-light.png',
         png: await renderArbitrationCard({
           locale: 'zh',
-          skin: 'light',
+          skin: 'orokin',
           worldstate: {
             ...baseWs(),
             ...EMPTY_WORLDSTATE_MISSION_SLICES,
@@ -169,7 +169,7 @@ describe('fill-layout QQ card previews (light)', () => {
         name: 'alerts-light.png',
         png: await renderAlertsCard({
           locale: 'zh',
-          skin: 'light',
+          skin: 'orokin',
           worldstate: {
             ...baseWs(),
             ...EMPTY_WORLDSTATE_MISSION_SLICES,
@@ -199,7 +199,7 @@ describe('fill-layout QQ card previews (light)', () => {
         name: 'circuit-light.png',
         png: await renderCircuitCard({
           locale: 'zh',
-          skin: 'light',
+          skin: 'orokin',
           worldstate: {
             ...baseWs(),
             ...EMPTY_WORLDSTATE_MISSION_SLICES,
@@ -226,7 +226,7 @@ describe('fill-layout QQ card previews (light)', () => {
         name: 'archimedea-light.png',
         png: await renderArchimedeaCard({
           locale: 'zh',
-          skin: 'light',
+          skin: 'orokin',
           worldstate: {
             ...baseWs(),
             ...EMPTY_WORLDSTATE_MISSION_SLICES,
@@ -280,7 +280,7 @@ describe('fill-layout QQ card previews (light)', () => {
         name: 'bounties-light.png',
         png: await renderBountiesCard({
           locale: 'zh',
-          skin: 'light',
+          skin: 'orokin',
           worldstate: {
             ...baseWs(),
             ...EMPTY_WORLDSTATE_MISSION_SLICES,
@@ -329,7 +329,7 @@ describe('fill-layout QQ card previews (light)', () => {
         name: 'cycles-light.png',
         png: await renderWorldstateCard({
           locale: 'zh',
-          skin: 'light',
+          skin: 'orokin',
           worldstate: {
             ...baseWs(),
             ...EMPTY_WORLDSTATE_MISSION_SLICES,

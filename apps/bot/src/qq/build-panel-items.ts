@@ -6,7 +6,10 @@ import type { QqMenuSendItem, QqPanelCommandItem } from '@lanius/qq-official';
  * 开放平台按加权计长：中文约 2、其余 1，上限 30（约 15 汉字）。
  * 此处保持明显低于上限，避免依赖运行时截断产生半截句。
  */
-const PANEL_DESC_ZH: Readonly<Record<ModuleId, string>> = {
+/**
+ * 已挂目录的模块面板短说明（预留 ModuleId 无目录项，故用 Partial）。
+ */
+const PANEL_DESC_ZH: Readonly<Partial<Record<ModuleId, string>>> = {
   worldstate: '开放世界周期与节点',
   fissures: '虚空裂隙列表与筛选',
   invasions: '活跃入侵进度与阵营',
@@ -39,7 +42,7 @@ export function buildQqPanelItems(): QqPanelCommandItem[] {
     const name = entry.roots[0] ?? entry.command.replace(/^\//, '');
     items.push({
       name,
-      desc: PANEL_DESC_ZH[entry.id],
+      desc: PANEL_DESC_ZH[entry.id] ?? entry.summary.zh.slice(0, 15),
     });
   }
   return items;

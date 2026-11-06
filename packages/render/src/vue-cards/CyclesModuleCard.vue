@@ -73,6 +73,7 @@ const stamp = formatTimestamp(props.worldstate.fetchedAt);
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'WORLD STATE' : '世界状态'"
+    kicker="WORLD STATE"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

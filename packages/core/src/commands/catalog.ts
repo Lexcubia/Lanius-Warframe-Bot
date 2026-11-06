@@ -38,6 +38,9 @@ export type CommandDef = {
 
 /**
  * Lanius Bot 指令目录：每条指令独立根命令，统一供 API 帮助 / Bot 解析 / Web 帮助页使用。
+ *
+ * Wave 0 预留 ModuleId（timers / dailyDeals / relic / wiki 等）刻意**不**出现在本目录，
+ * 避免无 handler 的空指令；实现见 `RESERVED_MODULE_IDS`（`packages/core/src/modules.ts`）。
  */
 export const LANIUS_COMMAND_CATALOG: readonly CommandDef[] = [
   {

@@ -17,6 +17,7 @@ import {
   renderVoidTraderCard,
   renderWeaponRotationCard,
   renderWorldstateCard,
+  type CardSkinId,
 } from '@lanius/render';
 import {
   applyBountyMapFilter,
@@ -70,16 +71,16 @@ import { buildMarketPageKeyboard, marketPageMarkdownHint } from '../qq/build-mar
 import { buildRivenPageKeyboard, rivenPageMarkdownHint } from '../qq/build-riven-keyboard.js';
 
 /**
- * QQ 图片模式卡片皮肤（与 render capture 约定一致）。
+ * QQ 图片模式卡片皮肤（与 `@lanius/render` `CardSkinId` 一致）。
  */
-export type CardSkin = 'light' | 'dark';
+export type CardSkin = CardSkinId;
 
 /**
  * 进程级回复偏好（由 `bot.defaultReplyMode` / `bot.defaultCardSkin` 初始化；无 QQ 指令切换）。
  */
 export type SessionPrefs = {
   replyMode: 'text' | 'image';
-  /** 图片模式卡片亮/暗色皮肤（后台配置） */
+  /** 图片模式卡片皮肤（后台配置；默认 orokin） */
   cardSkin: CardSkin;
   locale: Locale;
 };
@@ -88,7 +89,7 @@ export type SessionPrefs = {
  * 为 render*Card 入参附加 `skin`（与 `@lanius/render` 的 `skin?` / `resolveCardSkin` 对齐）。
  *
  * @param input - 原卡片渲染入参
- * @param skin - 会话当前卡片皮肤（`light` | `dark`）
+ * @param skin - 会话当前卡片皮肤（`orokin` | `dark` | `light`）
  * @returns 带 `skin` 字段的入参，供图片模式截图使用
  */
 function withCardSkin<T extends object>(input: T, skin: CardSkin): T & { skin: CardSkin } {

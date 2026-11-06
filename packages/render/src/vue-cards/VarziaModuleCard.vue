@@ -69,6 +69,7 @@ const stamp = computed(() => formatTimestamp(props.varzia.fetchedAt));
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'VARZIA' : '瓦奇娅'"
+    kicker="VARZIA"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

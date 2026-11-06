@@ -45,6 +45,7 @@ function isDetailView(): boolean {
 <template>
   <QqCardShell
     :title="pickLocalized(help.title, locale)"
+    kicker="COMMAND CODEX"
     :subtitle="formatTimestamp(new Date().toISOString())"
     :locale="locale"
     :skin="skin"

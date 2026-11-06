@@ -66,6 +66,7 @@ const remaining = computed((): string => {
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'ARBITRATION' : '仲裁'"
+    kicker="ARBITRATION"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

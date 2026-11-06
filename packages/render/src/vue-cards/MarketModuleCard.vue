@@ -36,6 +36,7 @@ const visibleOrders = computed(() => props.market.orders.slice(0, 6));
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'Market' : '市场'"
+    kicker="MARKET"
     :subtitle="
       locale === 'en'
         ? `page ${market.page}/${Math.max(1, Math.ceil(market.total / market.pageSize) || 1)}`

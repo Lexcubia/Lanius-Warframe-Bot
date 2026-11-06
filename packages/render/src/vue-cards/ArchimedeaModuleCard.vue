@@ -163,6 +163,7 @@ const seasonViews = computed((): SeasonView[] => {
 <template>
   <QqCardShell
     :title="cardTitle"
+    kicker="ARCHIMEDEA"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

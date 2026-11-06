@@ -7,4 +7,5 @@
 #
 # Bot 回复形态与卡片皮肤（仅后台 / 配置；不对 QQ 用户暴露指令）：
 #   bot.defaultReplyMode: image   # text | image（默认 image）
-#   bot.defaultCardSkin: light    # light | dark（默认 light）
+#   bot.defaultCardSkin: orokin   # orokin | dark | light（默认 orokin）
+#   bot.commandPrefixPolicy: required  # optional | required | bare（默认 required）

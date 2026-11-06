@@ -54,14 +54,18 @@ export const BotModuleSchema = z.object({
   defaultReplyMode: z.enum(['text', 'image']).default('image'),
   /**
    * QQ 图片模式卡片默认皮肤（后台配置；非用户 QQ 指令）。
+   * Wave 0 起默认 `orokin`（SDJK 暗金）；`dark` / `light` 仍可切换。
    */
-  defaultCardSkin: z.enum(['light', 'dark']).default('light'),
+  defaultCardSkin: z.enum(['orokin', 'dark', 'light']).default('orokin'),
   dryRun: z.boolean().default(true),
   publicSiteBaseUrl: z.string().url().optional(),
   panelIdStorePath: z.string().optional(),
   pushIntervalMs: z.number().int().nonnegative().default(60_000),
   commandPrefix: z.string().default('/'),
-  commandPrefixPolicy: z.enum(['optional', 'required', 'bare']).default('optional'),
+  /**
+   * 指令前导策略：默认 `required`（无前导拒识）；Admin 可改 `optional` / `bare`。
+   */
+  commandPrefixPolicy: z.enum(['optional', 'required', 'bare']).default('required'),
   image: z
     .object({
       maxPerUserPerMinute: z.number().int().positive().default(5),
@@ -231,11 +235,15 @@ export const MODULE_FIELD_META: Record<ConfigModuleId, Record<string, FieldMeta>
     port: { restartRequired: true },
     apiBaseUrl: { description: 'Lanius API 基址' },
     defaultReplyMode: { description: '默认 QQ 回复模式 text|image（后台；默认 image）' },
-    defaultCardSkin: { description: '默认 QQ 卡片皮肤 light|dark（后台；默认 light）' },
+    defaultCardSkin: {
+      description: '默认 QQ 卡片皮肤 orokin|dark|light（后台；默认 orokin）',
+    },
     dryRun: { description: '是否跳过真实 QQ 下行' },
     pushIntervalMs: { description: '推送轮询间隔' },
-    commandPrefix: { description: '指令前导符' },
-    commandPrefixPolicy: { description: '前导策略 optional|required|bare' },
+    commandPrefix: { description: '指令前导符（可配置，默认 /）' },
+    commandPrefixPolicy: {
+      description: '前导策略 optional|required|bare（默认 required；无前导拒识）',
+    },
     markdownImage: { description: '裂隙 Markdown 嵌图开关（默认开）' },
     'cos.secretId': { secret: true, description: 'COS SecretId' },
     'cos.secretKey': { secret: true, description: 'COS SecretKey' },

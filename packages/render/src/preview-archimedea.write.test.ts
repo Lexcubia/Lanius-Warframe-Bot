@@ -191,7 +191,7 @@ describe('archimedea QQ card previews', () => {
 
   it('writes overview / lab / hex PNGs for light and dark', async () => {
     mkdirSync(outDir, { recursive: true });
-    const skins: CardSkinId[] = ['light', 'dark'];
+    const skins: CardSkinId[] = ['orokin', 'dark'];
 
     for (const skin of skins) {
       const both = await renderArchimedeaCard({

@@ -69,7 +69,7 @@ export type CardHostPayload = {
   kind: CardHostKind;
   locale: Locale;
   stale?: boolean;
-  /** QQ 皮肤 id（非法值回落 light） */
+  /** QQ 皮肤 id（非法值回落 orokin） */
   skin?: CardSkinId | string;
   worldstate?: WorldstateDto;
   /** 科研子类过滤（仅 archimedea） */

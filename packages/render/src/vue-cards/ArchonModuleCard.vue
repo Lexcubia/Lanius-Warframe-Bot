@@ -101,6 +101,7 @@ function missionNode(mission: SortieMissionDto): string {
 <template>
   <QqCardShell
     :title="locale === 'en' ? 'ARCHON HUNT' : '执行官'"
+    kicker="ARCHON HUNT"
     :subtitle="stamp || 'LANIUS'"
     :stale="stale"
     :locale="locale"

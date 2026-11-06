@@ -21,11 +21,11 @@ function sampleConfig(): BotConfig {
       port: 8788,
       apiBaseUrl: 'http://127.0.0.1:8787',
       defaultReplyMode: 'text',
-      defaultCardSkin: 'light',
+      defaultCardSkin: 'orokin',
       dryRun: true,
       pushIntervalMs: 60_000,
       commandPrefix: '/',
-      commandPrefixPolicy: 'optional',
+      commandPrefixPolicy: 'required',
       markdownImage: true,
       image: {
         maxPerUserPerMinute: 5,
