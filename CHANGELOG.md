@@ -6,6 +6,23 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-06
+
+### Added
+
+- SDJK → Lanius 全量复刻 Wave 0–5（#105–#110）：缺口模块经 Lanius API 落地，QQ/Web 不直连上游。
+- Wave 0：默认指令前缀 `required`；QQ/Web Orokin 暗金皮肤（默认；保留 light/dark）；ModuleId / 可订阅骨架。
+- Wave 1：日常与轮换缺口（时效 / Darvo / 新闻 / 赤毒 / 合成 / 建造 / 虚空风暴 / 活动 / 武馆 / 氏族 / 闪购 / 仲裁表 / 1999 / 钢铁 / 银币 / 深渊 / 入侵点 / 灵化 / 言录使等）。
+- Wave 2：市场趋势与杜卡德、紫卡工具与分析、遗物与开核桃；`/rm` 走 WFM（rivens.market 停服）。
+- Wave 3：灰机 wiki 深链、EN↔ZH 官方名翻译、效价融合规划（`/wiki` `/翻译` `/武器融合`）。
+- Wave 4：推送事件对齐 SDJK `PUSH_EVENTS`（裂隙/周期/商人/突击/执刑官/仲裁/侵袭/警报等）；`/订阅` 指令格式不变，支持 SDJK 事件别名与 `filterArgs`。
+- Wave 5：帮助键盘覆盖可订阅增量；公开站 Orokin 看板（任务链 / 日常 / 时效 / 覆盖摘要）与 `/tools` wiki·翻译·效价页。
+
+### Changed
+
+- QQ 单列卡铺满布局与加大字号（#100）。
+- 默认卡片皮肤改为 `orokin`；Admin 仍可改 light/dark。
+
 ## [0.6.1] - 2026-10-26
 
 ### Fixed
